@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+INSTALLED="$HOME/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor"
+BUILT="$ROOT/build/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor"
+if [ "${1:-}" = install ] || [ "${1:-}" = self-test ]; then
+  if [ ! -x "$BUILT" ]; then "$ROOT/scripts/build.sh"; fi
+  exec "$BUILT" "$@"
+fi
+if [ -x "$INSTALLED" ]; then exec "$INSTALLED" "$@"; fi
+if [ -x "$BUILT" ]; then exec "$BUILT" "$@"; fi
+/usr/bin/printf '%s\n' 'Run scripts/build.sh first.' >&2
+exit 1

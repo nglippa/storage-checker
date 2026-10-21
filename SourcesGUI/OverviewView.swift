@@ -1,0 +1,226 @@
+import SwiftUI
+import Charts
+
+extension EventSeverity {
+    var color: Color { switch self { case .normal: return .secondary; case .information: return .blue; case .warning: return .orange; case .critical: return .red } }
+}
+struct SeverityLabel: View {
+    let severity: EventSeverity
+    var textColor: Color = .primary
+    var body: some View {
+        HStack(spacing:4) {
+            Image(systemName:severity == .critical ? "exclamationmark.octagon.fill" : (severity == .warning ? "exclamationmark.triangle.fill" : (severity == .information ? "info.circle" : "checkmark.circle"))).foregroundColor(severity.color)
+            Text(severity.label).foregroundStyle(textColor)
+        }.font(.caption.weight(.medium))
+            .accessibilityLabel("Severity: \(severity.label)")
+    }
+}
+
+struct OverviewView: View {
+    let snapshot: HistorySnapshot
+    @ObservedObject var live: LiveCapacityMonitor
+    var body: some View {
+        if let recorded = snapshot.latest {
+            // Re-evaluates staleness every 15 s without touching the disk.
+            TimelineView(.periodic(from: .now, by: 15)) { context in
+                content(recorded: recorded, now: context.date)
+            }
+        }
+    }
+    @ViewBuilder private func content(recorded: Measurement, now: Date) -> some View {
+        let state = live.state
+        let freshness = state.freshness(at: now)
+        let reading = state.reading
+        let free = reading?.free ?? recorded.free, total = reading?.total ?? recorded.capacity
+        let severity = EventSeverity.capacity(free)
+        VStack(alignment:.leading,spacing:14) {
+            HStack(alignment:.firstTextBaseline,spacing:10) {
+                Label("Internal storage",systemImage:"internaldrive").font(.headline)
+                Spacer(minLength:8)
+                SeverityLabel(severity:severity)
+                    .help(reading == nil ? "Based on the last recorded reading." : "Capacity pressure from the live reading. Alerts come only from recorded background readings.")
+            }
+            ViewThatFits(in:.horizontal) {
+                HStack(alignment:.top,spacing:28) {
+                    available(free:free,reading:reading,freshness:freshness,now:now).frame(minWidth:230,alignment:.leading)
+                    usage(free:free,total:total,severity:severity).frame(minWidth:220)
+                    Divider().frame(height:64)
+                    changes(recorded)
+                }
+                VStack(alignment:.leading,spacing:14) {
+                    HStack(alignment:.top) { available(free:free,reading:reading,freshness:freshness,now:now); Spacer(minLength:12); changes(recorded) }
+                    usage(free:free,total:total,severity:severity)
+                }
+            }
+            recordedLine(recorded,reading:reading)
+        }.padding(.horizontal,22).padding(.top,16).padding(.bottom,14)
+    }
+
+    private func available(free: Int64, reading: LiveCapacityReading?, freshness: LiveFreshness, now: Date) -> some View {
+        VStack(alignment:.leading,spacing:3) {
+            Text(reading == nil ? "Available (last recorded)" : "Available now").font(.subheadline).foregroundStyle(.secondary)
+            Text(capacity(free)).font(.system(size:34,weight:.semibold,design:.rounded)).monospacedDigit()
+                .accessibilityLabel("\(reading == nil ? "Last recorded" : "Live") available APFS capacity: \(capacity(free))")
+                .accessibilityIdentifier("overview.available")
+            liveStatus(reading:reading,freshness:freshness,now:now)
+        }
+    }
+    @ViewBuilder private func liveStatus(reading: LiveCapacityReading?, freshness: LiveFreshness, now: Date) -> some View {
+        Group {
+            switch freshness {
+            case .live:
+                Label { Text("Live · updated \(reading!.timestamp.formatted(date:.omitted,time:.standard))") } icon: { Circle().fill(Color.green).frame(width:7,height:7) }
+            case .stale:
+                Label("Stale · last live reading \(reading!.timestamp.formatted(date:.omitted,time:.shortened))" + (live.state.lastError != nil ? " · refresh failed" : ""),systemImage:"exclamationmark.circle")
+                    .foregroundStyle(.orange)
+            case .unavailable:
+                Label(live.state.lastError ?? (live.isRefreshing ? "Reading live capacity…" : "Live reading unavailable"),systemImage:"circle.dashed")
+            }
+        }
+        .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+        .help("Live readings come from the filesystem when the viewer opens, becomes active, every minute while visible, and on ⌘R. They are not stored and never trigger alerts.")
+        // Explicit label so assistive technologies get the current status, not a cached one.
+        .accessibilityElement(children:.ignore)
+        .accessibilityLabel(liveStatusText(reading:reading,freshness:freshness))
+        .accessibilityIdentifier("overview.liveStatus")
+    }
+    private func liveStatusText(reading: LiveCapacityReading?, freshness: LiveFreshness) -> String {
+        switch freshness {
+        case .live: return "Live, updated \(reading!.timestamp.formatted(date:.omitted,time:.standard))"
+        case .stale: return "Stale, last live reading \(reading!.timestamp.formatted(date:.omitted,time:.shortened))" + (live.state.lastError != nil ? ", refresh failed" : "")
+        case .unavailable: return live.state.lastError ?? "Live reading unavailable"
+        }
+    }
+    private func usage(free: Int64, total: Int64, severity: EventSeverity) -> some View {
+        VStack(alignment:.leading,spacing:7) {
+            HStack { Text("\(capacity(total-free)) used"); Spacer(); Text("\(capacity(total)) total") }.font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
+            ProgressView(value:Double(total-free),total:Double(max(total,1))).tint(severity == .normal ? .accentColor : severity.color)
+                .accessibilityLabel("Physical storage used").accessibilityValue("\(Int(Double(total-free)/Double(max(total,1))*100)) percent")
+            Text(severity == .critical ? "Critical pressure · less than 15 GB available" : (severity == .warning ? "Low capacity · less than 25 GB available" : "Capacity within configured thresholds"))
+                .font(.subheadline).foregroundStyle(severity == .normal ? Color.secondary : Color.primary)
+        }.frame(maxWidth:.infinity)
+    }
+    private func changes(_ current: Measurement) -> some View {
+        VStack(alignment:.leading,spacing:9) {
+            baseline("Recorded 1-hour change",seconds:3600,current:current)
+            baseline("Recorded 24-hour change",seconds:86400,current:current)
+        }.frame(width:190,alignment:.leading)
+    }
+    // The last background reading, kept visibly separate from the live value.
+    private func recordedLine(_ recorded: Measurement, reading: LiveCapacityReading?) -> some View {
+        let comparison = ObservationComparison.make(live: reading, recorded: recorded)
+        return ViewThatFits(in:.horizontal) {
+            HStack(spacing:6) { recordedText(recorded); comparisonText(comparison, live: reading, inline: true); Spacer(minLength:0) }
+            VStack(alignment:.leading,spacing:3) { recordedText(recorded); comparisonText(comparison, live: reading, inline: false) }
+        }
+        .font(.subheadline).foregroundStyle(.secondary)
+        .accessibilityElement(children:.ignore)
+        .accessibilityLabel("Last recorded reading \(recorded.timestamp.formatted(date:.omitted,time:.shortened)), \(capacity(recorded.free))" + (comparison.map { ". Live is \(signedChange($0.difference)) versus that reading; an observation comparison, not a recorded event." } ?? ""))
+        .accessibilityIdentifier("overview.recorded")
+    }
+    private func recordedText(_ recorded: Measurement) -> some View {
+        HStack(spacing:5) {
+            Image(systemName:Date().timeIntervalSince(recorded.timestamp)>4500 ? "clock.badge.exclamationmark" : "clock")
+            Text("Last recorded reading \(recorded.timestamp.formatted(date:.omitted,time:.shortened)) · \(capacity(recorded.free))")
+                .help("Background monitor reading \(recorded.timestamp.formatted(date:.complete,time:.complete)). History, events and the chart use recorded readings only.")
+        }.lineLimit(1)
+    }
+    @ViewBuilder private func comparisonText(_ comparison: ObservationComparison?, live: LiveCapacityReading?, inline: Bool) -> some View {
+        if let comparison {
+            Text("\(inline ? "· " : "")Live is \(signedChange(comparison.difference)) vs that reading (observation comparison, not a recorded event)")
+                .lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
+                .help("Live \(exactBytes(comparison.live.free)) at \(comparison.live.timestamp.formatted(date:.omitted,time:.standard)) minus recorded \(exactBytes(comparison.recorded.free)). Not stored, not an alert.")
+        } else if live != nil {
+            Text("\(inline ? "· " : "")Live and recorded readings are from different containers; not compared").lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
+        }
+    }
+    @ViewBuilder private func baseline(_ title: String,seconds: Double,current: Measurement) -> some View {
+        HStack(alignment:.firstTextBaseline,spacing:8) {
+            VStack(alignment:.leading,spacing:2) {
+                Text(title).font(.subheadline).foregroundStyle(.secondary)
+                if let prior = snapshot.baseline(seconds:seconds) {
+                    Text(signedChange(current.free-prior.free)).font(.callout.weight(.medium)).monospacedDigit()
+                    Text("Over \(duration(current.timestamp.timeIntervalSince(prior.timestamp)))").font(.caption).foregroundStyle(.secondary)
+                        .help("Compared with \(prior.timestamp.formatted(date:.complete,time:.complete)), the nearest same-container reading at or before the requested baseline. No interpolation.")
+                } else { Text("Not enough history").font(.callout).foregroundStyle(.secondary).help("No same-container reading at or before \(current.timestamp.addingTimeInterval(-seconds).formatted(date:.abbreviated,time:.standard)).") }
+            }
+        }
+    }
+    private func duration(_ seconds: Double) -> String {
+        let minutes = Int(seconds/60)
+        if minutes >= 1440 { return "\(minutes/1440)d \((minutes%1440)/60)h" }
+        return "\(minutes/60)h \(minutes%60)m"
+    }
+}
+
+private struct PlotReading: Identifiable {
+    var id: Int64 { measurement.id }
+    let measurement: Measurement
+    let segment: Int
+    var date: Date { measurement.timestamp }
+    var freeGB: Double { Double(measurement.free)/Double(decimalGB) }
+}
+struct CapacityChart: View {
+    let readings: [Measurement]
+    @Binding var range: EventTimeFilter
+    @ViewState private var hovered: PlotReading?
+    private var points: [PlotReading] {
+        let cutoff = Date().addingTimeInterval(-(range.seconds ?? 86400))
+        var segment = 0, previous: Measurement?
+        return readings.filter { $0.timestamp >= cutoff }.map { reading in
+            if let previous, previous.container != reading.container || reading.timestamp.timeIntervalSince(previous.timestamp)>4500 { segment += 1 }
+            previous = reading
+            return PlotReading(measurement:reading,segment:segment)
+        }
+    }
+    var body: some View {
+        VStack(alignment:.leading,spacing:8) {
+            HStack {
+                Text("Recorded available capacity").font(.subheadline.weight(.semibold)).fixedSize()
+                Text("\(points.count) points").font(.subheadline).foregroundStyle(.secondary).lineLimit(1).layoutPriority(-1)
+                Spacer()
+                ViewThatFits(in:.horizontal) {
+                    Text("Warning 25 GB · Critical 15 GB").font(.subheadline).foregroundStyle(.secondary).fixedSize()
+                    Color.clear.frame(width:0,height:0)   // hidden when there is no room; the lines stay labelled by colour and help
+                }
+                Picker("Chart time range",selection:$range) { ForEach(EventTimeFilter.allCases.filter { $0 != .custom },id:\.self) { Text($0.rawValue).tag($0) } }.labelsHidden().frame(width:145).accessibilityIdentifier("chart.range")
+            }
+            if points.isEmpty { Text("No recorded capacity measurements in this chart range.").font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,minHeight:80) }
+            else {
+                Chart {
+                    RuleMark(y:.value("Warning",25)).foregroundStyle(.orange.opacity(0.6)).lineStyle(StrokeStyle(lineWidth:1,dash:[4,4]))
+                    RuleMark(y:.value("Critical",15)).foregroundStyle(.red.opacity(0.55)).lineStyle(StrokeStyle(lineWidth:1,dash:[3,4]))
+                    ForEach(points) { point in
+                        LineMark(x:.value("Time",point.date),y:.value("Free GB",point.freeGB),series:.value("Recorded segment",point.segment)).foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth:1.5))
+                        PointMark(x:.value("Time",point.date),y:.value("Free GB",point.freeGB)).foregroundStyle(Color.accentColor).symbolSize(14)
+                            .accessibilityLabel("\(point.date.formatted()): \(capacity(point.measurement.free)) available")
+                    }
+                    if let hovered, points.contains(where: { $0.id == hovered.id }) {
+                        RuleMark(x:.value("Selected reading",hovered.date)).foregroundStyle(.secondary.opacity(0.5))
+                        PointMark(x:.value("Selected reading",hovered.date),y:.value("Available",hovered.freeGB)).foregroundStyle(Color.accentColor).symbolSize(55)
+                            .annotation(position:.top,alignment:.leading) { Text("\(hovered.date.formatted(date:.abbreviated,time:.standard)) · \(capacity(hovered.measurement.free))").font(.caption2).padding(5).background(.regularMaterial,in:RoundedRectangle(cornerRadius:5)) }
+                    }
+                }
+                .chartYScale(domain:0...max(30,(points.map(\.freeGB).max() ?? 25)+3))
+                .chartYAxis { AxisMarks(position:.trailing,values:.automatic(desiredCount:4)) { value in AxisGridLine(stroke:StrokeStyle(lineWidth:0.5)); AxisValueLabel { if let gb = value.as(Double.self) { Text("\(gb,format:.number.precision(.fractionLength(0))) GB").font(.caption) } } } }
+                .chartXAxis { AxisMarks(values:.automatic(desiredCount:5)) { _ in AxisGridLine(stroke:StrokeStyle(lineWidth:0.5)); AxisTick(); AxisValueLabel().font(.caption) } }
+                .chartLegend(.hidden)
+                .chartOverlay { proxy in
+                    GeometryReader { geometry in
+                        Rectangle().fill(.clear).contentShape(Rectangle()).onContinuousHover { phase in
+                            switch phase {
+                            case .active(let location):
+                                guard let frame = proxy.plotFrame else { return }
+                                let x = location.x - geometry[frame].origin.x
+                                if let date: Date = proxy.value(atX:x) { hovered = points.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) } }
+                            case .ended: hovered = nil
+                            }
+                        }
+                    }
+                }.frame(height:118)
+                .accessibilityIdentifier("capacity.chart")
+                .help("Actual recorded points. Lines connect adjacent readings only; gaps over 75 minutes and container changes are not joined. Hover snaps to a recorded measurement.")
+            }
+        }.padding(.horizontal,22).padding(.vertical,12)
+    }
+}
