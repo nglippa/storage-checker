@@ -53,6 +53,7 @@ struct OverviewView: View {
                 }
             }
             recordedLine(recorded,reading:reading)
+            if let folders = snapshot.folderMonitoring { folderMonitoringLine(folders) }
         }.padding(.horizontal,22).padding(.top,16).padding(.bottom,14)
     }
 
@@ -117,6 +118,21 @@ struct OverviewView: View {
         .accessibilityElement(children:.ignore)
         .accessibilityLabel("Last recorded reading \(recorded.timestamp.formatted(date:.omitted,time:.shortened)), \(capacity(recorded.free))" + (comparison.map { ". Live is \(signedChange($0.difference)) versus that reading; an observation comparison, not a recorded event." } ?? ""))
         .accessibilityIdentifier("overview.recorded")
+    }
+    // Baseline coverage now, separate from any event's interval comparability.
+    private func folderMonitoringLine(_ status: FolderMonitoringStatus) -> some View {
+        HStack(spacing:5) {
+            Image(systemName: ["ready":"folder.badge.checkmark","initializing":"folder.badge.gearshape","partial":"folder.badge.minus","degraded":"exclamationmark.triangle"][status.state] ?? "folder")
+                .foregroundStyle(status.state == "degraded" ? Color.orange : Color.secondary)
+            Text("Folder monitoring").fontWeight(.medium)
+            Text("· \(status.summary)").lineLimit(1).truncationMode(.tail)
+        }
+        .font(.subheadline).foregroundStyle(.secondary)
+        .help(status.detail)
+        .accessibilityElement(children:.ignore)
+        .accessibilityLabel("Folder monitoring: \(status.summary)")
+        .accessibilityHint(status.detail)
+        .accessibilityIdentifier("overview.folderMonitoring")
     }
     private func recordedText(_ recorded: Measurement) -> some View {
         HStack(spacing:5) {

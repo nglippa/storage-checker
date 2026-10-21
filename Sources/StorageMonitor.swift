@@ -181,7 +181,9 @@ func authorize() throws {
     print("Notification permission granted=\(granted) \(notificationStatus().1) \(failure)")
     try required(granted, "Notifications denied; enable MacBook Storage Monitor in System Settings > Notifications")
 }
+var notificationRequests = 0
 func notify(_ title: String, _ body: String) -> String {
+    notificationRequests += 1
     let (status, detail) = notificationStatus()
     guard status == .authorized || status == .provisional else { return "unavailable: \(detail)" }
     let id = UUID().uuidString, content = UNMutableNotificationContent()
@@ -205,17 +207,57 @@ let agentURL = home.appendingPathComponent("Library/LaunchAgents/\(label).plist"
 func agentPlist(_ executable: String, _ data: String) -> [String: Any] {
     ["Label": label, "ProgramArguments": [executable, "check", "--data-dir", data], "RunAtLoad": true, "StartCalendarInterval": [["Minute": 0], ["Minute": 30]], "ProcessType": "Background", "LowPriorityIO": true, "Nice": 10, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
 }
+// One-time baseline initializer. It runs at load (install/login), exits 0 once coverage
+// reaches a terminal state and is then idle; a non-zero exit (time limit, busy) lets
+// launchd resume it after the throttle interval. The scheduled check wakes it when
+// coverage is incomplete. It never records readings or sends notifications.
+let baselineLabel = "local.macbook.storage-monitor.baseline"
+let baselineAgentURL = home.appendingPathComponent("Library/LaunchAgents/\(baselineLabel).plist")
+func baselineAgentPlist(_ executable: String, _ data: String) -> [String: Any] {
+    ["Label": baselineLabel, "ProgramArguments": [executable, "initialize-baseline", "--data-dir", data], "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false], "ThrottleInterval": 300,
+     "ProcessType": "Background", "LowPriorityIO": true, "Nice": 15, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
+}
 func launchctl(_ args: [String], acceptable: Bool = false) throws -> CommandResult {
     let r = try run("/bin/launchctl", args, timeout: 15); if !acceptable { try required(r.status == 0, "launchctl \(args.first ?? "") failed: \(r.text)") }; return r
+}
+// Consistent online copy of the history database, verified before anything is replaced.
+// Keeps the three newest install backups; other files are never touched.
+func backupDatabase(_ directory: URL, keep: Int = 3) throws -> URL? {
+    let source = directory.appendingPathComponent("history.sqlite3")
+    guard fm.fileExists(atPath: source.path) else { return nil }
+    let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
+    let target = directory.appendingPathComponent("history.install-backup-\(stamp).sqlite3")
+    var from: OpaquePointer?, to: OpaquePointer?
+    defer { sqlite3_close(from); sqlite3_close(to) }
+    try required(sqlite3_open_v2(source.path, &from, SQLITE_OPEN_READONLY, nil) == SQLITE_OK && sqlite3_open(target.path, &to) == SQLITE_OK, "Cannot open database for backup")
+    sqlite3_busy_timeout(from, 10000)
+    guard let backup = sqlite3_backup_init(to, "main", from, "main") else { throw Failure("Backup could not start: \(String(cString: sqlite3_errmsg(to)))") }
+    let step = sqlite3_backup_step(backup, -1); sqlite3_backup_finish(backup)
+    try required(step == SQLITE_DONE, "Backup did not complete (\(step))")
+    _ = chmod(target.path, 0o600)
+    func scalar(_ db: OpaquePointer?, _ sql: String) -> String {
+        var stmt: OpaquePointer?; defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, sqlite3_step(stmt) == SQLITE_ROW, let text = sqlite3_column_text(stmt, 0) else { return "" }
+        return String(cString: text)
+    }
+    try required(scalar(to, "PRAGMA integrity_check") == "ok", "Backup failed its integrity check")
+    for table in ["readings", "alerts", "diagnostics", "state"] {
+        try required(scalar(from, "SELECT count(*) FROM \(table)") == scalar(to, "SELECT count(*) FROM \(table)"), "Backup row count differs for \(table)")
+    }
+    let old = ((try? fm.contentsOfDirectory(atPath: directory.path)) ?? []).filter { $0.hasPrefix("history.install-backup-") && $0.hasSuffix(".sqlite3") }.sorted()
+    for name in old.dropLast(keep) { try? fm.removeItem(at: directory.appendingPathComponent(name)) }
+    return target
 }
 func install() throws {
     guard Bundle.main.bundleURL.pathExtension == "app" else { throw Failure("Build and run the bundled executable using bin/storage-monitor") }
     let source = Bundle.main.bundleURL
     try privateDirectory(defaultData)
+    if let backup = try backupDatabase(defaultData) { print("Backed up history to \(backup.path)") }   // before any replacement or migration
     try fm.createDirectory(at: home.appendingPathComponent("Applications"), withIntermediateDirectories: true)
     try fm.createDirectory(at: agentURL.deletingLastPathComponent(), withIntermediateDirectories: true)
     // bootout only this monitor before replacing its executable. Preserve all user data.
     _ = try launchctl(["bootout", "gui/\(getuid())/\(label)"], acceptable: true)
+    _ = try launchctl(["bootout", "gui/\(getuid())/\(baselineLabel)"], acceptable: true)
     if source.standardizedFileURL != installedApp.standardizedFileURL {
         let staging = installedApp.deletingLastPathComponent().appendingPathComponent(".MacBook Storage Monitor.staging.\(UUID().uuidString).app")
         try fm.copyItem(at: source, to: staging)
@@ -227,13 +269,19 @@ func install() throws {
     let data = try PropertyListSerialization.data(fromPropertyList: agentPlist(executable, defaultData.path), format: .xml, options: 0)
     try data.write(to: agentURL, options: .atomic); _ = chmod(agentURL.path, 0o600)
     _ = try run("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", ["-f", installedApp.path])
+    let baselineData = try PropertyListSerialization.data(fromPropertyList: baselineAgentPlist(executable, defaultData.path), format: .xml, options: 0)
+    try baselineData.write(to: baselineAgentURL, options: .atomic); _ = chmod(baselineAgentURL.path, 0o600)
     _ = try launchctl(["enable", "gui/\(getuid())/\(label)"])
     _ = try launchctl(["bootstrap", "gui/\(getuid())", agentURL.path])
+    _ = try launchctl(["enable", "gui/\(getuid())/\(baselineLabel)"])
+    _ = try launchctl(["bootstrap", "gui/\(getuid())", baselineAgentURL.path])
     print("Installed \(agentURL.path)\nRuns at login and every :00/:30 (calendar catch-up after sleep).\nAuthorize notifications: bin/storage-monitor authorize")
 }
 func uninstall() throws {
     _ = try launchctl(["bootout", "gui/\(getuid())/\(label)"], acceptable: true)
+    _ = try launchctl(["bootout", "gui/\(getuid())/\(baselineLabel)"], acceptable: true)
     if fm.fileExists(atPath: agentURL.path) { try fm.removeItem(at: agentURL) }
+    if fm.fileExists(atPath: baselineAgentURL.path) { try fm.removeItem(at: baselineAgentURL) }
     print("LaunchAgent removed. App and history retained: \(defaultData.path)")
 }
 
@@ -281,7 +329,11 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         // read-only, and never allowed to fail the check.
         let evidenceStarted = Date()
         let prior = previousRow.flatMap { row in Int64(row["id"] ?? "").flatMap { id in Double(row["timestamp"] ?? "").map { (id: id, time: $0) } } }
-        let evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, roots: defaultMonitoredRoots() + configuredRoots(directory))
+        let evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, roots: defaultMonitoredRoots() + configuredRoots(directory), lockPath: directory.appendingPathComponent("attribution.lock").path)
+        // Incomplete coverage: wake the one-time initializer instead of stretching this check.
+        if let lifecycle = decodeLifecycle(db), ["not_initialized", "initializing"].contains(lifecycle.state), directory.standardizedFileURL == defaultData.standardizedFileURL, fm.fileExists(atPath: baselineAgentURL.path) {
+            _ = try? launchctl(["kickstart", "gui/\(getuid())/\(baselineLabel)"], acceptable: true)
+        }
         do { try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [readingId, current.timestamp, json(evidence)]) }
         catch { log(directory, "attribution not stored: \(error)") }
         let folders = evidence["folders"] as? [String: Any] ?? [:]
@@ -434,6 +486,7 @@ func selfTest() throws {
     let defaults = defaultDirectoryTargets().map(\.path)
     try test(!defaults.contains("/private/var/folders") && !defaults.contains(home.path) && !defaults.contains(home.appendingPathComponent("Library/Caches").path) && !defaults.contains(home.appendingPathComponent("Library/Application Support").path), "no broad protected or whole-library scan targets")
     try attributionSelfTest(test)
+    try baselineInitializationSelfTest(test)
     print("\(count) tests passed")
 }
 
@@ -462,6 +515,23 @@ func runMain() throws {
         print(result); try required(result.hasPrefix("delivered:"), "Test notification was not confirmed delivered: \(result)")
     case "notification-status": print(notificationStatus().1)
     case "self-test": try selfTest()
+    case "initialize-baseline":
+        // Background, one worker at a time, checkpointed; never notifies.
+        try privateDirectory(directory)
+        let result = initializeBaseline(dbPath: directory.appendingPathComponent("history.sqlite3").path, directory: directory, roots: defaultMonitoredRoots() + configuredRoots(directory))
+        let l = result.lifecycle
+        let summary = "initialize-baseline \(result.outcome) state=\(l?.state ?? "?") discovered=\(l?.discovered ?? 0) baselined=\(l?.baselined ?? 0) pending=\(l?.pending ?? 0) incomplete=\(l?.incomplete ?? 0) unavailable=\(l?.unavailable ?? 0) measurements=\(l?.initializer?.measurements ?? 0) reconciliations=\(l?.initializer?.reconciliations ?? 0) peakMB=\((l?.initializer?.peakMemoryBytes ?? 0) / 1_048_576)"
+        log(directory, summary); print(summary)
+        if !["terminal", "already_running"].contains(result.outcome) { exit(75) }   // launchd resumes after its throttle interval
+    case "stress-state-writes":
+        // Test helper: initializer-style state writes to the given database.
+        let db = try Database(args[1]); let count = Int(args[2]) ?? 100; var failures = 0
+        let payload = String(repeating: "x", count: 60_000)
+        for index in 0..<count { do { try db.state("attribution_baseline", "{\"n\":\(index),\"pad\":\"\(payload)\"}") } catch { failures += 1 } }
+        print("failures=\(failures)")
+    case "baseline-status":
+        let db = try Database(directory.appendingPathComponent("history.sqlite3").path)
+        print(decodeLifecycle(db).map { String(decoding: (try? JSONEncoder().encode($0)) ?? Data(), as: UTF8.self) } ?? "{\"state\":\"not_initialized\"}")
     case "attribution-probe":
         // Development aid: evidence collection only, into a separate --data-dir.
         // No capacity reading, alert, or notification.
@@ -473,7 +543,7 @@ func runMain() throws {
         let evidence = collectIntervalEvidence(db: db, readingId: id, readingTime: now, previous: prior.map { (id: $0.readingId, time: $0.timestamp) }, marker: currentEventMarker(), roots: defaultMonitoredRoots() + configuredRoots(directory))
         try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [id, now, json(evidence)])
         print(json(evidence))
-    default: print("MacBook Storage Monitor\nCommands: install | uninstall | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | authorize | notification-status | test-notification | self-test\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
+    default: print("MacBook Storage Monitor\nCommands: install | uninstall | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | authorize | notification-status | test-notification | self-test\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
     }
 }
 @main enum StorageMonitorEntry {

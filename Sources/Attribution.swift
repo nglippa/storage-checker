@@ -79,6 +79,10 @@ func currentEventMarker(_ path: String = home.path) -> EventMarker {
 
 final class FileActivity {
     let roots: [String], until: UInt64, maxEvents: Int
+    // Events at or before this ID only mark folders dirty; they are not this interval's activity.
+    var countFrom: UInt64 = 0
+    var lastEvent = [String: UInt64]()     // latest event ID per "root\u{1}child"
+    var scanned = 0
     var events = 0, historyDone = false, doneAt: Date?, lastId: UInt64 = 0, truncated = false
     var gaps = [String](), gapRoots = Set<String>(), allGap = false
     var counters = [String: [Int]]()       // "root\u{1}child" → created, modified, removed, renamed, cloned, events
@@ -114,11 +118,16 @@ final class FileActivity {
             }
             return
         }
-        events += 1
-        if events > maxEvents { if !truncated { truncated = true; allGap = true; gaps.append("More than \(maxEvents) file events; activity is incomplete") }; return }
         let relative = String(path.dropFirst(root.count + 1))
         let child = String(relative.split(separator: "/", maxSplits: 1).first ?? Substring(relative))
         let key = Self.key(root, child)
+        lastEvent[key] = max(lastEvent[key] ?? 0, id)
+        if has(kFSEventStreamEventFlagMustScanSubDirs) { gapRoots.insert(root) }
+        scanned += 1
+        if scanned > maxEvents * 2 { if !truncated { truncated = true; allGap = true; gaps.append("Too many file events to replay; activity is incomplete") }; return }
+        guard id > countFrom else { return }
+        events += 1
+        if events > maxEvents { if !truncated { truncated = true; allGap = true; gaps.append("More than \(maxEvents) file events; activity is incomplete") }; return }
         var count = counters[key] ?? [0, 0, 0, 0, 0, 0]
         if has(kFSEventStreamEventFlagItemCreated) { count[0] += 1 }
         if has(kFSEventStreamEventFlagItemModified) || has(kFSEventStreamEventFlagItemInodeMetaMod) { count[1] += 1 }
@@ -127,13 +136,16 @@ final class FileActivity {
         if has(kFSEventStreamEventFlagItemCloned) { count[4] += 1 }
         count[5] += 1
         counters[key] = count
-        if has(kFSEventStreamEventFlagMustScanSubDirs) { gapRoots.insert(root) }
         if distinct.count < 50_000 { distinct.insert(path) } else { distinctCapped = true }
         if samples[key, default: []].count < 5, !path.contains(".sb-") {
             var labels = [String]()
             for (flag, name) in [(kFSEventStreamEventFlagItemCreated, "created"), (kFSEventStreamEventFlagItemModified, "modified"), (kFSEventStreamEventFlagItemRemoved, "removed"), (kFSEventStreamEventFlagItemRenamed, "renamed"), (kFSEventStreamEventFlagItemCloned, "cloned")] where has(flag) { labels.append(name) }
             samples[key, default: []].append(relative + (labels.isEmpty ? "" : " [" + labels.joined(separator: ",") + "]"))
         }
+    }
+    // True when the folder changed after the given event ID (or after this reading's marker).
+    func changed(_ root: String, _ child: String, after event: UInt64) -> Bool {
+        lateDirty[root]?.contains(child) == true || (lastEvent[Self.key(root, child)] ?? 0) > event
     }
     func dirty(_ root: String) -> Set<String> {
         lateDirty[root, default: []].union(counters.keys.compactMap { key in
@@ -144,8 +156,9 @@ final class FileActivity {
 }
 
 // Replays FSEvents history for (since, until] without staying resident.
-func replayFileActivity(roots: [String], since: UInt64, until: UInt64, timeout: TimeInterval = 10, maxEvents: Int = 200_000) -> FileActivity {
+func replayFileActivity(roots: [String], since: UInt64, until: UInt64, countFrom: UInt64? = nil, timeout: TimeInterval = 10, maxEvents: Int = 200_000) -> FileActivity {
     let activity = FileActivity(roots: roots, until: until, maxEvents: maxEvents)
+    activity.countFrom = countFrom ?? since
     guard !roots.isEmpty, until > since else { activity.historyDone = true; activity.doneAt = .distantPast; activity.lastId = until; return activity }
     var context = FSEventStreamContext(version: 0, info: Unmanaged.passUnretained(activity).toOpaque(), retain: nil, release: nil, copyDescription: nil)
     let callback: FSEventStreamCallback = { _, info, count, paths, flags, ids in
@@ -183,6 +196,25 @@ struct ChildState: Codable {
     var measuredAt: Double
     var validThrough: Int64      // last reading this value is known to describe
     var pending: Bool
+    // Per-folder validity (absent in baselines written before initialization support).
+    var validEvent: UInt64? = nil   // FSEvents ID at which this value is known current (taken before the walk)
+    var validAt: Double? = nil      // wall time of validEvent
+    var attempts: Int? = nil        // consecutive incomplete measurements
+    var lastAttempt: Double? = nil
+    var origin: String? = nil       // "scheduled" or "initializer"
+    var everValid: Bool? = nil      // has been valid at some reading (distinguishes first measurements)
+
+    var isPlaceholder: Bool { measuredAt == 0 }
+    var unavailable: Bool { status == "failed" || (status == "partial" && !complete) }
+    // Ready to be trusted at a later reading if file events show no change since validEvent.
+    func hasFreshValue(at now: Double) -> Bool { complete && validEvent != nil && (validAt.map { now - $0 <= maxReplayAge } ?? false) }
+    // Bounded retries: protected folders daily, repeated timeouts every 6 hours after 3 attempts.
+    func retryDue(at now: Double) -> Bool {
+        guard !complete, let last = lastAttempt else { return true }
+        if status == "failed" || status == "partial" { return now - last >= 24 * 3600 }
+        if (attempts ?? 0) >= 3 { return now - last >= 6 * 3600 }
+        return true
+    }
 }
 struct RootState: Codable {
     var children = [String: ChildState]()
@@ -197,6 +229,37 @@ struct AttributionBaseline: Codable {
     var roots = [String: RootState]()
 }
 struct ProcessBaseline: Codable { var readingId: Int64; var written: [String: UInt64] }
+
+// Baselines written before per-folder validity: a value valid at the baseline's
+// reading is valid at that reading's marker.
+func migrated(_ baseline: AttributionBaseline) -> AttributionBaseline {
+    var copy = baseline
+    for (root, var state) in copy.roots {
+        for (name, var child) in state.children where child.validEvent == nil && child.validThrough == baseline.readingId && baseline.readingId > 0 && child.complete {
+            child.validEvent = baseline.eventId; child.validAt = baseline.timestamp; child.everValid = true
+            state.children[name] = child
+        }
+        copy.roots[root] = state
+    }
+    return copy
+}
+
+// MARK: Locks
+
+// Serializes reads and writes of the baseline between the scheduled check and the initializer.
+final class FileLock {
+    let fd: Int32
+    init?(_ path: String, wait: TimeInterval) {
+        fd = open(path, O_RDWR | O_CREAT, 0o600)
+        guard fd >= 0 else { return nil }
+        let deadline = Date().addingTimeInterval(wait)
+        while flock(fd, LOCK_EX | LOCK_NB) != 0 {
+            if Date() >= deadline { close(fd); return nil }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+    }
+    deinit { _ = flock(fd, LOCK_UN); close(fd) }
+}
 
 func decodeState<T: Decodable>(_ db: Database, _ key: String, as type: T.Type) -> T? {
     guard let text = try? db.state(key), !text.isEmpty else { return nil }
@@ -280,67 +343,91 @@ func tilde(_ path: String) -> String {
 
 func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double, previous: (id: Int64, time: Double)?, marker: EventMarker,
                              roots candidates: [MonitoredRoot], within base: String = home.path, budget: TimeInterval = 25, replayTimeout: TimeInterval = 10, processBudget: TimeInterval = 3,
-                             now: () -> Date = Date.init, simulateActivityGap: Bool = false) -> [String: Any] {
+                             now: () -> Date = Date.init, simulateActivityGap: Bool = false, lockPath: String? = nil, lockWait: TimeInterval = 45) -> [String: Any] {
     let started = now()
     let (roots, rejected) = validatedRoots(candidates, within: base)
     let previousId = previous?.id ?? -1
-    var baseline = decodeState(db, "attribution_baseline", as: AttributionBaseline.self)
+    // The initializer may be checkpointing; wait briefly, never indefinitely.
+    var lock: FileLock?
+    if let lockPath {
+        lock = FileLock(lockPath, wait: lockWait)
+        if lock == nil {
+            return ["version": attributionVersion, "reading_id": readingId, "previous_reading_id": previous.map { NSNumber(value: $0.id) } ?? NSNull(), "collected_at": started.timeIntervalSince1970,
+                    "folders": ["status": "busy", "reason": "Folder baseline was being updated; folder evidence skipped for this reading."], "file_activity": ["status": "unavailable", "reason": "Skipped while the folder baseline was busy."],
+                    "processes": ["status": "skipped"], "duration_ms": Int(now().timeIntervalSince(started) * 1000)]
+        }
+    }
+    defer { _ = lock }
+    var baseline = decodeState(db, "attribution_baseline", as: AttributionBaseline.self).map(migrated)
     if baseline?.version != 1 { baseline = nil }
+    let deviceMatches = baseline != nil && marker.device != nil && baseline!.device == marker.device
 
-    // 1. File activity for (previous marker, this marker].
-    var activityJSON: [String: Any] = ["status": "unavailable"]
+    // 1. File activity. The replay window reaches back to the oldest folder value still
+    //    trusted, so folders measured between readings are validated too. Interval
+    //    statistics count only events after the previous reading's marker.
+    let intervalStart: UInt64? = {
+        guard let baseline, deviceMatches, baseline.readingId == previousId, previousId > 0, readingTime - baseline.timestamp <= maxReplayAge, baseline.eventId <= marker.eventId else { return nil }
+        return baseline.eventId
+    }()
+    var oldestValid: UInt64?
+    if deviceMatches {
+        for (_, rootState) in baseline!.roots { for (_, child) in rootState.children where child.hasFreshValue(at: readingTime) {
+            if let event = child.validEvent, event <= marker.eventId { oldestValid = min(oldestValid ?? event, event) }
+        } }
+        if let start = intervalStart { oldestValid = min(oldestValid ?? start, start) }
+    }
     var activity: FileActivity?
-    // History older than this may have been purged by fseventsd without any flag,
-    // so a long interval is re-measured instead of carried forward.
-    let markerFresh = baseline.map { readingTime - $0.timestamp <= maxReplayAge } ?? false
-    let markerContinuous = baseline != nil && baseline!.readingId == previousId && marker.device != nil && baseline!.device == marker.device && baseline!.eventId <= marker.eventId && markerFresh
-    if markerContinuous {
-        let replay = replayFileActivity(roots: roots.map(\.path), since: baseline!.eventId, until: marker.eventId, timeout: replayTimeout)
+    var activityJSON: [String: Any] = ["status": "unavailable"]
+    if let since = oldestValid {
+        let replay = replayFileActivity(roots: roots.map(\.path), since: since, until: marker.eventId, countFrom: intervalStart ?? marker.eventId, timeout: replayTimeout)
         if simulateActivityGap { replay.allGap = true; replay.gaps.append("Simulated gap (self-test)") }
         activity = replay
+    }
+    if let replay = activity, let start = intervalStart {
         let status = replay.allGap || !replay.gapRoots.isEmpty ? "gap" : "complete"
         var groups = replay.counters.map { key, count -> [String: Any] in
             let parts = key.components(separatedBy: "\u{1}")
             return ["path": tilde(parts[0] + "/" + parts[1]), "created": count[0], "modified": count[1], "removed": count[2], "renamed": count[3], "cloned": count[4], "events": count[5]]
         }
         groups.sort { ($0["events"] as! Int) > ($1["events"] as! Int) }
-        activityJSON = ["status": status, "device_uuid": marker.device ?? "", "since_event": baseline!.eventId, "until_event": marker.eventId, "events": replay.events,
+        activityJSON = ["status": status, "device_uuid": marker.device ?? "", "since_event": start, "until_event": marker.eventId, "events": replay.events,
                         "distinct_paths": replay.distinct.count, "distinct_paths_capped": replay.distinctCapped, "truncated": replay.truncated,
                         "groups": Array(groups.prefix(25)), "gaps": Array(Set(replay.gaps)).sorted().prefix(10).map { $0 }]
     } else {
         let reason: String
         if baseline == nil { reason = "No event marker from an earlier reading yet; file activity starts with the next interval." }
+        else if marker.device == nil || !deviceMatches { reason = "The file event database changed (volume UUID differs), so history before this reading is not continuous." }
         else if baseline!.readingId != previousId { reason = "The previous reading has no event marker, so this interval's history cannot be bounded." }
-        else if marker.device == nil || baseline!.device != marker.device { reason = "The file event database changed (volume UUID differs), so history before this reading is not continuous." }
-        else if !markerFresh { reason = "The previous marker is more than 6 hours old; macOS may have purged that history, so all folders were re-measured." }
+        else if readingTime - baseline!.timestamp > maxReplayAge { reason = "The previous marker is more than 6 hours old; macOS may have purged that history, so all folders were re-measured." }
         else { reason = "File event IDs went backwards." }
         activityJSON = ["status": "unavailable", "reason": reason]
     }
+    func rootContinuous(_ root: String) -> Bool { activity.map { !$0.allGap && !$0.gapRoots.contains(root) && $0.historyDone } ?? false }
 
     // 2. Folder measurements.
     var state = baseline?.roots ?? [:]
     let deadline = started.addingTimeInterval(budget)
     var changes = [[String: Any]](), incomparable = [[String: Any]](), rootSummaries = [[String: Any]]()
-    var measuredCount = 0, carriedCount = 0, pendingCount = 0, fullRoots = [String]()
+    var measuredCount = 0, carriedCount = 0, pendingCount = 0, firstCount = 0, deferredCount = 0, fullRoots = [String]()
     struct Work { let root: String; let child: String; let priority: Int }
-    var work = [Work](), listings = [String: Set<String>](), dirtyByRoot = [String: Set<String>]()
+    var work = [Work](), listings = [String: Set<String>](), trusted = Set<String>()
     for root in roots {
-        var rootState = state[root.path] ?? RootState()
-        let continuous = markerContinuous && activity.map { !$0.allGap && !$0.gapRoots.contains(root.path) } ?? false
-        guard let names = try? fm.contentsOfDirectory(atPath: root.path) else { state[root.path] = rootState; continue }
+        let rootState = state[root.path] ?? RootState()
+        let continuous = rootContinuous(root.path)
+        guard let names = try? fm.contentsOfDirectory(atPath: root.path) else { continue }
         let listing = Set(names.prefix(3000))
         listings[root.path] = listing
-        let dirty = continuous ? (activity?.dirty(root.path) ?? []) : Set(listing)
-        dirtyByRoot[root.path] = dirty
         if !continuous { fullRoots.append(root.label) }
         for name in listing {
-            if dirty.contains(name) { work.append(Work(root: root.path, child: name, priority: 0)) }
-            else if let child = rootState.children[name] {
-                if child.pending || !child.complete { work.append(Work(root: root.path, child: name, priority: 2)) }
-                else if started.timeIntervalSince1970 - child.measuredAt > 6 * 3600 { work.append(Work(root: root.path, child: name, priority: 3)) }
-            } else { work.append(Work(root: root.path, child: name, priority: 1)) }  // new, or listed but never measured
+            let key = root.path + "\u{1}" + name
+            guard let child = rootState.children[name], !child.isPlaceholder else { work.append(Work(root: root.path, child: name, priority: 1)); continue }  // new or never measured
+            if child.complete && continuous && child.hasFreshValue(at: readingTime) && !(activity?.changed(root.path, name, after: child.validEvent!) ?? true) {
+                trusted.insert(key)                                         // unchanged since its own measurement
+                if started.timeIntervalSince1970 - child.measuredAt > 6 * 3600 { work.append(Work(root: root.path, child: name, priority: 3)) }
+            } else if child.complete { work.append(Work(root: root.path, child: name, priority: 0)) }   // changed, gap, or stale
+            else if child.retryDue(at: readingTime) { work.append(Work(root: root.path, child: name, priority: 2)) }
+            else { deferredCount += 1 }                                       // protected or repeatedly timed out
         }
-        state[root.path] = rootState
     }
     // Deduplicate, keep the highest priority, cap drift refreshes at 20 per check.
     var seen = Set<String>(), queue = [Work](), refreshes = 0
@@ -352,14 +439,18 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
     for item in queue {
         let remaining = deadline.timeIntervalSince(now())
         guard remaining > 0.05 else { break }
-        guard listings[item.root]?.contains(item.child) == true else { continue }
         let path = item.root + "/" + item.child
+        let walkMarker = currentEventMarker(item.root)
         let result = measureChild(path, budget: min(remaining, 15))
         measuredCount += 1
         measured.insert(item.root + "\u{1}" + item.child)
         var rootState = state[item.root] ?? RootState()
         let old = rootState.children[item.child]
-        let fresh = ChildState(logical: result.logical, allocated: result.allocated, files: result.files, complete: result.complete, status: result.status, measuredAt: now().timeIntervalSince1970, validThrough: readingId, pending: !result.complete)
+        if result.status == "absent" { rootState.children[item.child] = nil; state[item.root] = rootState; continue }  // vanished since listing
+        let attempts = result.complete ? 0 : (old?.attempts ?? 0) + 1
+        var fresh = ChildState(logical: result.logical, allocated: result.allocated, files: result.files, complete: result.complete, status: result.status, measuredAt: now().timeIntervalSince1970, validThrough: readingId, pending: !result.complete,
+                               validEvent: result.complete ? walkMarker.eventId : nil, validAt: result.complete ? now().timeIntervalSince1970 : nil, attempts: attempts, lastAttempt: now().timeIntervalSince1970, origin: "scheduled", everValid: true)
+        if result.complete && walkMarker.device != marker.device { fresh.validEvent = nil }
         func record(_ kind: String, before: ChildState?) {
             let dl = fresh.logical - (before?.logical ?? 0), da = fresh.allocated - (before?.allocated ?? 0)
             guard abs(dl) >= folderChangeThreshold || abs(da) >= folderChangeThreshold else { return }
@@ -367,38 +458,37 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
                             "before_logical": before?.logical ?? 0, "after_logical": fresh.logical, "before_allocated": before?.allocated ?? 0, "after_allocated": fresh.allocated,
                             "before_files": before?.files ?? 0, "after_files": fresh.files, "before_measured_at": before?.measuredAt ?? 0, "after_measured_at": fresh.measuredAt])
         }
-        if let old {
+        if let old, !old.isPlaceholder, old.everValid == true || old.validThrough > 0 {
             if old.validThrough == previousId && old.complete && fresh.complete { record(fresh.allocated >= old.allocated ? "grew" : "shrank", before: old) }
             else if old.validThrough != previousId { incomparable.append(["path": tilde(path), "reason": "Not measured at the previous reading"]) }
             else { incomparable.append(["path": tilde(path), "reason": "Incomplete measurement (\(fresh.complete ? old.status : fresh.status))"]) }
-        } else if rootState.listingValidThrough == previousId && previousId > 0 && fresh.complete {
-            record("new", before: nil)
-        } else if previousId > 0 {
-            incomparable.append(["path": tilde(path), "reason": "No measurement at the previous reading"])
+        } else if old == nil && rootState.listingValidThrough == previousId && previousId > 0 && fresh.complete {
+            record("new", before: nil)                                        // appeared during the interval
+        } else {
+            firstCount += 1                                                   // first measurement: a baseline, never growth
         }
         rootState.children[item.child] = fresh
         state[item.root] = rootState
     }
-    // Carry forward, mark unreached work pending, and record removals.
+    // Carry forward trusted folders, mark unreached work pending, and record removals.
     for root in roots {
-        guard var rootState = state[root.path], let listing = listings[root.path] else { pendingCount += state[root.path]?.children.count ?? 0; continue }
-        let continuous = markerContinuous && activity.map { !$0.allGap && !$0.gapRoots.contains(root.path) } ?? false
+        guard var rootState = state[root.path] ?? (listings[root.path] != nil ? RootState() : nil), let listing = listings[root.path] else { pendingCount += state[root.path]?.children.count ?? 0; continue }
         for (name, var child) in rootState.children {
             let key = root.path + "\u{1}" + name
             if !listing.contains(name) {
-                if child.validThrough == previousId && child.complete && previousId > 0 {
-                    let path = root.path + "/" + name
-                    if abs(child.allocated) >= folderChangeThreshold || abs(child.logical) >= folderChangeThreshold {
-                        changes.append(["root": tilde(root.path), "path": tilde(path), "child": name, "kind": "removed", "before_logical": child.logical, "after_logical": Int64(0), "before_allocated": child.allocated, "after_allocated": Int64(0),
-                                        "before_files": child.files, "after_files": 0, "before_measured_at": child.measuredAt, "after_measured_at": now().timeIntervalSince1970])
-                    }
+                // Only a folder valid at the previous reading can show a removal; others vanish silently.
+                if child.validThrough == previousId && child.complete && previousId > 0 && (abs(child.allocated) >= folderChangeThreshold || abs(child.logical) >= folderChangeThreshold) {
+                    changes.append(["root": tilde(root.path), "path": tilde(root.path + "/" + name), "child": name, "kind": "removed", "before_logical": child.logical, "after_logical": Int64(0), "before_allocated": child.allocated, "after_allocated": Int64(0),
+                                    "before_files": child.files, "after_files": 0, "before_measured_at": child.measuredAt, "after_measured_at": now().timeIntervalSince1970])
                 }
                 rootState.children[name] = nil; continue
             }
             if measured.contains(key) { continue }
-            let dirty = continuous ? (dirtyByRoot[root.path]?.contains(name) ?? true) : true
-            if !dirty && continuous && child.validThrough == previousId && !child.pending { child.validThrough = readingId; carriedCount += 1 }
-            else { child.pending = true; pendingCount += 1 }
+            if trusted.contains(key) {
+                if child.everValid != true { firstCount += 1 }
+                child.validThrough = readingId; child.validEvent = marker.eventId; child.validAt = readingTime; child.pending = false; child.everValid = true
+                carriedCount += 1
+            } else if child.complete || child.isPlaceholder || child.retryDue(at: readingTime) { child.pending = true; pendingCount += 1 }
             rootState.children[name] = child
         }
         for name in listing where rootState.children[name] == nil {
@@ -408,11 +498,11 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
         rootState.listingValidThrough = readingId
         state[root.path] = rootState
         let children = rootState.children.values
-        let current = children.filter { $0.validThrough == readingId }
+        let current = children.filter { $0.validThrough == readingId && $0.complete }
         rootSummaries.append(["path": tilde(root.path), "label": root.label, "children": children.count, "current_children": current.count,
                               "logical": current.reduce(Int64(0)) { $0 + $1.logical }, "allocated": current.reduce(Int64(0)) { $0 + $1.allocated },
-                              "complete": current.count == children.count && current.allSatisfy(\.complete),
-                              "permission_limited": children.filter { $0.status == "partial" }.count])
+                              "complete": current.count == children.count,
+                              "permission_limited": children.filter(\.unavailable).count])
     }
     for root in state.keys where !roots.contains(where: { $0.path == root }) { state[root] = nil }  // roots no longer monitored
     changes.sort { abs(int64($0["after_allocated"]) - int64($0["before_allocated"])) > abs(int64($1["after_allocated"]) - int64($1["before_allocated"])) }
@@ -459,15 +549,17 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
     }
     activityJSON["samples"] = pathSamples
 
-    // 5. Persist the baseline for the next interval.
+    // 5. Persist the baseline for the next interval, and the coverage summary.
     let next = AttributionBaseline(readingId: readingId, eventId: marker.eventId, device: marker.device, timestamp: readingTime, roots: state)
     try? encodeState(db, "attribution_baseline", next)
+    let degraded: String? = baseline == nil ? nil : (activity == nil ? (activityJSON["reason"] as? String) : ((activity!.allGap || !activity!.gapRoots.isEmpty) ? "File-change history had a gap; affected folders are re-measured." : nil))
+    saveLifecycle(db, baselineLifecycle(next, roots: roots, at: readingTime, degraded: degraded, previous: decodeLifecycle(db)))
 
     var evidence: [String: Any] = [
         "version": attributionVersion, "reading_id": readingId, "previous_reading_id": previous.map { NSNumber(value: $0.id) } ?? NSNull(), "collected_at": started.timeIntervalSince1970,
         "interval": ["start": previous.map { NSNumber(value: $0.time) } ?? NSNull(), "end": readingTime],
         "folders": ["status": folderStatus, "method": fullRoots.isEmpty ? "incremental" : (fullRoots.count == roots.count ? "full" : "mixed"), "full_rescan_roots": fullRoots,
-                    "measured": measuredCount, "carried": carriedCount, "pending": pendingCount, "roots": rootSummaries,
+                    "measured": measuredCount, "carried": carriedCount, "pending": pendingCount, "first_measurements": firstCount, "deferred": deferredCount, "roots": rootSummaries,
                     "changes": Array(changes.prefix(40)), "changes_total": changes.count,
                     "incomparable": Array(incomparable.prefix(20)), "incomparable_total": incomparable.count, "rejected_roots": rejected],
         "file_activity": activityJSON,
@@ -484,6 +576,169 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
         evidence["file_activity"] = activityJSON
     }
     return evidence
+}
+
+// MARK: Lifecycle
+
+struct InitializerProgress: Codable {
+    var startedAt: Double
+    var finishedAt: Double?
+    var status: String              // running | terminal | interrupted | time_limit | busy | deferred
+    var measurements = 0            // folder measurements (one bounded walk each)
+    var reconciliations = 0         // re-measurements after file activity during initialization
+    var peakMemoryBytes: Int64?
+}
+struct BaselineLifecycle: Codable {
+    var state: String               // not_initialized | initializing | ready | partial | degraded
+    var discovered = 0, baselined = 0, pending = 0, incomplete = 0, unavailable = 0
+    var comparableNext = 0          // folders valid at the latest reading (comparable for the next interval)
+    var degradedReason: String?
+    var updatedAt: Double
+    var initializer: InitializerProgress?
+}
+func decodeLifecycle(_ db: Database) -> BaselineLifecycle? { decodeState(db, "attribution_lifecycle", as: BaselineLifecycle.self) }
+func saveLifecycle(_ db: Database, _ value: BaselineLifecycle) { try? encodeState(db, "attribution_lifecycle", value) }
+
+// Coverage, from per-folder state. Never counts an unmeasured folder as baselined.
+func baselineLifecycle(_ baseline: AttributionBaseline?, roots: [MonitoredRoot], at now: Double, degraded: String?, previous: BaselineLifecycle?) -> BaselineLifecycle {
+    var value = BaselineLifecycle(state: "not_initialized", updatedAt: now, initializer: previous?.initializer)
+    guard let baseline else { return value }
+    let monitored = Set(roots.map(\.path))
+    for (root, rootState) in baseline.roots where monitored.contains(root) {
+        for (_, child) in rootState.children {
+            value.discovered += 1
+            if child.complete && child.validThrough == baseline.readingId && baseline.readingId > 0 { value.comparableNext += 1 }
+            if child.complete && child.hasFreshValue(at: now) { value.baselined += 1 }
+            else if child.complete || child.isPlaceholder { value.pending += 1 }
+            else if child.unavailable { value.unavailable += 1 }
+            else if (child.attempts ?? 0) >= 3 { value.incomplete += 1 }
+            else { value.pending += 1 }
+        }
+    }
+    value.degradedReason = degraded
+    if degraded != nil && value.baselined > 0 { value.state = "degraded" }
+    else if value.pending > 0 || value.discovered == 0 { value.state = "initializing" }
+    else if value.incomplete + value.unavailable > 0 { value.state = "partial" }
+    else { value.state = "ready" }
+    return value
+}
+
+// MARK: Initializer
+
+struct InitializerOptions {
+    var sliceBudget: TimeInterval = 8          // measuring time per checkpoint while holding the baseline lock
+    var perChildBudget: TimeInterval = 30
+    var maxDuration: TimeInterval = 1800
+    var pause: TimeInterval = 1                // yield between slices
+    var reconcileRounds = 3
+    var stopAfterMeasurements: Int?            // tests: simulate interruption
+    var onMeasured: ((String) -> Void)?        // tests: filesystem activity during initialization
+    var simulateGap = false
+}
+
+func peakMemoryBytes() -> Int64 { var usage = rusage(); getrusage(RUSAGE_SELF, &usage); return Int64(usage.ru_maxrss) }
+
+// Builds a complete baseline without waiting for scheduled checks. Each folder keeps its
+// own measurement time and FSEvents marker; nothing is assigned a shared timestamp.
+// Returns the outcome and the resulting coverage.
+func initializeBaseline(dbPath: String, directory: URL, roots candidates: [MonitoredRoot], within base: String = home.path, options: InitializerOptions = InitializerOptions()) -> (outcome: String, lifecycle: BaselineLifecycle?) {
+    guard let worker = FileLock(directory.appendingPathComponent("initializer.lock").path, wait: 0) else { return ("already_running", nil) }
+    defer { _ = worker }
+    // Low Power Mode: keep going, but more gently (shorter slices, longer pauses).
+    var options = options
+    if ProcessInfo.processInfo.isLowPowerModeEnabled && options.pause > 0 { options.sliceBudget = min(options.sliceBudget, 4); options.pause = max(options.pause, 5) }
+    let started = Date()
+    var progress = InitializerProgress(startedAt: started.timeIntervalSince1970, status: "running")
+    var measuredThisRun = [String: UInt64]()           // key → validEvent, for reconciliation
+    var rounds = 0, outcome = "terminal", lifecycle: BaselineLifecycle?
+    let (roots, _) = validatedRoots(candidates, within: base)
+    loop: while true {
+        if Date().timeIntervalSince(started) > options.maxDuration { outcome = "time_limit"; break }
+        guard let lock = FileLock(directory.appendingPathComponent("attribution.lock").path, wait: 60), let db = try? Database(dbPath) else { outcome = "busy"; break }
+        let marker = currentEventMarker(roots.first?.path ?? home.path)
+        var baseline = decodeState(db, "attribution_baseline", as: AttributionBaseline.self).map(migrated) ?? AttributionBaseline(readingId: 0, eventId: 0, device: marker.device, timestamp: 0)
+        if baseline.device != marker.device {                // event database changed: per-folder markers are void
+            for (root, var rootState) in baseline.roots { for name in rootState.children.keys { rootState.children[name]?.validEvent = nil; rootState.children[name]?.validAt = nil }; baseline.roots[root] = rootState }
+            baseline.device = marker.device
+        }
+        // Current listings: new folders get placeholders; deleted folders are dropped (no negative growth is recorded here).
+        for root in roots {
+            guard let names = try? fm.contentsOfDirectory(atPath: root.path) else { continue }
+            let listing = Set(names.prefix(3000))
+            var rootState = baseline.roots[root.path] ?? RootState()
+            for name in listing where rootState.children[name] == nil { rootState.children[name] = ChildState(logical: 0, allocated: 0, files: 0, complete: false, status: "not yet measured", measuredAt: 0, validThrough: 0, pending: true) }
+            for name in rootState.children.keys where !listing.contains(name) { rootState.children[name] = nil; measuredThisRun[root.path + "\u{1}" + name] = nil }
+            baseline.roots[root.path] = rootState
+        }
+        let now = Date().timeIntervalSince1970
+        func needsWork(_ child: ChildState) -> Bool {
+            if child.isPlaceholder { return true }
+            if child.complete { return !child.hasFreshValue(at: now) }
+            if child.unavailable { return child.lastAttempt == nil || child.retryDue(at: now) }
+            return (child.attempts ?? 0) < 3 || child.retryDue(at: now)
+        }
+        var queue = [(String, String)]()
+        for root in roots { for (name, child) in baseline.roots[root.path]?.children ?? [:] where needsWork(child) { queue.append((root.path, name)) } }
+        queue.sort { $0.0 == $1.0 ? $0.1 < $1.1 : $0.0 < $1.0 }
+
+        // Reconcile: folders measured earlier in this run that changed afterwards are measured again.
+        if queue.isEmpty, !measuredThisRun.isEmpty, rounds < options.reconcileRounds, let since = measuredThisRun.values.min() {
+            rounds += 1
+            let replay = replayFileActivity(roots: roots.map(\.path), since: since, until: marker.eventId, countFrom: marker.eventId)
+            if options.simulateGap { replay.allGap = true }
+            for (key, event) in measuredThisRun {
+                let parts = key.components(separatedBy: "\u{1}")
+                guard parts.count == 2 else { continue }
+                if replay.allGap || replay.gapRoots.contains(parts[0]) || !replay.historyDone || replay.changed(parts[0], parts[1], after: event) {
+                    baseline.roots[parts[0]]?.children[parts[1]]?.validEvent = nil
+                    baseline.roots[parts[0]]?.children[parts[1]]?.validAt = nil
+                    queue.append((parts[0], parts[1])); progress.reconciliations += 1
+                }
+            }
+            measuredThisRun = [:]
+        }
+        if queue.isEmpty {
+            try? encodeState(db, "attribution_baseline", baseline)
+            progress.status = "terminal"; progress.finishedAt = Date().timeIntervalSince1970; progress.peakMemoryBytes = peakMemoryBytes()
+            var value = baselineLifecycle(baseline, roots: roots, at: Date().timeIntervalSince1970, degraded: nil, previous: decodeLifecycle(db)); value.initializer = progress
+            saveLifecycle(db, value); lifecycle = value
+            break loop
+        }
+        // One slice of measurements, then a checkpoint.
+        let sliceEnd = Date().addingTimeInterval(options.sliceBudget)
+        var interrupted = false
+        for (root, name) in queue {
+            if Date() >= sliceEnd { break }
+            let walkMarker = currentEventMarker(root)
+            let result = measureChild(root + "/" + name, budget: options.perChildBudget)
+            progress.measurements += 1
+            let key = root + "\u{1}" + name
+            let old = baseline.roots[root]?.children[name]
+            if result.status == "absent" { baseline.roots[root]?.children[name] = nil; measuredThisRun[key] = nil }
+            else {
+                let at = Date().timeIntervalSince1970
+                // validThrough stays unmatched: this value describes the walk time, not any reading.
+                var fresh = ChildState(logical: result.logical, allocated: result.allocated, files: result.files, complete: result.complete, status: result.status, measuredAt: at, validThrough: Int64.min, pending: !result.complete,
+                                       validEvent: nil, validAt: nil, attempts: result.complete ? 0 : (old?.attempts ?? 0) + 1, lastAttempt: at, origin: "initializer", everValid: old?.everValid)
+                if result.complete && walkMarker.device == baseline.device { fresh.validEvent = walkMarker.eventId; fresh.validAt = at; measuredThisRun[key] = walkMarker.eventId }
+                baseline.roots[root]?.children[name] = fresh
+            }
+            options.onMeasured?(key)
+            if let stop = options.stopAfterMeasurements, progress.measurements >= stop { interrupted = true; break }
+        }
+        try? encodeState(db, "attribution_baseline", baseline)       // durable checkpoint
+        progress.peakMemoryBytes = peakMemoryBytes()
+        var value = baselineLifecycle(baseline, roots: roots, at: Date().timeIntervalSince1970, degraded: nil, previous: decodeLifecycle(db)); value.initializer = progress
+        saveLifecycle(db, value); lifecycle = value
+        _ = lock
+        if interrupted { outcome = "interrupted"; break }
+        Thread.sleep(forTimeInterval: options.pause)
+    }
+    if outcome != "terminal", let db = try? Database(dbPath), var value = decodeLifecycle(db) {
+        progress.status = outcome; progress.peakMemoryBytes = peakMemoryBytes()
+        value.initializer = progress; saveLifecycle(db, value); lifecycle = value
+    }
+    return (outcome, lifecycle)
 }
 
 // MARK: Self-test
@@ -547,8 +802,7 @@ func attributionSelfTest(_ test: (Bool, String) throws -> Void) throws {
     try test(delta(change(second, "w1"), "logical") == 3_000_000 && delta(change(second, "w2"), "logical") == 5_000_000, "simultaneous writers into separate folders measured independently")
     try test(change(second, "c_new")?["kind"] as? String == "new" && delta(change(second, "c_new"), "logical") == 2_000_000, "folder created during the interval reported as new")
     try test(change(second, "c_idle") == nil && (folders(second)["carried"] as? Int ?? 0) >= 1, "untouched folder carried forward without re-measuring")
-    let locked = (folders(second)["incomparable"] as? [[String: Any]] ?? []).first { ($0["path"] as? String ?? "").hasSuffix("c_locked") }
-    try test(locked != nil && change(second, "c_locked") == nil, "permission-denied folder is incomparable, never a change")
+    try test((folders(second)["deferred"] as? Int ?? 0) >= 1 && change(second, "c_locked") == nil, "permission-denied folder is deferred as unavailable, never a change or a retry every check")
     let activity = second["file_activity"] as? [String: Any] ?? [:]
     let groups = activity["groups"] as? [[String: Any]] ?? []
     try test(activity["status"] as? String == "complete" && groups.contains { ($0["path"] as? String ?? "").hasSuffix("c_create") && ($0["created"] as? Int ?? 0) >= 1 }, "file activity replayed from FSEvents history between readings")
@@ -610,4 +864,167 @@ func attributionSelfTest(_ test: (Bool, String) throws -> Void) throws {
     try retained.write("INSERT INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [Int64(424242), 0.0, "{}"])
     try retained.retain(Date().timeIntervalSince1970)
     try test(try retained.rows("SELECT * FROM interval_evidence WHERE reading_id=424242").isEmpty, "attribution rows are removed with their reading")
+}
+
+func baselineInitializationSelfTest(_ test: (Bool, String) throws -> Void) throws {
+    let sandbox = "/private/tmp/storage-monitor-init-\(UUID().uuidString)"
+    defer { _ = chmod(sandbox + "/messy/locked", 0o700); try? fm.removeItem(atPath: sandbox) }
+    func make(_ root: String, _ children: [String: Int]) throws {
+        for (name, bytes) in children {
+            if name.hasSuffix(".bin") { try fm.createDirectory(atPath: sandbox + "/" + root, withIntermediateDirectories: true); try Data(count: bytes).write(to: URL(fileURLWithPath: sandbox + "/" + root + "/" + name)) }
+            else { try fm.createDirectory(atPath: sandbox + "/" + root + "/" + name, withIntermediateDirectories: true); try Data(count: bytes).write(to: URL(fileURLWithPath: sandbox + "/" + root + "/" + name + "/data.bin")) }
+        }
+    }
+    func roots(_ name: String) -> [MonitoredRoot] { [MonitoredRoot(path: sandbox + "/" + name, label: name)] }
+    func dir(_ name: String) -> URL { let url = URL(fileURLWithPath: sandbox + "/state-" + name); try? privateDirectory(url); return url }
+    func db(_ name: String) -> String { dir(name).appendingPathComponent("history.sqlite3").path }
+    var fast = InitializerOptions(); fast.pause = 0
+    func baseline(_ name: String) -> AttributionBaseline? { (try? Database(db(name))).flatMap { decodeState($0, "attribution_baseline", as: AttributionBaseline.self) } }
+    func child(_ name: String, _ root: String, _ child: String) -> ChildState? { baseline(name)?.roots[canonicalPath(sandbox + "/" + root)!]?.children[child] }
+    let notificationsBefore = notificationRequests
+
+    // 1–2. Clean first initialization: every accessible folder, no scheduled check needed.
+    try make("clean", ["a": 1_000_000, "b": 2_000_000, "c": 3_000_000, "top.bin": 500_000])
+    let clean = initializeBaseline(dbPath: db("clean"), directory: dir("clean"), roots: roots("clean"), within: "/private/tmp", options: fast)
+    try test(clean.outcome == "terminal" && clean.lifecycle?.state == "ready", "initialization completes without a scheduled check (state \(clean.lifecycle?.state ?? "?"))")
+    try test(clean.lifecycle?.discovered == 4 && clean.lifecycle?.baselined == 4 && clean.lifecycle?.pending == 0, "every accessible folder baselined (\(clean.lifecycle?.baselined ?? -1) of \(clean.lifecycle?.discovered ?? -1))")
+    let a = child("clean", "clean", "a")
+    try test(a?.validEvent != nil && a?.validAt != nil && a?.validThrough == Int64.min && a?.origin == "initializer", "each folder keeps its own measurement marker; none is tied to a reading")
+    let times = Set(["a", "b", "c"].compactMap { child("clean", "clean", $0)?.measuredAt })
+    try test(times.count == 3, "folders keep individual measurement times (no shared baseline timestamp)")
+
+    // 14. First scheduled check after initialization: no re-walk, no growth, first measurements.
+    func scheduled(_ name: String, _ id: Int64, previous: (Int64, Double)?, time: Double = Date().timeIntervalSince1970, gap: Bool = false) throws -> [String: Any] {
+        let database = try Database(db(name)); Thread.sleep(forTimeInterval: 1.2)
+        return collectIntervalEvidence(db: database, readingId: id, readingTime: time, previous: previous.map { (id: $0.0, time: $0.1) }, marker: currentEventMarker(sandbox), roots: roots(name), within: "/private/tmp", simulateActivityGap: gap, lockPath: dir(name).appendingPathComponent("attribution.lock").path)
+    }
+    func folders(_ e: [String: Any]) -> [String: Any] { e["folders"] as? [String: Any] ?? [:] }
+    let first = try scheduled("clean", 1, previous: nil)
+    try test(folders(first)["measured"] as? Int == 0 && folders(first)["carried"] as? Int == 4, "first scheduled check trusts initializer values without re-walking (\(folders(first)["measured"] ?? -1) measured)")
+    try test((folders(first)["changes"] as? [Any])?.isEmpty == true && folders(first)["first_measurements"] as? Int == 4, "first measurement is never growth (4 first measurements, 0 changes)")
+    // 15. Valid growth after the baseline is established.
+    try Data(count: 3_000_000).write(to: URL(fileURLWithPath: sandbox + "/clean/a/more.bin"))
+    let second = try scheduled("clean", 2, previous: (1, 0))
+    let grew = (folders(second)["changes"] as? [[String: Any]])?.first { $0["child"] as? String == "a" }
+    try test(grew != nil && int64(grew?["after_logical"]) - int64(grew?["before_logical"]) == 3_000_000 && folders(second)["carried"] as? Int == 3, "growth after initialization is measured exactly; untouched folders carried")
+    // 16. Historical evidence is never rewritten by initialization.
+    let history = try Database(db("clean"))
+    try history.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [Int64(2), 0.0, json(second)])
+    let stored = try history.rows("SELECT evidence FROM interval_evidence WHERE reading_id=2").first?["evidence"]
+    _ = initializeBaseline(dbPath: db("clean"), directory: dir("clean"), roots: roots("clean"), within: "/private/tmp", options: fast)
+    try test(try Database(db("clean")).rows("SELECT evidence FROM interval_evidence WHERE reading_id=2").first?["evidence"] == stored, "historical interval evidence is unchanged by a later initialization")
+    // 9. Stale per-folder markers are not trusted.
+    let stale = try scheduled("clean", 3, previous: (2, 0), time: Date().timeIntervalSince1970 + maxReplayAge + 60)
+    try test(folders(stale)["carried"] as? Int == 0 && (folders(stale)["measured"] as? Int ?? 0) == 4, "markers older than 6 h are re-measured, never carried")
+    // Degraded: an FSEvents gap after initialization.
+    let gapped = try scheduled("clean", 4, previous: (3, 0), gap: true)
+    try test(folders(gapped)["carried"] as? Int == 0 && decodeLifecycle(try Database(db("clean")))?.state == "degraded", "FSEvents gap after initialization: nothing carried, coverage reported degraded")
+
+    // 3–4. Interrupted midway, then resumed without repeating finished work.
+    try make("resume", ["f1": 10_000, "f2": 10_000, "f3": 10_000, "f4": 10_000, "f5": 10_000, "f6": 10_000])
+    var interrupt = fast; interrupt.stopAfterMeasurements = 2
+    let partial = initializeBaseline(dbPath: db("resume"), directory: dir("resume"), roots: roots("resume"), within: "/private/tmp", options: interrupt)
+    try test(partial.outcome == "interrupted" && partial.lifecycle?.state == "initializing" && partial.lifecycle?.baselined == 2 && partial.lifecycle?.pending == 4, "interrupted initialization reports progress (2 of 6) and stays initializing")
+    let resumed = initializeBaseline(dbPath: db("resume"), directory: dir("resume"), roots: roots("resume"), within: "/private/tmp", options: fast)
+    try test(resumed.outcome == "terminal" && resumed.lifecycle?.baselined == 6 && resumed.lifecycle?.initializer?.measurements == 4, "resume after restart measures only the remaining 4 folders")
+
+    // 5–7. Creation, modification and deletion during initialization.
+    try make("busy", ["m1": 100_000, "m2": 100_000, "m3": 100_000, "gone": 100_000])
+    let busyRoot = canonicalPath(sandbox + "/busy")!
+    var duringInit = fast
+    duringInit.onMeasured = { key in
+        if key == busyRoot + "\u{1}m1" {
+            try? fm.createDirectory(atPath: sandbox + "/busy/created", withIntermediateDirectories: true)
+            try? Data(count: 200_000).write(to: URL(fileURLWithPath: sandbox + "/busy/created/new.bin"))
+            try? Data(count: 2_000_000).write(to: URL(fileURLWithPath: sandbox + "/busy/m1/grown.bin"))   // m1 already measured
+            try? fm.removeItem(atPath: sandbox + "/busy/gone")
+            Thread.sleep(forTimeInterval: 1.2)
+        }
+    }
+    let busy = initializeBaseline(dbPath: db("busy"), directory: dir("busy"), roots: roots("busy"), within: "/private/tmp", options: duringInit)
+    let m1 = child("busy", "busy", "m1")
+    try test(busy.outcome == "terminal" && child("busy", "busy", "created")?.complete == true, "folder created during initialization gets its own baseline")
+    try test(m1?.logical == 2_100_000 && (busy.lifecycle?.initializer?.reconciliations ?? 0) >= 1, "folder modified after its measurement is reconciled (stored \(m1?.logical ?? -1) bytes, actual 2,100,000)")
+    try test(child("busy", "busy", "gone") == nil && busy.lifecycle?.discovered == 4, "folder deleted during initialization is dropped")
+    let afterDelete = try scheduled("busy", 1, previous: nil)
+    try test(!((folders(afterDelete)["changes"] as? [[String: Any]]) ?? []).contains { $0["kind"] as? String == "removed" }, "deleted folder produces no negative growth")
+
+    // 8. FSEvents gap during initialization: earlier measurements are re-measured, not trusted.
+    try make("gap", ["g1": 10_000, "g2": 10_000])
+    var gapOptions = fast; gapOptions.simulateGap = true
+    let gapRun = initializeBaseline(dbPath: db("gap"), directory: dir("gap"), roots: roots("gap"), within: "/private/tmp", options: gapOptions)
+    try test(gapRun.outcome == "terminal" && gapRun.lifecycle?.initializer?.reconciliations == 6 && gapRun.lifecycle?.initializer?.measurements == 8, "gap during initialization re-measures every affected folder, bounded to 3 rounds")
+
+    // 10–12. Permission-denied and timed-out folders: recorded separately, retried with limits.
+    try make("messy", ["ok": 10_000, "locked": 10_000])
+    for index in 0..<600 { fm.createFile(atPath: sandbox + "/messy/big-\(index % 3)", contents: nil) }   // placeholder files replaced below
+    for index in 0..<3 { try? fm.removeItem(atPath: sandbox + "/messy/big-\(index)") }
+    try fm.createDirectory(atPath: sandbox + "/messy/big", withIntermediateDirectories: true)
+    for index in 0..<3000 { fm.createFile(atPath: sandbox + "/messy/big/\(index)", contents: Data([1])) }
+    _ = chmod(sandbox + "/messy/locked", 0)
+    var slow = fast; slow.perChildBudget = 0.000_001
+    let messy = initializeBaseline(dbPath: db("messy"), directory: dir("messy"), roots: roots("messy"), within: "/private/tmp", options: slow)
+    try test(messy.outcome == "terminal" && messy.lifecycle?.state == "partial" && messy.lifecycle?.unavailable == 1 && messy.lifecycle?.incomplete == 1 && messy.lifecycle?.baselined == 1, "permission-denied and timed-out folders recorded separately (partial: 1 baselined, 1 unavailable, 1 incomplete)")
+    try test(child("messy", "messy", "big")?.attempts == 3 && child("messy", "messy", "big")?.complete == false, "timed-out folder stops after 3 attempts and is never marked complete")
+    let again = initializeBaseline(dbPath: db("messy"), directory: dir("messy"), roots: roots("messy"), within: "/private/tmp", options: slow)
+    try test(again.outcome == "terminal" && again.lifecycle?.initializer?.measurements == 0, "no retry loop: a second run measures nothing")
+    let messyCheck = try scheduled("messy", 1, previous: nil)
+    try test(folders(messyCheck)["deferred"] as? Int == 2 && folders(messyCheck)["measured"] as? Int == 0, "scheduled checks defer unavailable and exhausted folders instead of retrying every 30 minutes")
+
+    // 13. One worker at a time.
+    let held = FileLock(dir("clean").appendingPathComponent("initializer.lock").path, wait: 0)
+    try test(held != nil && initializeBaseline(dbPath: db("clean"), directory: dir("clean"), roots: roots("clean"), within: "/private/tmp", options: fast).outcome == "already_running", "a second initializer exits immediately")
+    _ = held
+    // 17. A busy baseline never blocks the scheduled check indefinitely.
+    let busyLock = FileLock(dir("clean").appendingPathComponent("attribution.lock").path, wait: 0)
+    let clock = Date()
+    let skipped = collectIntervalEvidence(db: try Database(db("clean")), readingId: 9, readingTime: Date().timeIntervalSince1970, previous: nil, marker: currentEventMarker(sandbox), roots: roots("clean"), within: "/private/tmp", lockPath: dir("clean").appendingPathComponent("attribution.lock").path, lockWait: 0.5)
+    try test(folders(skipped)["status"] as? String == "busy" && Date().timeIntervalSince(clock) < 3, "scheduled check skips folder evidence after a bounded wait while the baseline is busy")
+    _ = busyLock
+    // 18. Initialization never notifies.
+    try test(notificationRequests == notificationsBefore, "no notifications during initialization")
+
+    // 20. Baselines written before this change are migrated, not discarded.
+    let legacy = "{\"version\":1,\"readingId\":26,\"eventId\":500,\"device\":\"U\",\"timestamp\":1000,\"roots\":{\"/r\":{\"listingValidThrough\":26,\"children\":{\"x\":{\"logical\":5,\"allocated\":8,\"files\":1,\"complete\":true,\"status\":\"complete\",\"measuredAt\":900,\"validThrough\":26,\"pending\":false},\"y\":{\"logical\":0,\"allocated\":0,\"files\":0,\"complete\":false,\"status\":\"failed\",\"measuredAt\":900,\"validThrough\":26,\"pending\":true}}}}}"
+    let decoded = try JSONDecoder().decode(AttributionBaseline.self, from: Data(legacy.utf8))
+    let upgraded = migrated(decoded)
+    try test(upgraded.roots["/r"]?.children["x"]?.validEvent == 500 && upgraded.roots["/r"]?.children["y"]?.validEvent == nil, "existing baselines decode and migrate (valid folders keep their reading marker)")
+    let legacyLifecycle = baselineLifecycle(upgraded, roots: [MonitoredRoot(path: "/r", label: "r")], at: 1500, degraded: nil, previous: nil)
+    try test(legacyLifecycle.baselined == 1 && legacyLifecycle.unavailable == 1 && legacyLifecycle.state == "partial", "coverage computed for migrated baselines")
+
+    // 6. Both agents writing one database: separate processes, real SQLite locking.
+    let sharedPath = sandbox + "/shared.sqlite3"
+    let shared = try Database(sharedPath)
+    let writer = Process(); writer.executableURL = URL(fileURLWithPath: CommandLine.arguments[0].hasPrefix("/") ? CommandLine.arguments[0] : Bundle.main.executablePath!)
+    writer.arguments = ["stress-state-writes", sharedPath, "400"]
+    let output = Pipe(); writer.standardOutput = output
+    try writer.run()
+    var scheduledFailures = 0
+    for index in 0..<200 {
+        do {
+            try shared.exec("BEGIN IMMEDIATE")
+            try shared.write("INSERT INTO readings(timestamp,container,free,used,volumes) VALUES(?,?,?,?,?)", [Double(index), "C", Int64(1), Int64(1), "[]"])
+            try shared.state("conditions", "free_below_25gb")
+            try shared.exec("COMMIT")
+        } catch { scheduledFailures += 1; try? shared.exec("ROLLBACK") }
+    }
+    writer.waitUntilExit()
+    let writerReport = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+    let integrity = try shared.rows("PRAGMA integrity_check").first?.values.first ?? ""
+    try test(scheduledFailures == 0 && writerReport.contains("failures=0") && integrity == "ok" && (try shared.rows("SELECT count(*) AS n FROM readings").first?["n"]) == "200", "concurrent agent writes: 0 failures in 200 transactions and 400 state writes; integrity ok")
+
+    // 7. Install backup: verified copy, bounded retention.
+    let backupDir = URL(fileURLWithPath: sandbox + "/backup-test"); try privateDirectory(backupDir)
+    let original = try Database(backupDir.appendingPathComponent("history.sqlite3").path)
+    try original.write("INSERT INTO readings(timestamp,container,free,used,volumes) VALUES(?,?,?,?,?)", [1.0, "C", Int64(5), Int64(5), "[]"])
+    var made = [String]()
+    for _ in 0..<4 { if let url = try backupDatabase(backupDir) { made.append(url.lastPathComponent) }; Thread.sleep(forTimeInterval: 1.1) }
+    let kept = ((try? fm.contentsOfDirectory(atPath: backupDir.path)) ?? []).filter { $0.hasPrefix("history.install-backup-") }
+    let restored = try Database(backupDir.appendingPathComponent(made.last!).path)
+    try test(kept.count == 3 && (try restored.rows("SELECT count(*) AS n FROM readings").first?["n"]) == "1", "install backup is verified and the 3 newest are kept")
+
+    // Launch agent: one-shot, background, self-terminating; the scheduled agent is unchanged.
+    let agent = baselineAgentPlist("/x/StorageMonitor", "/x/data")
+    try test(agent["StartCalendarInterval"] == nil && (agent["KeepAlive"] as? [String: Bool])?["SuccessfulExit"] == false && agent["LowPriorityIO"] as? Bool == true && (agent["ProgramArguments"] as? [String])?[1] == "initialize-baseline", "initializer agent runs at load, exits when done, background I/O priority")
+    try test((agentPlist("/x/StorageMonitor", "/x/data")["StartCalendarInterval"] as? [[String: Int]]) == [["Minute": 0], ["Minute": 30]], "scheduled monitoring agent unchanged (:00/:30)")
 }

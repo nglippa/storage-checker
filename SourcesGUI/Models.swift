@@ -208,6 +208,7 @@ struct IntervalEvidence: Sendable {
     let collectedAt: Date?
     let folderStatus: String, folderMethod: String
     let measured: Int, carried: Int, pending: Int
+    var firstMeasurements = 0, deferred = 0
     let changes: [FolderChange], changesTotal: Int
     let incomparable: [(path: String, reason: String)], incomparableTotal: Int
     let roots: [FolderRootSummary]
@@ -248,6 +249,55 @@ struct IntervalEvidence: Sendable {
                                 activityEvents: i(activity["events"]), distinctPaths: i(activity["distinct_paths"]), groups: groups, samples: activity["samples"] as? [String] ?? [], gaps: activity["gaps"] as? [String] ?? [],
                                 sinceEvent: (activity["since_event"] as? NSNumber)?.uint64Value, untilEvent: (activity["until_event"] as? NSNumber)?.uint64Value, device: activity["device_uuid"] as? String,
                                 processStatus: processes["status"] as? String ?? "unavailable", processesSampled: i(processes["sampled"]), correlations: correlations, raw: json)
+            .with(first: i(folders["first_measurements"]), deferred: i(folders["deferred"]))
+    }
+    func with(first: Int, deferred: Int) -> IntervalEvidence { var copy = self; copy.firstMeasurements = first; copy.deferred = deferred; return copy }
+}
+
+// Coverage of the folder baseline right now (state key attribution_lifecycle). This is not
+// interval comparability: each event carries its own evidence for its own interval.
+struct FolderMonitoringStatus: Sendable, Equatable {
+    let state: String
+    let discovered: Int, baselined: Int, pending: Int, incomplete: Int, unavailable: Int, comparableNext: Int
+    let degradedReason: String?
+    let updatedAt: Date?
+    let initializerStatus: String?, initializerMeasurements: Int?
+
+    static func parse(_ json: String) -> FolderMonitoringStatus? {
+        guard let root = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any], let state = root["state"] as? String else { return nil }
+        func i(_ key: String) -> Int { (root[key] as? NSNumber)?.intValue ?? 0 }
+        let initializer = root["initializer"] as? [String: Any]
+        return FolderMonitoringStatus(state: state, discovered: i("discovered"), baselined: i("baselined"), pending: i("pending"), incomplete: i("incomplete"), unavailable: i("unavailable"), comparableNext: i("comparableNext"),
+                                      degradedReason: root["degradedReason"] as? String, updatedAt: (root["updatedAt"] as? NSNumber).map { Date(timeIntervalSince1970: $0.doubleValue) },
+                                      initializerStatus: initializer?["status"] as? String, initializerMeasurements: (initializer?["measurements"] as? NSNumber)?.intValue)
+    }
+    var title: String {
+        switch state {
+        case "initializing": return "Initializing"
+        case "ready": return "Active"
+        case "partial": return "Partial"
+        case "degraded": return "Degraded"
+        default: return "Not started"
+        }
+    }
+    // Counts only; no percentage that would blur coverage with comparability.
+    var summary: String {
+        switch state {
+        case "initializing": return "Initializing · \(baselined) of \(discovered) folders baselined"
+        case "ready": return "Active · \(baselined) folders tracked"
+        case "partial": return (["Partial · \(baselined) tracked"] + (unavailable > 0 ? ["\(unavailable) unavailable"] : []) + (incomplete > 0 ? ["\(incomplete) incomplete"] : [])).joined(separator: " · ")
+        case "degraded": return "Degraded · \(baselined) tracked · re-measuring after a file-history gap"
+        default: return "Not started"
+        }
+    }
+    var detail: String {
+        var lines = ["Discovered \(discovered) · baselined \(baselined) · pending \(pending) · incomplete \(incomplete) · unavailable \(unavailable)"]
+        lines.append("Comparable for the next interval: \(comparableNext)")
+        if let degradedReason { lines.append(degradedReason) }
+        if unavailable > 0 { lines.append("Unavailable folders are protected by macOS and are retried daily.") }
+        if incomplete > 0 { lines.append("Incomplete folders stopped at their time limit three times and are retried every 6 hours.") }
+        lines.append("This describes the current baseline. Each event shows which folders were comparable for its own interval.")
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -289,6 +339,7 @@ struct HistorySnapshot: Sendable {
     let measurements: [Measurement]
     let events: [StorageEvent]
     let loadedAt: Date
+    var folderMonitoring: FolderMonitoringStatus? = nil
     var latest: Measurement? { measurements.last }
     func baseline(seconds: TimeInterval) -> Measurement? {
         guard let latest else { return nil }

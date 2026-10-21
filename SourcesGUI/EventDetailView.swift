@@ -229,7 +229,7 @@ private struct EventInspector: View {
             return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
         case .folders:
             guard let i = event.interval else { return nil }
-            var lines = ["Status: \(i.folderStatus) · method \(i.folderMethod) · \(i.measured) measured, \(i.carried) carried forward, \(i.pending) pending",
+            var lines = ["Status: \(i.folderStatus) · method \(i.folderMethod) · \(i.measured) measured, \(i.carried) carried forward, \(i.pending) pending, \(i.firstMeasurements) first measurements, \(i.deferred) deferred (unavailable or exhausted)",
                          "Reading #\(i.readingId) compared with #\(i.previousReadingId.map(String.init) ?? "none")" + (i.previousReadingId == event.previousMeasurement?.id ? "" : " (does not match this event's previous reading; not used)")]
             for c in i.changes { lines.append("\n\(c.path) [\(c.kind)]\nAllocated \(exactBytes(c.beforeAllocated)) → \(exactBytes(c.afterAllocated)) (\(exactBytes(c.allocatedDelta)))\nLogical \(exactBytes(c.beforeLogical)) → \(exactBytes(c.afterLogical))\nFiles \(c.beforeFiles) → \(c.afterFiles)" + (c.afterMeasuredAt.map { "\nMeasured \(EventPanelText.stamp(c.beforeMeasuredAt ?? $0)) → \(EventPanelText.stamp($0))" } ?? "")) }
             if i.changesTotal > i.changes.count { lines.append("\n\(i.changesTotal - i.changes.count) smaller changes not stored") }

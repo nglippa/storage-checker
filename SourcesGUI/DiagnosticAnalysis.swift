@@ -110,7 +110,8 @@ struct CollectionSummary: Sendable {
     let incomplete: Int
     let refusedLocations: Int
     var hasProblems: Bool { incomplete > 0 || refusedLocations > 0 }
-    var headline: String { incomplete > 0 || refusedLocations > 0 ? "\(incomplete) of \(measured) measurements incomplete" : "All \(measured) measurements complete" }
+    var headlineOverride: String? = nil
+    var headline: String { headlineOverride ?? (incomplete > 0 || refusedLocations > 0 ? "\(incomplete) of \(measured) measurements incomplete" : "All \(measured) measurements complete") }
 }
 
 struct EventAnalysis: Sendable {
@@ -366,8 +367,12 @@ enum CauseAnalyzer {
         guard !event.diagnostics.isEmpty else {
             guard let interval = interval(event) else { return nil }
             let measured = interval.measured + interval.carried
-            // On a first baseline, "not compared" means "no earlier measurement", not incomplete.
-            return CollectionSummary(lines: folderLines, measured: measured, incomplete: interval.comparable ? interval.incomparableTotal : 0, refusedLocations: 0)
+            // Folder evidence is about comparability for this interval, not measurement completeness.
+            let notComparable = interval.comparable ? interval.incomparableTotal : 0
+            var summary = CollectionSummary(lines: folderLines, measured: measured, incomplete: notComparable, refusedLocations: 0)
+            summary.headlineOverride = notComparable > 0 ? "\(notComparable) of \(measured) folders not comparable for this interval" : "All \(measured) folders comparable for this interval"
+            if !interval.comparable { summary.headlineOverride = "Folder baseline started at this reading" }
+            return summary
         }
         let collectors = event.diagnostics.flatMap(\.collectors).filter { $0.status != .absent }
         // Old records repeat the same refused paths across du -A, du -k and find,
@@ -395,6 +400,7 @@ enum CauseAnalyzer {
         guard let interval = interval(event) else { return [] }
         var lines = [String]()
         if interval.folderStatus == "baseline_only" { lines.append("Folder tracking began at this reading; changes can be compared from the next one.") }
+        else if interval.firstMeasurements > 0 { lines.append("\(interval.firstMeasurements) folder\(interval.firstMeasurements == 1 ? " was" : "s were") measured for the first time; \(interval.firstMeasurements == 1 ? "it becomes" : "they become") comparable from the next reading.") }
         if interval.comparable && interval.incomparableTotal > 0 { lines.append("\(interval.incomparableTotal) folder\(interval.incomparableTotal == 1 ? "" : "s") could not be compared (incomplete, protected, or not measured at the previous reading).") }
         if interval.activityStatus == "gap" { lines.append("File-change history has a gap, so changed paths may be incomplete.") }
         if interval.activityStatus == "unavailable", let reason = interval.activityReason { lines.append(reason) }

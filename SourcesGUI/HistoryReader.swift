@@ -36,7 +36,7 @@ actor HistoryReader {
         // The existing writer uses DELETE journal mode. Short read-only transactions
         // preserve its contract; close the connection before parsing JSON/projecting UI.
         try execute("PRAGMA query_only=ON; BEGIN DEFERRED;")
-        let rawReadings: [[String:String]], rawAlerts: [[String:String]], rawDiagnostics: [[String:String]], rawIntervals: [[String:String]]
+        let rawReadings: [[String:String]], rawAlerts: [[String:String]], rawDiagnostics: [[String:String]], rawIntervals: [[String:String]], rawLifecycle: String?
         do {
             rawReadings = try query("SELECT * FROM readings ORDER BY timestamp DESC,id DESC LIMIT 10000")
             rawAlerts = try query("SELECT * FROM alerts ORDER BY timestamp DESC,id DESC LIMIT 5000")
@@ -44,6 +44,8 @@ actor HistoryReader {
             // Older databases do not have this table; it is optional.
             let hasIntervals = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='interval_evidence'").isEmpty
             rawIntervals = hasIntervals ? try query("SELECT reading_id,evidence FROM interval_evidence ORDER BY reading_id DESC LIMIT 10000") : []
+            let hasState = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='state'").isEmpty
+            rawLifecycle = hasState ? try query("SELECT value FROM state WHERE key='attribution_lifecycle'").first?["value"] : nil
             try execute("COMMIT")
         } catch { try? execute("ROLLBACK"); throw error }
         // Finalize and close now, not while UI projection is doing JSON work.
@@ -60,6 +62,8 @@ actor HistoryReader {
         let diagnostics = try rawDiagnostics.map { row in try EvidenceParser.diagnostic(id: integer(row,"id"), timestamp: timestamp(row), json: row["snapshot"] ?? "{}") }
         var intervals = [Int64: IntervalEvidence]()
         for row in rawIntervals { if let id = Int64(row["reading_id"] ?? ""), let value = IntervalEvidence.parse(readingId: id, json: row["evidence"] ?? "") { intervals[id] = value } }
-        return EventProjector.project(measurements: readings, alerts: alerts, diagnostics: diagnostics, intervals: intervals)
+        var snapshot = EventProjector.project(measurements: readings, alerts: alerts, diagnostics: diagnostics, intervals: intervals)
+        snapshot.folderMonitoring = rawLifecycle.flatMap(FolderMonitoringStatus.parse)
+        return snapshot
     }
 }

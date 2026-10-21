@@ -94,6 +94,7 @@ import Foundation
         func label(_ id: String) -> String { identifier(id).map { string($0,kAXDescriptionAttribute) + string($0,kAXValueAttribute) + string($0,kAXTitleAttribute) } ?? "" }
         if CommandLine.arguments.contains("--overview-only") {
             try check(label("overview.recorded").hasPrefix("Last recorded reading"),"recorded reading line has a full accessible label")
+            if let folders = snapshot.folderMonitoring { try check(label("overview.folderMonitoring") == "Folder monitoring: \(folders.summary)","folder monitoring status has an accessible label (\(label("overview.folderMonitoring")))") }
             let before = label("overview.liveStatus")
             try check(before.hasPrefix("Live, updated") || before.hasPrefix("Stale"),"live status has an accessible label (\(before))")
             pause(1.2)

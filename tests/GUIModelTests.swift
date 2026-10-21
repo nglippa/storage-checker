@@ -309,10 +309,43 @@ import SQLite3
             try test(!(EventPanelText.details(event).lowercased().contains("confirmed process") || EventPanelText.details(event).lowercased().contains("caused by")), "\(event.id): no confirmed-process or caused-by wording")
         }
         let baselineSummary = CauseAnalyzer.collection(attributed.events.first { $0.id == "reading:5" }!)
-        try test(baselineSummary?.incomplete == 0 && baselineSummary?.headline.hasPrefix("All ") == true && baselineSummary?.lines.contains { $0.contains("could not be compared") } == false, "first baseline is not reported as incomplete measurements")
+        try test(baselineSummary?.incomplete == 0 && baselineSummary?.headline == "Folder baseline started at this reading" && baselineSummary?.lines.contains { $0.contains("could not be compared") } == false, "first baseline is not reported as incomplete measurements")
         let copied = EventPanelText.details(withFolders)
         try test(copied.contains("Estimated unattributed remainder") && copied.contains("Process correlation: codex pid 3858") && copied.contains("allocated 1,000,000,000 bytes → 2,200,000,000 bytes"), "copied details include folder evidence with exact bytes")
         try test(EventPanelText.raw(withFolders).contains("\"previous_reading_id\":1"), "raw output includes the stored folder evidence")
+
+        // MARK: Folder monitoring coverage
+
+        func lifecycleJSON(_ state: String, _ d: Int, _ b: Int, _ p: Int, _ inc: Int, _ un: Int, degraded: String? = nil) -> String {
+            var o: [String: Any] = ["state": state, "discovered": d, "baselined": b, "pending": p, "incomplete": inc, "unavailable": un, "comparableNext": b - 5, "updatedAt": 1.0, "initializer": ["status": "running", "measurements": b, "startedAt": 1.0, "reconciliations": 0]]
+            if let degraded { o["degradedReason"] = degraded }
+            return encoded(o)
+        }
+        let initializing = FolderMonitoringStatus.parse(lifecycleJSON("initializing", 348, 242, 106, 0, 0))!
+        try test(initializing.summary == "Initializing · 242 of 348 folders baselined" && initializing.title == "Initializing", "coverage while initializing: 242 of 348 folders baselined")
+        try test(FolderMonitoringStatus.parse(lifecycleJSON("ready", 348, 348, 0, 0, 0))!.summary == "Active · 348 folders tracked", "coverage when ready: Active · 348 folders tracked")
+        try test(FolderMonitoringStatus.parse(lifecycleJSON("partial", 348, 337, 0, 1, 10))!.summary == "Partial · 337 tracked · 10 unavailable · 1 incomplete", "partial coverage names unavailable and incomplete separately")
+        try test(FolderMonitoringStatus.parse(lifecycleJSON("degraded", 348, 300, 48, 0, 0, degraded: "gap"))!.summary.hasPrefix("Degraded"), "degraded coverage stated")
+        let allSummaries = ["initializing", "ready", "partial", "degraded", "not_initialized"].map { FolderMonitoringStatus.parse(lifecycleJSON($0, 348, 300, 48, 0, 0))! }
+        try test(allSummaries.allSatisfy { !$0.summary.contains("%") && !$0.detail.contains("%") }, "no percentage combines coverage with comparability")
+        try test(initializing.detail.contains("Discovered 348 · baselined 242 · pending 106 · incomplete 0 · unavailable 0") && initializing.detail.contains("Comparable for the next interval: 237") && initializing.detail.contains("Each event shows which folders were comparable for its own interval"), "detail separates discovered, baselined, pending, incomplete, unavailable and next-interval comparability")
+        let coverageDB = try create("coverage.sqlite3")
+        write(coverageDB, "INSERT INTO readings VALUES(?,?,?,?,?,?)", ["1", time(1), "A", String(30 * decimalGB), String(215 * decimalGB), "[]"])
+        write(coverageDB, "INSERT INTO state VALUES(?,?)", ["attribution_lifecycle", lifecycleJSON("partial", 346, 336, 0, 1, 9)])
+        sqlite3_close(coverageDB)
+        let coverageSnapshot = try await HistoryReader(path: folder.appendingPathComponent("coverage.sqlite3").path).load()
+        try test(coverageSnapshot.folderMonitoring?.summary == "Partial · 336 tracked · 9 unavailable · 1 incomplete", "coverage read from the monitor database")
+        try test(snapshot.folderMonitoring == nil && real.folderMonitoring == nil, "databases without coverage data load unchanged (no status shown)")
+        // Per-interval: first measurements are reported as such, not as incomplete or not comparable.
+        let firstJSON = encoded(["version": 1, "reading_id": 2, "previous_reading_id": 1, "folders": ["status": "partial", "method": "incremental", "measured": 3, "carried": 300, "pending": 0, "first_measurements": 213, "deferred": 9, "changes": [], "changes_total": 0, "incomparable": [], "incomparable_total": 0, "roots": []], "file_activity": ["status": "complete", "events": 0, "groups": []], "processes": ["status": "not_needed", "correlations": []]])
+        let firstInterval = IntervalEvidence.parse(readingId: 2, json: firstJSON)!
+        try test(firstInterval.firstMeasurements == 213 && firstInterval.deferred == 9, "interval evidence keeps first measurements and deferred folders separate")
+        let firstEvent = StorageEvent(id: "reading:2", timestamp: anchor, category: "Storage loss", delta: -1, previousFree: 2, currentFree: 1, previousTime: anchor, severity: .warning,
+                                      measurement: Measurement(id: 2, timestamp: anchor, container: "A", free: 1, used: 1, volumes: []), previousMeasurement: Measurement(id: 1, timestamp: anchor, container: "A", free: 2, used: 0, volumes: []),
+                                      alerts: [], diagnostics: [], comparisons: [], source: "", searchText: "", interval: firstInterval)
+        let firstSummary = CauseAnalyzer.collection(firstEvent)
+        try test(firstSummary?.lines.contains("213 folders were measured for the first time; they become comparable from the next reading.") == true && firstSummary?.incomplete == 0, "first measurements explained per interval and not counted as incomplete")
+        try test(firstSummary?.headline == "All 303 folders comparable for this interval", "interval headline speaks of comparability, not completeness")
 
         // MARK: Live capacity and appearance
 

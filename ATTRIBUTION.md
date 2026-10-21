@@ -75,3 +75,42 @@ A process is never named because it is present, because of its executable name, 
 - **Budgets.** 25 s for folders, 10 s for event replay, 3 s and 50,000 file-descriptor queries for processes. All work runs after the reading, alerts and notification are committed. Any failure is recorded and never fails the check.
 - **Storage.** One `interval_evidence` row per reading. Rows are capped at about 24 KB (typically 2–6 KB), follow the 30-day and 10,000-reading retention, and are deleted with their reading. Baselines live in the existing `state` table, overwritten on each check. The schema change is additive: `CREATE TABLE IF NOT EXISTS interval_evidence`.
 - **Never done.** Reading file contents, writing anywhere except the monitor's own database, following symlinks, crossing volumes, sending signals to other processes, network access, requesting privileges, or uploading anything.
+
+## 6. Baseline initialization (audit, 2026-10-21)
+
+**What the code did.** The baseline lived in one `state` row (`attribution_baseline`). Each subfolder stored its sizes, `complete`, `status`, `measuredAt`, `validThrough` (the reading it describes) and `pending`, under a single FSEvents marker taken at the last reading. Only the scheduled check wrote it, within a 25-second budget. Carrying a folder forward needed that one marker, so a value measured between readings could never be trusted. Pending, timed-out and permission-refused folders were retried at every check, indefinitely.
+
+**What production showed** (readings #18–#26, read-only copy):
+
+| Reading | Measured | Carried forward | Pending | Not comparable |
+|---|---|---|---|---|
+| #18 | 115 | — | 231 | — |
+| #19 | 242 | 106 | — | 233 |
+| #20 onward | 33 → 1 | 313 → 334 | — | 9 → 1 |
+
+- At #18 the 25-second budget ran out after 115 of 346 subfolders.
+- Of the 233 not comparable at #19, 213 were first measurements labelled "Not measured at the previous reading".
+- From #20 on, the remaining work was the same 9 permission-protected Caches folders and one large cache, retried every check.
+- Readings #23–#26 reported 7–17-minute durations. These were DarkWake runs on battery during which the Mac went back to sleep about two seconds in. Durations are wall-clock time; budgets are wall-clock deadlines, so sleep ends a run early (which is safe).
+
+**Design.**
+
+- **Per-folder validity.** Each folder stores the FSEvents ID and wall time taken immediately before its own walk (`validEvent`, `validAt`). A later check trusts the value only if FSEvents history shows no activity in that folder after `validEvent`. The replay window reaches back to the oldest trusted folder, and markers older than 6 hours are never trusted. Interval statistics still count only events after the previous reading. Folders measured at different times therefore form one baseline without a fabricated shared timestamp. A change is still reported only against a value valid at the immediately previous reading. Initializer values use an unmatched sentinel, so they are never compared as if they described a reading.
+- **Initializer.** The LaunchAgent `local.macbook.storage-monitor.baseline` runs `StorageMonitor initialize-baseline`. Its settings: `RunAtLoad`, `KeepAlive` only on failure, `ThrottleInterval` 300, background process type, low-priority I/O, nice 15.
+  - **Workers and locking.** One worker at a time (`initializer.lock`). It measures in 8-second slices under `attribution.lock`, checkpointing the baseline after every slice, and pauses between slices. In Low Power Mode it uses 4-second slices and 5-second pauses.
+  - **Changes during initialization.** Folders with file activity after their walk are re-measured, in up to 3 reconciliation rounds. Anything still changing afterwards keeps a marker that predates the change, so the next scheduled check sees the activity and re-measures it rather than trusting it.
+  - **Exit behavior.** It exits 0 at a terminal state. It exits 75 at its 30-minute cap or if the lock stays busy, so launchd resumes it later. The scheduled check wakes it (`launchctl kickstart`) while coverage is not initialized.
+  - **What it never touches.** Readings, alerts, interval evidence and notifications.
+- **Bounded retries.** A folder macOS refuses to open is *unavailable* and retried daily. A folder that stops at its time limit three times is *incomplete* and retried every 6 hours. Neither is ever counted as baselined or unchanged.
+- **Coverage.** Stored as `state.attribution_lifecycle` with counts for discovered, baselined, pending, incomplete, unavailable and comparable-for-the-next-interval. States: `not_initialized`, `initializing`, `ready`, `partial`, `degraded` (a file-history gap after the baseline existed). The viewer shows it on one overview line. Each event keeps showing its own interval's evidence, with first measurements reported separately from folders that could not be compared.
+- **Scheduled check.** The 25-second budget and APFS path are unchanged. It waits at most 45 s for the baseline lock and otherwise records "folder evidence skipped" for that reading.
+
+**Measured on this Mac** (scratch databases; the real monitored folders; launched from Terminal, so macOS-protected Caches folders were readable — under launchd they would be reported as unavailable):
+
+| Run | Result | Time | Walks | Peak memory |
+|---|---|---|---|---|
+| Fresh | 348 discovered, 348 baselined, ready | 85.4 s (Low Power Mode pacing) | 355 (7 reconciliations) | 15 MB |
+| Killed with SIGKILL after 15 s, then resumed | 103 checkpointed; resume measured only the remaining 245 | 29.8 s at background priority | 246 | 17 MB |
+| Upgrade from a production copy | 9 measurements to ready; readings, alerts, diagnostics and evidence byte-identical | 5.9 s | 9 | 14 MB |
+| First scheduled-style check after initialization | 344 trusted without re-walking, 4 re-measured, 0 false growth | 3.3 s | 4 | — |
+| Next check | complete: 346 carried, 2 measured | 3.1 s | 2 | — |
