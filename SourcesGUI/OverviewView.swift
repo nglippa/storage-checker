@@ -53,7 +53,8 @@ struct OverviewView: View {
                 }
             }
             recordedLine(recorded,reading:reading)
-            if let folders = snapshot.folderMonitoring { folderMonitoringLine(folders) }
+            if let coverage = snapshot.filesystemCoverage, coverage.state != "not_initialized" { filesystemCoverageLine(coverage) }
+            if let folders = snapshot.folderMonitoring, snapshot.filesystemCoverage?.establishedAt == nil { folderMonitoringLine(folders) }
         }.padding(.horizontal,22).padding(.top,16).padding(.bottom,14)
     }
 
@@ -133,6 +134,20 @@ struct OverviewView: View {
         .accessibilityLabel("Folder monitoring: \(status.summary)")
         .accessibilityHint(status.detail)
         .accessibilityIdentifier("overview.folderMonitoring")
+    }
+    private func filesystemCoverageLine(_ status: FilesystemCoverageStatus) -> some View {
+        HStack(spacing:5) {
+            Image(systemName: ["ready":"internaldrive.badge.checkmark","initializing":"internaldrive","partial":"internaldrive.badge.exclamationmark","degraded":"exclamationmark.triangle"][status.state] ?? "internaldrive")
+                .foregroundStyle(status.state == "degraded" ? Color.orange : Color.secondary)
+            Text("Filesystem coverage").fontWeight(.medium)
+            Text("· \(status.summary)").lineLimit(1).truncationMode(.tail)
+        }
+        .font(.subheadline).foregroundStyle(.secondary)
+        .help(status.detail)
+        .accessibilityElement(children:.ignore)
+        .accessibilityLabel("Filesystem coverage: \(status.summary)")
+        .accessibilityHint(status.detail)
+        .accessibilityIdentifier("overview.filesystemCoverage")
     }
     private func recordedText(_ recorded: Measurement) -> some View {
         HStack(spacing:5) {

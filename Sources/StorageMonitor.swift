@@ -83,7 +83,9 @@ final class Database {
     init(_ path: String) throws {
         try required(sqlite3_open(path, &db) == SQLITE_OK, "Cannot open SQLite history")
         sqlite3_busy_timeout(db, 3000)
-        try exec("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA auto_vacuum=INCREMENTAL; CREATE TABLE IF NOT EXISTS readings (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, container TEXT NOT NULL, free INTEGER NOT NULL, used INTEGER NOT NULL, volumes TEXT NOT NULL); CREATE INDEX IF NOT EXISTS readings_time ON readings(timestamp); CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, severity TEXT NOT NULL, reasons TEXT NOT NULL, free INTEGER NOT NULL, delta INTEGER, notification TEXT NOT NULL); CREATE TABLE IF NOT EXISTS diagnostics (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, snapshot TEXT NOT NULL); CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS interval_evidence (reading_id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, evidence TEXT NOT NULL);")
+        try exec("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA auto_vacuum=INCREMENTAL; CREATE TABLE IF NOT EXISTS readings (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, container TEXT NOT NULL, free INTEGER NOT NULL, used INTEGER NOT NULL, volumes TEXT NOT NULL); CREATE INDEX IF NOT EXISTS readings_time ON readings(timestamp); CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, severity TEXT NOT NULL, reasons TEXT NOT NULL, free INTEGER NOT NULL, delta INTEGER, notification TEXT NOT NULL); CREATE TABLE IF NOT EXISTS diagnostics (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, snapshot TEXT NOT NULL); CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS interval_evidence (reading_id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, evidence TEXT NOT NULL); " +
+            // Comprehensive coverage (additive; see Coverage.swift). Current state, not history: no retention.
+            "CREATE TABLE IF NOT EXISTS coverage_units (id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, parent INTEGER, depth INTEGER NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, reason TEXT, inode INTEGER, logical INTEGER NOT NULL DEFAULT 0, allocated INTEGER NOT NULL DEFAULT 0, files INTEGER NOT NULL DEFAULT 0, entries INTEGER NOT NULL DEFAULT 0, complete INTEGER NOT NULL DEFAULT 0, measured_at REAL, valid_event INTEGER, valid_at REAL, valid_reading INTEGER, first_valid_reading INTEGER, listing_reading INTEGER, discovered_at REAL NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, last_attempt REAL, needs_split INTEGER NOT NULL DEFAULT 0, agg_logical INTEGER NOT NULL DEFAULT 0, agg_allocated INTEGER NOT NULL DEFAULT 0, agg_files INTEGER NOT NULL DEFAULT 0, agg_complete INTEGER NOT NULL DEFAULT 0, agg_holes INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS coverage_units_parent ON coverage_units(parent); CREATE TABLE IF NOT EXISTS coverage_epochs (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, reading_id INTEGER, scope TEXT NOT NULL, detail TEXT NOT NULL);")
         _ = chmod(path, 0o600)
     }
     deinit { sqlite3_close(db) }
@@ -329,15 +331,30 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         // read-only, and never allowed to fail the check.
         let evidenceStarted = Date()
         let prior = previousRow.flatMap { row in Int64(row["id"] ?? "").flatMap { id in Double(row["timestamp"] ?? "").map { (id: id, time: $0) } } }
-        let evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, roots: defaultMonitoredRoots() + configuredRoots(directory), lockPath: directory.appendingPathComponent("attribution.lock").path)
-        // Incomplete coverage: wake the one-time initializer instead of stretching this check.
-        if let lifecycle = decodeLifecycle(db), ["not_initialized", "initializing"].contains(lifecycle.state), directory.standardizedFileURL == defaultData.standardizedFileURL, fm.fileExists(atPath: baselineAgentURL.path) {
+        // Comprehensive coverage of the startup Data volume once established; until then (or with
+        // {"mode":"folders"} in coverage.json) the predefined monitored folders.
+        let comprehensive = coverageMode(directory) == "comprehensive"
+        let region = comprehensive ? startupDataRegion(current) : (region: nil, reason: "Comprehensive coverage is turned off in coverage.json.")
+        let lockPath = directory.appendingPathComponent("attribution.lock").path
+        var evidence: [String: Any]
+        if let coverageRegion = region.region, let wide = collectCoverageEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, region: coverageRegion, volumeAllocated: dataVolumeAllocated(current)?.allocated, lockPath: lockPath) {
+            evidence = wide
+        } else {
+            evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, roots: defaultMonitoredRoots() + configuredRoots(directory), lockPath: lockPath)
+            let lifecycle = decodeCoverageLifecycle(db)
+            evidence["coverage"] = ["scope": "folders", "reason": region.reason ?? (lifecycle == nil ? "Comprehensive coverage has not started yet." : "Comprehensive coverage is still being established (\(lifecycle!.baselined) of \(lifecycle!.units) areas measured)."),
+                                    "comprehensive_state": lifecycle?.state ?? "not_initialized"]
+            if region.region == nil { recordCoverageEpoch(db, scope: "folders", readingId: readingId, at: current.timestamp, detail: region.reason ?? "Predefined monitored folders") }
+        }
+        // Incomplete coverage: wake the background initializer instead of stretching this check.
+        let needsInitializer = region.region != nil ? coverageNeedsWork(db, at: current.timestamp) : (decodeLifecycle(db).map { ["not_initialized", "initializing"].contains($0.state) } ?? false)
+        if needsInitializer, directory.standardizedFileURL == defaultData.standardizedFileURL, fm.fileExists(atPath: baselineAgentURL.path) {
             _ = try? launchctl(["kickstart", "gui/\(getuid())/\(baselineLabel)"], acceptable: true)
         }
         do { try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [readingId, current.timestamp, json(evidence)]) }
         catch { log(directory, "attribution not stored: \(error)") }
         let folders = evidence["folders"] as? [String: Any] ?? [:]
-        log(directory, "attribution \(folders["status"] ?? "?") measured=\(folders["measured"] ?? 0) carried=\(folders["carried"] ?? 0) changes=\(folders["changes_total"] ?? 0) activity=\((evidence["file_activity"] as? [String: Any])?["status"] ?? "?") \(Int(Date().timeIntervalSince(evidenceStarted) * 1000))ms")
+        log(directory, "attribution \((evidence["coverage"] as? [String: Any])?["scope"] ?? "folders") \(folders["status"] ?? "?") measured=\(folders["measured"] ?? 0) carried=\(folders["carried"] ?? 0) pending=\(folders["pending"] ?? 0) changes=\(folders["changes_total"] ?? 0) activity=\((evidence["file_activity"] as? [String: Any])?["status"] ?? "?") \(Int(Date().timeIntervalSince(evidenceStarted) * 1000))ms peakMB=\(peakMemoryBytes() / 1_048_576)")
         if forceDiagnostics || !evaluation.growth.subtracting(plan.prior).isEmpty {
             let snapshot = diagnosticSnapshot(current)
             try db.write("INSERT INTO diagnostics(timestamp,snapshot) VALUES(?,?)", [current.timestamp, snapshot])
@@ -487,6 +504,7 @@ func selfTest() throws {
     try test(!defaults.contains("/private/var/folders") && !defaults.contains(home.path) && !defaults.contains(home.appendingPathComponent("Library/Caches").path) && !defaults.contains(home.appendingPathComponent("Library/Application Support").path), "no broad protected or whole-library scan targets")
     try attributionSelfTest(test)
     try baselineInitializationSelfTest(test)
+    try coverageSelfTest(test)
     print("\(count) tests passed")
 }
 
@@ -495,6 +513,7 @@ func runMain() throws {
     var args = Array(CommandLine.arguments.dropFirst()), directory = defaultData
     if let i = args.firstIndex(of: "--data-dir") { try required(args.count > i+1, "--data-dir requires an absolute path"); try required(args[i+1].hasPrefix("/"), "--data-dir must be absolute"); directory = URL(fileURLWithPath: args[i+1]); args.removeSubrange(i...i+1) }
     let command = args.first ?? "help"
+    if ["check", "diagnose", "initialize-baseline", "coverage-probe", "attribution-probe"].contains(command) { applyObservationalIOPolicy() }
     let limit = min(1000,max(1,Int(args.dropFirst().first ?? "10") ?? 10))
     switch command {
     case "check": try check(directory, retryNotifications: args.contains("--retry-notifications"))
@@ -514,10 +533,23 @@ func runMain() throws {
         let r = try measure(); let result = notify("Storage Monitor TEST", "\(size(r.free)) free; change 0.00 GB (test); severity TEST.")
         print(result); try required(result.hasPrefix("delivered:"), "Test notification was not confirmed delivered: \(result)")
     case "notification-status": print(notificationStatus().1)
-    case "self-test": try selfTest()
+    case "self-test":
+        if args.contains("--coverage") {   // only the comprehensive coverage tests
+            var count = 0
+            try coverageSelfTest { value, description in try required(value, "FAIL: \(description)"); count += 1; print("PASS \(description)") }
+            print("\(count) tests passed")
+        } else { try selfTest() }
     case "initialize-baseline":
         // Background, one worker at a time, checkpointed; never notifies.
         try privateDirectory(directory)
+        if coverageMode(directory) == "comprehensive", let region = startupDataRegion(try? measure()).region {
+            let result = initializeCoverage(dbPath: directory.appendingPathComponent("history.sqlite3").path, directory: directory, region: region)
+            let l = result.lifecycle
+            let summary = "initialize-baseline comprehensive \(result.outcome) state=\(l?.state ?? "?") units=\(l?.units ?? 0) baselined=\(l?.baselined ?? 0) discovered=\(l?.discovered ?? 0) pending=\(l?.pending ?? 0) inaccessible=\(l?.inaccessible ?? 0) excluded=\(l?.excluded ?? 0) deferred=\(l?.deferred ?? 0) measurements=\(l?.initializer?.measurements ?? 0) reconciliations=\(l?.initializer?.reconciliations ?? 0) fda=\(l?.fullDiskAccess ?? "?") peakMB=\((l?.initializer?.peakMemoryBytes ?? 0) / 1_048_576) seconds=\(Int((l?.initializer?.finishedAt ?? Date().timeIntervalSince1970) - (l?.initializer?.startedAt ?? Date().timeIntervalSince1970)))"
+            log(directory, summary); print(summary)
+            if !["terminal", "already_running"].contains(result.outcome) { exit(75) }
+            return
+        }
         let result = initializeBaseline(dbPath: directory.appendingPathComponent("history.sqlite3").path, directory: directory, roots: defaultMonitoredRoots() + configuredRoots(directory))
         let l = result.lifecycle
         let summary = "initialize-baseline \(result.outcome) state=\(l?.state ?? "?") discovered=\(l?.discovered ?? 0) baselined=\(l?.baselined ?? 0) pending=\(l?.pending ?? 0) incomplete=\(l?.incomplete ?? 0) unavailable=\(l?.unavailable ?? 0) measurements=\(l?.initializer?.measurements ?? 0) reconciliations=\(l?.initializer?.reconciliations ?? 0) peakMB=\((l?.initializer?.peakMemoryBytes ?? 0) / 1_048_576)"
@@ -532,6 +564,31 @@ func runMain() throws {
     case "baseline-status":
         let db = try Database(directory.appendingPathComponent("history.sqlite3").path)
         print(decodeLifecycle(db).map { String(decoding: (try? JSONEncoder().encode($0)) ?? Data(), as: UTF8.self) } ?? "{\"state\":\"not_initialized\"}")
+    case "coverage-status":
+        // Current comprehensive coverage, its limits, and how to widen it. Read-only.
+        let db = try Database(directory.appendingPathComponent("history.sqlite3").path)
+        print(decodeCoverageLifecycle(db).map { String(decoding: (try? JSONEncoder().encode($0)) ?? Data(), as: UTF8.self) } ?? "{\"state\":\"not_initialized\"}")
+        for row in try db.rows("SELECT timestamp, reading_id, scope, detail FROM coverage_epochs ORDER BY id") { print("epoch \(iso(Double(row["timestamp"] ?? "") ?? 0)) reading=\(row["reading_id"] ?? "-") \(row["scope"] ?? "") \(row["detail"] ?? "")") }
+        if args.contains("--units") {
+            let states = args.drop(while: { $0 != "--units" }).dropFirst().prefix(1)
+            for row in try db.rows("SELECT path, kind, state, reason, agg_allocated, entries FROM coverage_units" + (states.isEmpty ? "" : " WHERE state=?") + " ORDER BY path", states.map { $0 as Any }) {
+                print("\(row["state"] ?? "")\t\(row["kind"] ?? "")\t\(row["agg_allocated"] ?? "0")\t\(row["reason"] ?? "-")\t/\(row["path"] ?? "")")
+            }
+        }
+        if fullDiskAccessState() != "granted" { print(fullDiskAccessGuidance) }
+    case "coverage-probe":
+        // Development aid: comprehensive evidence only, into a separate --data-dir. No reading, alert, or notification.
+        try required(directory != defaultData, "coverage-probe needs a separate --data-dir")
+        try privateDirectory(directory)
+        let db = try Database(directory.appendingPathComponent("history.sqlite3").path)
+        let rootArg = args.firstIndex(of: "--root").flatMap { args.count > $0 + 1 ? args[$0 + 1] : nil }
+        guard let region = rootArg.map({ coverageRegion(root: $0) }) ?? startupDataRegion(nil).region else { throw Failure("No coverage region") }
+        let cursor = decodeState(db, "coverage_cursor", as: CoverageCursor.self)
+        let id = (cursor?.readingId ?? 0) + 1, now = Date().timeIntervalSince1970
+        let clock = Date()
+        guard let evidence = collectCoverageEvidence(db: db, readingId: id, readingTime: now, previous: cursor.map { (id: $0.readingId, time: $0.timestamp) }, marker: currentEventMarker(region.root), region: region, lockPath: directory.appendingPathComponent("attribution.lock").path) else { print("Coverage not established; run initialize-baseline with this --data-dir first."); return }
+        try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [id, now, json(evidence)])
+        print(args.contains("--summary") ? json(["folders": (evidence["folders"] as? [String: Any] ?? [:]).filter { ["status", "measured", "carried", "pending", "first_measurements", "changes_total", "incomparable_total", "method"].contains($0.key) }, "coverage": (evidence["coverage"] as? [String: Any] ?? [:]).filter { ["level", "units", "monitored", "inaccessible", "excluded", "pending"].contains($0.key) }, "events": (evidence["file_activity"] as? [String: Any])?["events"] ?? 0, "seconds": Date().timeIntervalSince(clock), "peakMB": peakMemoryBytes() / 1_048_576]) : json(evidence))
     case "attribution-probe":
         // Development aid: evidence collection only, into a separate --data-dir.
         // No capacity reading, alert, or notification.
@@ -543,7 +600,7 @@ func runMain() throws {
         let evidence = collectIntervalEvidence(db: db, readingId: id, readingTime: now, previous: prior.map { (id: $0.readingId, time: $0.timestamp) }, marker: currentEventMarker(), roots: defaultMonitoredRoots() + configuredRoots(directory))
         try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [id, now, json(evidence)])
         print(json(evidence))
-    default: print("MacBook Storage Monitor\nCommands: install | uninstall | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | authorize | notification-status | test-notification | self-test\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
+    default: print("MacBook Storage Monitor\nCommands: install | uninstall | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | coverage-status [--units [state]] | authorize | notification-status | test-notification | self-test\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
     }
 }
 @main enum StorageMonitorEntry {

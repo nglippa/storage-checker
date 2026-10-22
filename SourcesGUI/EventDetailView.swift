@@ -231,6 +231,13 @@ private struct EventInspector: View {
             guard let i = event.interval else { return nil }
             var lines = ["Status: \(i.folderStatus) · method \(i.folderMethod) · \(i.measured) measured, \(i.carried) carried forward, \(i.pending) pending, \(i.firstMeasurements) first measurements, \(i.deferred) deferred (unavailable or exhausted)",
                          "Reading #\(i.readingId) compared with #\(i.previousReadingId.map(String.init) ?? "none")" + (i.previousReadingId == event.previousMeasurement?.id ? "" : " (does not match this event's previous reading; not used)")]
+            if i.hasCoverageBlock || i.isComprehensive {
+                lines.append("Coverage: scope \(i.coverageScope)" + (i.coverageLevel.map { " · level \($0)" } ?? "") + " · \(i.unitsMonitored) areas monitored · \(i.inaccessibleCount) inaccessible · Full Disk Access \(i.fullDiskAccess ?? "unknown")")
+                if let reason = i.coverageReason { lines.append(reason) }
+                if let gap = i.gapReason { lines.append("File-history gap: \(gap)") }
+                if i.movesCount > 0 { lines.append("Moves not counted as growth or reduction: \(i.movesCount)") }
+                if i.openDeletedFiles > 0 { lines.append("Open but deleted: \(i.openDeletedFiles) files, \(exactBytes(i.openDeletedBytes)) allocated" + (i.openDeletedHolders.isEmpty ? "" : " (held by \(i.openDeletedHolders.joined(separator: ", ")))")) }
+            }
             for c in i.changes { lines.append("\n\(c.path) [\(c.kind)]\nAllocated \(exactBytes(c.beforeAllocated)) → \(exactBytes(c.afterAllocated)) (\(exactBytes(c.allocatedDelta)))\nLogical \(exactBytes(c.beforeLogical)) → \(exactBytes(c.afterLogical))\nFiles \(c.beforeFiles) → \(c.afterFiles)" + (c.afterMeasuredAt.map { "\nMeasured \(EventPanelText.stamp(c.beforeMeasuredAt ?? $0)) → \(EventPanelText.stamp($0))" } ?? "")) }
             if i.changesTotal > i.changes.count { lines.append("\n\(i.changesTotal - i.changes.count) smaller changes not stored") }
             if !i.incomparable.isEmpty { lines.append("\nNot comparable (\(i.incomparableTotal)):\n" + i.incomparable.map { "\($0.path): \($0.reason)" }.joined(separator: "\n")) }

@@ -192,8 +192,11 @@ struct FolderChange: Identifiable, Sendable {
     let beforeMeasuredAt: Date?, afterMeasuredAt: Date?
     var allocatedDelta: Int64 { afterAllocated - beforeAllocated }
     var logicalDelta: Int64 { afterLogical - beforeLogical }
-    var isGrowth: Bool { max(allocatedDelta, logicalDelta) > 0 && kind != "shrank" && kind != "removed" }
+    // Moves (a renamed directory, or a file moved between areas) are neither growth nor reduction.
+    var isMove: Bool { kind == "moved" || kind == "moved_in" || kind == "moved_out" }
+    var isGrowth: Bool { !isMove && max(allocatedDelta, logicalDelta) > 0 && kind != "shrank" && kind != "removed" }
 }
+struct CoverageConcentration: Sendable, Equatable { let path: String; let allocated: Int64, total: Int64 }
 struct ActivityGroup: Sendable { let path: String; let created: Int, modified: Int, removed: Int, renamed: Int, cloned: Int, events: Int }
 struct ProcessCorrelation: Identifiable, Sendable {
     var id: String { "\(pid):\(folder)" }
@@ -209,6 +212,15 @@ struct IntervalEvidence: Sendable {
     let folderStatus: String, folderMethod: String
     let measured: Int, carried: Int, pending: Int
     var firstMeasurements = 0, deferred = 0
+    // Filesystem coverage block. Absent in historical rows, which are predefined-folder scope.
+    var coverageScope = "folders", hasCoverageBlock = false
+    var coverageLevel: String? = nil, coverageReason: String? = nil, gapReason: String? = nil
+    var unitsMonitored = 0, inaccessibleCount = 0, fullDiskAccess: String? = nil
+    var inaccessibleActivityEvents = 0, inaccessibleActivityPath: String? = nil
+    var growthConcentration: CoverageConcentration? = nil, reductionConcentration: CoverageConcentration? = nil
+    var movesCount = 0, splits = 0
+    var openDeletedBytes: Int64 = 0, openDeletedFiles = 0, openDeletedHolders = [String]()
+    var isComprehensive: Bool { coverageScope == "comprehensive" }
     let changes: [FolderChange], changesTotal: Int
     let incomparable: [(path: String, reason: String)], incomparableTotal: Int
     let roots: [FolderRootSummary]
@@ -250,6 +262,35 @@ struct IntervalEvidence: Sendable {
                                 sinceEvent: (activity["since_event"] as? NSNumber)?.uint64Value, untilEvent: (activity["until_event"] as? NSNumber)?.uint64Value, device: activity["device_uuid"] as? String,
                                 processStatus: processes["status"] as? String ?? "unavailable", processesSampled: i(processes["sampled"]), correlations: correlations, raw: json)
             .with(first: i(folders["first_measurements"]), deferred: i(folders["deferred"]))
+            .withCoverage(root: root, folders: folders, processes: processes)
+    }
+    private func withCoverage(root: [String: Any], folders: [String: Any], processes: [String: Any]) -> IntervalEvidence {
+        func i(_ v: Any?) -> Int { (v as? NSNumber)?.intValue ?? 0 }
+        func n(_ v: Any?) -> Int64 { (v as? NSNumber)?.int64Value ?? 0 }
+        var copy = self
+        let coverage = root["coverage"] as? [String: Any]
+        copy.hasCoverageBlock = coverage != nil
+        copy.coverageScope = (coverage?["scope"] as? String) ?? (folders["scope"] as? String) ?? "folders"
+        if let coverage {
+            copy.coverageLevel = coverage["level"] as? String; copy.coverageReason = coverage["reason"] as? String; copy.gapReason = coverage["gap_reason"] as? String
+            copy.unitsMonitored = i(coverage["monitored"]); copy.fullDiskAccess = coverage["full_disk_access"] as? String
+            copy.inaccessibleCount = i(coverage["inaccessible"])
+            let activity = coverage["inaccessible_activity"] as? [String: Any]
+            copy.inaccessibleActivityEvents = i(activity?["events"])
+            copy.inaccessibleActivityPath = (activity?["regions"] as? [[String: Any]])?.first?["path"] as? String
+        }
+        func concentration(_ v: Any?) -> CoverageConcentration? {
+            guard let o = v as? [String: Any], let path = o["path"] as? String else { return nil }
+            return CoverageConcentration(path: path, allocated: n(o["allocated"]), total: n(o["total"]))
+        }
+        let concentrationBlock = folders["concentration"] as? [String: Any]
+        copy.growthConcentration = concentration(concentrationBlock?["growth"]); copy.reductionConcentration = concentration(concentrationBlock?["reduction"])
+        copy.movesCount = (folders["moves"] as? [Any])?.count ?? 0; copy.splits = i(folders["splits"])
+        if let open = processes["open_deleted"] as? [String: Any] {
+            copy.openDeletedBytes = n(open["allocated_bytes"]); copy.openDeletedFiles = i(open["files"])
+            copy.openDeletedHolders = (open["holders"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+        }
+        return copy
     }
     func with(first: Int, deferred: Int) -> IntervalEvidence { var copy = self; copy.firstMeasurements = first; copy.deferred = deferred; return copy }
 }
@@ -301,6 +342,72 @@ struct FolderMonitoringStatus: Sendable, Equatable {
     }
 }
 
+// Comprehensive filesystem coverage right now (state key coverage_lifecycle).
+struct FilesystemCoverageStatus: Sendable, Equatable {
+    static let guidance = "To widen coverage, open System Settings → Privacy & Security → Full Disk Access, click +, and add ~/Applications/MacBook Storage Monitor.app (the background monitor). Storage Monitor never requests this itself; without it, monitoring continues and protected folders are reported as inaccessible."
+    let state: String
+    let units: Int, baselined: Int, discovered: Int, pending: Int, deferred: Int, inaccessible: Int, excluded: Int, stale: Int, reconcile: Int, splitPending: Int, monitored: Int
+    let measuredAllocated: Int64
+    let fullDiskAccess: String
+    let establishedAt: Date?, comprehensiveSince: Date?, lastReconciledAt: Date?, lastContinuousAt: Date?
+    let degradedReason: String?
+    let notes: [(path: String, state: String, detail: String)]
+    let initializerStatus: String?, initializerMeasurements: Int?
+
+    static func == (a: Self, b: Self) -> Bool {
+        (a.state, a.units, a.baselined, a.discovered, a.pending, a.deferred) == (b.state, b.units, b.baselined, b.discovered, b.pending, b.deferred)
+            && (a.inaccessible, a.excluded, a.stale, a.reconcile, a.splitPending, a.monitored) == (b.inaccessible, b.excluded, b.stale, b.reconcile, b.splitPending, b.monitored)
+            && (a.measuredAllocated, a.fullDiskAccess, a.establishedAt, a.lastReconciledAt, a.lastContinuousAt) == (b.measuredAllocated, b.fullDiskAccess, b.establishedAt, b.lastReconciledAt, b.lastContinuousAt)
+            && (a.degradedReason, a.notes.count, a.initializerStatus, a.initializerMeasurements) == (b.degradedReason, b.notes.count, b.initializerStatus, b.initializerMeasurements)
+    }
+    static func parse(_ json: String) -> FilesystemCoverageStatus? {
+        guard let root = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any], let state = root["state"] as? String else { return nil }
+        func i(_ key: String) -> Int { (root[key] as? NSNumber)?.intValue ?? 0 }
+        func d(_ key: String) -> Date? { (root[key] as? NSNumber).flatMap { $0.doubleValue > 0 ? Date(timeIntervalSince1970: $0.doubleValue) : nil } }
+        let initializer = root["initializer"] as? [String: Any]
+        let notes = (root["notes"] as? [[String: Any]] ?? []).map { (path: $0["path"] as? String ?? "", state: $0["state"] as? String ?? "", detail: ($0["detail"] as? String) ?? ($0["reason"] as? String) ?? "") }
+        return FilesystemCoverageStatus(state: state, units: i("units"), baselined: i("baselined"), discovered: i("discovered"), pending: i("pending"), deferred: i("deferred"), inaccessible: i("inaccessible"), excluded: i("excluded"), stale: i("stale"), reconcile: i("reconcile"), splitPending: i("splitPending"), monitored: i("monitored"),
+                                        measuredAllocated: (root["measuredAllocated"] as? NSNumber)?.int64Value ?? 0, fullDiskAccess: root["fullDiskAccess"] as? String ?? "unknown",
+                                        establishedAt: d("establishedAt"), comprehensiveSince: d("comprehensiveSince"), lastReconciledAt: d("lastReconciledAt"), lastContinuousAt: d("lastContinuousAt"),
+                                        degradedReason: root["degradedReason"] as? String, notes: notes, initializerStatus: initializer?["status"] as? String, initializerMeasurements: (initializer?["measurements"] as? NSNumber)?.intValue)
+    }
+    var pendingWork: Int { discovered + pending + stale + reconcile + splitPending }
+    var title: String {
+        switch state {
+        case "initializing": return "Initializing"
+        case "ready": return "Comprehensive"
+        case "partial": return "Partial"
+        case "degraded": return "Reconciling"
+        default: return "Not started"
+        }
+    }
+    var summary: String {
+        switch state {
+        case "initializing": return "Initializing · \(baselined.formatted()) of \(units.formatted()) areas measured"
+        case "ready": return "Comprehensive · \((monitored > 0 ? monitored : baselined).formatted()) areas monitored"
+        case "partial": return "Comprehensive except \(inaccessible.formatted()) inaccessible areas" + (deferred > 0 ? " · \(deferred.formatted()) deferred" : "") + (pendingWork > 0 ? " · \(pendingWork.formatted()) pending" : "")
+        case "degraded": return "Reconciling after a file-history gap · \(pendingWork.formatted()) areas pending"
+        default: return "Not started"
+        }
+    }
+    var detail: String {
+        var lines = ["Areas \(units.formatted()) · measured \(baselined.formatted()) · monitored at last reading \(monitored.formatted()) · pending \(pendingWork.formatted()) · deferred \(deferred.formatted()) · inaccessible \(inaccessible.formatted()) · excluded \(excluded.formatted())"]
+        lines.append("Measured file data: \(capacity(measuredAllocated)). Measured sizes are file sizes, not APFS physical allocation.")
+        switch fullDiskAccess {
+        case "granted": lines.append("Full Disk Access: granted to the background monitor.")
+        case "not_granted": lines.append("Full Disk Access: not granted.\n" + Self.guidance)
+        default: lines.append("Full Disk Access: unknown.\n" + Self.guidance)
+        }
+        if let degradedReason { lines.append(degradedReason) }
+        if let comprehensiveSince { lines.append("Comprehensive since \(comprehensiveSince.formatted(date:.abbreviated,time:.shortened))") }
+        if let lastReconciledAt { lines.append("Last successful reconciliation \(lastReconciledAt.formatted(date:.abbreviated,time:.shortened))") }
+        if let lastContinuousAt { lines.append("Last continuous check \(lastContinuousAt.formatted(date:.abbreviated,time:.shortened))") }
+        if !notes.isEmpty { lines.append("Inaccessible or excluded:\n" + notes.prefix(8).map { "\($0.path) — \($0.detail)" }.joined(separator: "\n") + (notes.count > 8 ? "\n… and \(notes.count - 8) more" : "")) }
+        if let initializerStatus { lines.append("Initializer: \(initializerStatus)" + (initializerMeasurements.map { " · \($0.formatted()) measurements" } ?? "")) }
+        return lines.joined(separator: "\n")
+    }
+}
+
 struct EvidenceComparison: Identifiable, Sendable {
     var id: String { current.id }
     let current: DiagnosticMetric
@@ -340,6 +447,7 @@ struct HistorySnapshot: Sendable {
     let events: [StorageEvent]
     let loadedAt: Date
     var folderMonitoring: FolderMonitoringStatus? = nil
+    var filesystemCoverage: FilesystemCoverageStatus? = nil
     var latest: Measurement? { measurements.last }
     func baseline(seconds: TimeInterval) -> Measurement? {
         guard let latest else { return nil }

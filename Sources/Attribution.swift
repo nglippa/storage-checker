@@ -634,6 +634,7 @@ struct InitializerOptions {
     var stopAfterMeasurements: Int?            // tests: simulate interruption
     var onMeasured: ((String) -> Void)?        // tests: filesystem activity during initialization
     var simulateGap = false
+    var coverageSplit: Int64 = coverageSplitEntries   // comprehensive coverage: entries before a unit is split (tests use small trees)
 }
 
 func peakMemoryBytes() -> Int64 { var usage = rusage(); getrusage(RUSAGE_SELF, &usage); return Int64(usage.ru_maxrss) }

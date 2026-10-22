@@ -135,6 +135,18 @@ Every check also records which monitored folders changed between this reading an
 
 **Baseline initialization.** On install or first login, a one-time background job (`local.macbook.storage-monitor.baseline`) measures every accessible monitored folder in short, checkpointed slices, without waiting for scheduled checks (about 1–2 minutes on this Mac). It resumes after interruption, reconciles folders that change while it runs, and exits once coverage is complete. The overview shows *Folder monitoring*, for example "Active · 348 folders tracked" or "Initializing · 242 of 348 folders baselined". `bin/storage-monitor baseline-status` prints the same coverage as JSON. Protected folders are reported as unavailable and retried daily; folders that repeatedly time out are reported as incomplete and retried every 6 hours.
 
+**Comprehensive filesystem coverage.** The monitor now covers the whole startup Data volume rather than only the predefined folders: `/Users`, `/Applications`, `/Library`, `/private`, `/opt`, `/usr/local`, hidden folders and everything else on it. Details are in [ATTRIBUTION.md §7](ATTRIBUTION.md).
+
+- **How it is measured.** The volume is divided into about 12,000 disjoint measurement areas. The background job measures each one once (about 2.5 minutes here), and scheduled checks re-measure only the areas with file events, typically in 1–4 seconds.
+- **Not walked.** Other mounted disks and network shares are never entered. The sealed system volume and the VM, Preboot and Update volumes are covered by APFS volume figures only.
+- **Gaps and history.** After a gap in file-event history, nothing is assumed unchanged and the background job re-measures. Until comprehensive coverage is established, the predefined folders keep providing evidence, and history records the reading where comprehensive coverage began.
+- **Turning it off.** `{"mode":"folders"}` in `~/Library/Application Support/MacBook Storage Monitor/coverage.json` returns to the predefined folders.
+- **Inspecting coverage.** `bin/storage-monitor coverage-status` prints the current coverage, inaccessible regions and coverage epochs. Add `--units inaccessible` (or any state) to list individual areas.
+
+**Full Disk Access.** Without it, macOS shows a permission prompt or an "app data" notification when a background process opens Desktop, Documents, Downloads, Pictures, Music, Movies, iCloud, app containers, or other apps' data in `~/Library`. Storage Monitor therefore never opens those folders, or any Application Support folder it was not already reading. If a folder still fails to answer, a watchdog marks it blocked and moves on. It reports them as inaccessible and keeps monitoring everything else.
+
+To include them, open **System Settings → Privacy & Security → Full Disk Access**, click **+**, and add `~/Applications/MacBook Storage Monitor.app` (the background monitor, not the viewer). The monitor never asks for this itself. Root-only and SIP-protected system folders stay inaccessible either way. The overview's *Filesystem coverage* line and its tooltip show the current state, pending work, inaccessible regions and the last successful reconciliation.
+
 In the inspector, measured folder growth and any process correlation appear under the Data volume cause. The breakdown states the unattributed remainder as an estimate; folder sizes are never added to APFS totals. Supporting evidence lists the folders, changed-file counts and correlated processes. Technical details gains Folder growth, File activity and Processes sections, collapsed by default.
 
 ## Local files and scheduling

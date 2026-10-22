@@ -97,3 +97,52 @@ The installed resource was independently decoded by `sips` to `build/icon-previe
 `NSWorkspace.icon(forFile:)` returned 32 lazy `NSISIconImageRep` representations but blank pixels from both drawing and TIFF export. A built-in Calculator app control also returned blank pixels, so the renderer issue is not specific to this app's resource. **Finder/IconServices rendered appearance could not be verified from this command-line host.** No broad icon-cache reset, Finder/Dock restart, or system change was attempted. `tests/verify-icon.swift` explicitly reports blank rendering and exits 2 rather than claiming visual verification.
 
 After the icon-bearing signed bundle was installed, the permanent LaunchAgent remained loaded with `runs=1`, last exit 0, notification authorization remained enabled, and a fresh real launchd notification was confirmed delivered with identifier `75FDBFE2-EF25-47D5-9075-C85AD2EAF6CB` (test exit 0). Its RunAtLoad check recorded 22.16 GB free at 07:29:18 UTC and deduplicated the already acknowledged low-space condition. No commits or pushes were made.
+
+## Comprehensive filesystem coverage (2026-10-21)
+
+Machine: Mac mini M4 Pro, 24 GB, macOS 27.0. Data volume: 418 GB in use, 3.06 M entries. All runs below used scratch data directories. The installed monitor and its history were not changed.
+
+**Background context (launchd, no Full Disk Access).** A separately identified, ad-hoc-signed test bundle (`local.macbook.storage-monitor.coverage-test2`) ran as a one-shot launchd job with `ProcessType` Background, `LowPriorityIO` and nice 15.
+
+| Run | Result | Time | Peak memory |
+|---|---|---|---|
+| `initialize-baseline` | Terminal, *partial*: 8,828 areas, 8,471 measured, 355 inaccessible, 2 excluded; 8,541 walks, 39 reconciliations; Full Disk Access `not_granted` | 291 s | 39 MB |
+| First check | Baseline only; 8,453 carried, 18 re-measured | 2.2 s | 37 MB |
+| Check 4 minutes later | *Comprehensive*: 1,207 events, 48 re-measured, 8,423 carried, 11 changes, 18 KB row. Measured a 1.51 GB Chrome code-signing clone removed from `/private/var/folders/…/X` (98% of measured reduction) and `~/.npm/_cacache` +139 MB (86% of measured growth). 1,193 events occurred in inaccessible areas. | 3.4 s | 38 MB |
+
+No TCC prompt or notification was logged for this identity during the run; a `log stream` on tccd and usernoted was watched for the whole run.
+
+**Earlier background runs exposed TCC prompts. They led to the consent gate and the stall watchdog:**
+
+- **First run** (identity `…coverage-test`, gate covering only Desktop, Documents, Downloads, iCloud and containers):
+  - opening `~/Library/Application Support/Google/Chrome` produced an "App Data" notification;
+  - a `kTCCServiceMediaLibrary` prompt followed;
+  - the walk blocked in `open()` until the job was stopped.
+- **Second run** (narrower gate, same identity): the walk stalled in Application Support.
+- **Third run:** the watchdog marked `~/Library` blocked after 90 seconds and exited 75.
+
+The media-library request for the first test identity was never answered, so that identity's prompt may still be pending. It belongs to the scratch test bundle, not to the installed monitor.
+
+**Full Disk Access context** (Terminal-launched binary; the responsible app has Full Disk Access):
+
+| Run | Result | Time | Peak memory |
+|---|---|---|---|
+| Initialization | 11,903 areas, 11,694 measured, 188 inaccessible (root-only and SIP folders), 21 excluded (autofs `/home`, the HFS image under `/Volumes`, iCloud placeholders) | 155 s | 56 MB footprint |
+| Checks | 1.3 s (baseline) and 4.0 s (2,402 events, 76 re-measured) | | 39–42 MB |
+
+**Migration.** A consistent copy of production history (22 readings, 22 evidence rows) was opened with the new schema:
+
+- `readings`, `alerts`, `diagnostics`, `state` and `interval_evidence` were byte-identical (row counts and SHA-256 of contents);
+- the new tables were added;
+- `PRAGMA integrity_check` returned ok.
+
+**Tests.**
+
+- `self-test` (backend): 180 passed, 63 of them new comprehensive-coverage tests on synthetic fixtures in `/private/tmp` (including a mounted 4 MB HFS image).
+- `scripts/test-gui.sh`: 273 passed, including the real 2026-10-21 04:00 acceptance fixture.
+
+**Not verified.**
+
+- **Viewer on screen:** the new overview line was not checked visually. A QA launch could not open its window while another viewer instance was running; strings and parsing are covered by the model tests.
+- **MacBook Air (8 GB):** not available.
+- **Installed monitor:** the new build is not installed, so the installed LaunchAgents still run the previous version.

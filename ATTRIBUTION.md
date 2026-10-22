@@ -114,3 +114,157 @@ A process is never named because it is present, because of its executable name, 
 | Upgrade from a production copy | 9 measurements to ready; readings, alerts, diagnostics and evidence byte-identical | 5.9 s | 9 | 14 MB |
 | First scheduled-style check after initialization | 344 trusted without re-walking, 4 re-measured, 0 false growth | 3.3 s | 4 | — |
 | Next check | complete: 346 carried, 2 measured | 3.1 s | 2 | — |
+
+## 7. Comprehensive filesystem coverage (Phase 1, 2026-10-21)
+
+The predefined folders in §2 covered about 350 subfolders of the home folder. Coverage now extends to the whole startup Data volume (`Sources/Coverage.swift`). The predefined-folder engine remains in place. It produces evidence until comprehensive coverage is established, and again whenever `<data dir>/coverage.json` contains `{"mode":"folders"}`.
+
+### What is covered
+
+| Region | How it is covered |
+|---|---|
+| Data volume (`/System/Volumes/Data`): `/Users`, `/Applications`, `/Library`, `/private` (`var`, `tmp`, `etc`), `/opt`, `/usr/local`, Homebrew, hidden folders, caches, VM images, model stores, everything else on it | Walked and tracked with file events |
+| Sealed system volume (`/System`, `/bin`, `/usr`) | Not walked. It is read-only and sealed, changes only through macOS updates, and its size is the APFS *System* volume figure. |
+| VM, Preboot, Update, Recovery volumes | Not walked. They keep no file-event history. Swap is measured through `vm.swapusage`, and every volume through APFS `CapacityInUse`. |
+| Other filesystems mounted inside the Data volume (`/Volumes/*`, autofs `/home`, disk images) | Never entered. Recorded as *excluded*, with the filesystem type. |
+
+**Path identity.** Every path is keyed relative to the Data volume. Firmlinks (`/usr/share/firmlinks`) map `/Users/x` and `/System/Volumes/Data/Users/x` to the same key `Users/x`. File events come from one device-relative FSEvents stream, which reports those same keys. Symlinks are never followed (`fts` with `FTS_PHYSICAL`), and walks never cross a device boundary (`FTS_XDEV` plus an `st_dev` check).
+
+### Partition
+
+The volume is divided into **units**: directories measured as one aggregate. The first walk of a unit stops after 20,000 entries. A unit that large becomes a *split* unit: its own files are measured directly, and each subdirectory becomes a unit of its own. The partition therefore follows where files are.
+
+On this Mac it produced 11,900 units, at most 12 levels deep. That is 11,694 measured units, 188 inaccessible and 21 excluded.
+
+- **Limits.** At most 60,000 units and 32 levels. Beyond that, a unit is walked whole, up to 2 million entries.
+- **Units are disjoint.** A unit's own measurement skips every unit nested inside it, so no byte is counted twice. An ancestor's total (`agg_*` columns) is its own files plus its child units.
+- **Holes.** Directories that cannot be measured are units too, and they never disappear from the model:
+  - *inaccessible*: `permissions` (POSIX), `privacy` (TCC or SIP), or `consent` (deliberately not opened);
+  - *excluded*: another filesystem, or a cloud placeholder (`SF_DATALESS`).
+- **Bounded state.** The `coverage_units` table holds about 12,000 rows (3.7 MB here). The full table is loaded into memory per run (bounded by the unit cap); there is never a per-file in-memory graph.
+
+### What a measurement means
+
+Each unit records:
+
+- **Logical size:** `st_size` of its regular files.
+- **Allocation:** `st_blocks × 512`, which covers the data fork only.
+- **Counts:** files and entries.
+
+Hard-linked files are counted once per walk. None of these figures is APFS physical allocation:
+
+- APFS clones and shared extents are counted once per file.
+- Compressed and sparse files report their allocated blocks.
+- Snapshots, purgeable space and open-but-deleted files are invisible to a walk.
+
+On this Mac the sum over all files was 484 GB, while the Data volume reported 418 GB in use.
+
+The evidence therefore keeps five separate quantities and never forces them to agree:
+
+1. container free space;
+2. APFS volume allocation;
+3. measured unit growth or reduction;
+4. file-event activity;
+5. process correlation.
+
+### Initialization
+
+The existing background job (`local.macbook.storage-monitor.baseline`, which runs `initialize-baseline`) now builds comprehensive coverage. It works in 8-second slices under `attribution.lock`, with throttled I/O, no access-time updates (`IOPOL_ATIME_UPDATES_OFF`), and no downloading of cloud placeholders (`IOPOL_MATERIALIZE_DATALESS_FILES_OFF`).
+
+- **Checkpoints.** Each slice saves changed units in transactions of at most 1,000 rows, so the job resumes where it stopped.
+- **Changes during initialization.** Units that changed while it ran are re-measured, in up to 3 rounds.
+- **Exit behavior.** It exits at a terminal state: *ready*, or *partial* when anything is inaccessible or deferred. At its 30-minute cap it exits 75, and launchd resumes it.
+- **Retries.** Protected units are retried daily. Consent-gated units are retried as soon as Full Disk Access is granted. Units that time out three times become *deferred* and are retried every 6 hours.
+
+### Scheduled checks
+
+1. **Replay.** FSEvents history is replayed from the oldest trusted unit marker. The durable cursor is the `coverage_cursor` state key, plus each unit's own `valid_event`.
+2. **Trust.** A unit is trusted, and carried forward, only when all of these hold:
+   - history is continuous;
+   - its marker is less than 6 hours old;
+   - it has no events after its own measurement;
+   - no `MustScanSubDirs` event covers it.
+3. **Re-measure.** Changed units are re-measured within the existing 25-second budget, those with the most events first. A single unit walk is capped at 80,000 entries. A unit that outgrows the cap is flagged for the background job to split.
+4. **Defer.** Work not reached within the budget is marked *pending* and kicks the background job.
+5. **Gaps.** Dropped events, ID wrap, `RootChanged`, an unfinished replay or a different FSEvents database UUID count as a gap. After a gap nothing is carried forward. Units are re-measured within the budget, or marked *reconcile* for the background job, and coverage is reported as *degraded* until that reconciliation finishes.
+
+### Interval evidence
+
+`folders.status` and `coverage.level` describe one interval:
+
+- `baseline_only`: the first comprehensive reading;
+- `comprehensive`: every accessible unit was compared;
+- `partial`: some units could not be compared, and they are listed.
+
+A change is reported only against a value valid at the immediately previous reading.
+
+- **Not growth:**
+  - first measurements, including folders that just became readable;
+  - units re-measured between readings;
+  - re-partitioned units.
+- **New:** a directory created during the interval under a listing that was current at the previous reading.
+- **Directory renames:** matched by directory inode. The unit keeps its identity and is reported as `moved`.
+- **File moves between units:** paired as `moved_out` / `moved_in`. This needs the same file name in both units' rename events and sizes within 1%. Similar sizes alone are not evidence.
+- **Concentration:** the deepest directory holding at least 75% of measured growth or reduction. It is never the volume root, and it excludes moves. This produces statements like "Approximately 1.8 GB of measured growth occurred under ~/Library/Caches." When nothing comparable changed, the viewer says the filesystem evidence does not explain the change.
+- **Inaccessible activity:** events inside holes are counted, so they can explain why a change was not measured.
+- **Open-but-deleted files:** for same-user processes, `proc_pidfdinfo` reports files with `nlink == 0` on the Data volume, with their allocated bytes.
+
+### Permissions
+
+The background monitor runs as the user. It never requests privileges and never bypasses TCC or SIP.
+
+Full Disk Access is detected by opening, never reading, `~/Library/Mail`, `~/Library/Safari` or `/Library/Application Support/com.apple.TCC`.
+
+**Without Full Disk Access**, the folders below are recorded as inaccessible (`consent`) and **never opened**:
+
+- Desktop, Documents, Downloads, Pictures, Music, Movies;
+- iCloud Drive and CloudStorage;
+- app containers and group containers;
+- every `~/Library` folder except Caches, Developer, Logs and Application Support;
+- inside Application Support, everything except folders this monitor's own predefined-folder baseline shows it already reads completely. Without such evidence, Application Support is not even listed.
+
+The reason, measured on macOS 27 with launchd test jobs:
+
+1. Opening Chrome's Application Support produced a user-visible "App Data" notification, and a media-library consent prompt followed. The walk blocked until the prompt was answered.
+2. A second run stalled inside Application Support with no new prompt logged.
+
+Prompts happen inside `open()` and cannot be checked in advance.
+
+**Stall watchdog.** If a unit's walk does not return within its time limit plus 60 seconds, a watchdog thread updates that unit through a separate database connection and ends the process with exit code 75:
+
+- a recursive unit is divided, so its subfolders are tried one by one on the next run and repeated stalls converge on the folder that blocks;
+- a unit whose own listing blocks becomes `blocked` (inaccessible, retried daily).
+
+In a launchd test, `~/Library` stalled once and was divided. The reading is committed before evidence collection, launchd resumes the background job, and the next run skips that unit. A blocked `open()` therefore cannot hold the locks and silently stop monitoring.
+
+**With Full Disk Access**, nothing is gated. Root-only and SIP-protected folders (`/private/var/db/*`, `.Spotlight-V100`, `.fseventsd` and similar) stay inaccessible either way.
+
+`bin/storage-monitor coverage-status [--units [state]]` lists every unit, with its state and reason.
+
+### History
+
+- **Schema.** The schema change is additive: `CREATE TABLE IF NOT EXISTS coverage_units`, `coverage_epochs`. Existing readings, alerts, diagnostics, interval evidence and folder baselines are not rewritten. A copy of production history was migrated, and all five existing tables were byte-identical afterwards.
+- **Epochs.** `coverage_epochs` records the reading at which comprehensive coverage began, and later scope changes.
+- **Older rows.** Rows without a `coverage` block are predefined-folder intervals, and the viewer labels them that way.
+
+### Measured on this Mac (Mac mini M4 Pro, 24 GB; Data volume 418 GB in use, 3.06 M entries)
+
+| Run | Result | Time | Peak memory |
+|---|---|---|---|
+| Full initialization (terminal, Full Disk Access present) | 11,903 units: 11,694 measured, 188 inaccessible, 21 excluded; 11,771 walks, 60 reconciliations | 155 s | 56 MB footprint |
+| First comprehensive check | Baseline only; 11,658 carried, 36 re-measured | 1.3 s | 39 MB |
+| Check about 15 minutes later | Comprehensive; 2,402 events, 76 re-measured, 11,618 carried, 10 changes; 18 KB evidence row | 4.0 s | 42 MB |
+
+The table above was measured with Full Disk Access (launched from Terminal). As a launchd background job without Full Disk Access, initialization measured 8,828 areas in 291 s (39 MB peak), and checks took 2.2 s and 3.4 s. See VERIFICATION.md.
+
+### Limits
+
+- **Not seen:**
+  - files written and deleted within one interval;
+  - snapshot-retained blocks;
+  - purgeable space;
+  - the sealed system volume;
+  - other users' and root processes' open files.
+- **Without Full Disk Access**, most of `~/Library` and the media and document folders are not measured.
+- **Interpretation.** Measured growth is file data, not physical allocation; the unattributed remainder is an estimate. FSEvents coalesces events and never names the writing process.
+- **Long gaps.** A marker older than 6 hours, for example after a long sleep, forces a background re-walk before units are trusted again (about 2.5 minutes here).

@@ -36,7 +36,7 @@ actor HistoryReader {
         // The existing writer uses DELETE journal mode. Short read-only transactions
         // preserve its contract; close the connection before parsing JSON/projecting UI.
         try execute("PRAGMA query_only=ON; BEGIN DEFERRED;")
-        let rawReadings: [[String:String]], rawAlerts: [[String:String]], rawDiagnostics: [[String:String]], rawIntervals: [[String:String]], rawLifecycle: String?
+        let rawReadings: [[String:String]], rawAlerts: [[String:String]], rawDiagnostics: [[String:String]], rawIntervals: [[String:String]], rawLifecycle: String?, rawCoverage: String?
         do {
             rawReadings = try query("SELECT * FROM readings ORDER BY timestamp DESC,id DESC LIMIT 10000")
             rawAlerts = try query("SELECT * FROM alerts ORDER BY timestamp DESC,id DESC LIMIT 5000")
@@ -46,6 +46,7 @@ actor HistoryReader {
             rawIntervals = hasIntervals ? try query("SELECT reading_id,evidence FROM interval_evidence ORDER BY reading_id DESC LIMIT 10000") : []
             let hasState = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='state'").isEmpty
             rawLifecycle = hasState ? try query("SELECT value FROM state WHERE key='attribution_lifecycle'").first?["value"] : nil
+            rawCoverage = hasState ? try query("SELECT value FROM state WHERE key='coverage_lifecycle'").first?["value"] : nil
             try execute("COMMIT")
         } catch { try? execute("ROLLBACK"); throw error }
         // Finalize and close now, not while UI projection is doing JSON work.
@@ -64,6 +65,7 @@ actor HistoryReader {
         for row in rawIntervals { if let id = Int64(row["reading_id"] ?? ""), let value = IntervalEvidence.parse(readingId: id, json: row["evidence"] ?? "") { intervals[id] = value } }
         var snapshot = EventProjector.project(measurements: readings, alerts: alerts, diagnostics: diagnostics, intervals: intervals)
         snapshot.folderMonitoring = rawLifecycle.flatMap(FolderMonitoringStatus.parse)
+        snapshot.filesystemCoverage = rawCoverage.flatMap(FilesystemCoverageStatus.parse)
         return snapshot
     }
 }

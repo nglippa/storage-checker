@@ -347,6 +347,77 @@ import SQLite3
         try test(firstSummary?.lines.contains("213 folders were measured for the first time; they become comparable from the next reading.") == true && firstSummary?.incomplete == 0, "first measurements explained per interval and not counted as incomplete")
         try test(firstSummary?.headline == "All 303 folders comparable for this interval", "interval headline speaks of comparability, not completeness")
 
+        // MARK: Comprehensive filesystem coverage
+
+        // (a) A historical row without a coverage block is predefined-folder scope with the exact legacy text.
+        try test(withFolders.interval?.coverageScope == "folders" && withFolders.interval?.hasCoverageBlock == false && withFolders.interval?.isComprehensive == false, "evidence row without coverage parses as scope folders")
+        try test(folderAnalysis.attribution.count == 2 && folderAnalysis.attribution[0].hasPrefix("Measured folder growth (file allocated sizes): about 1.20 GB across 1 folder (1 folder could not be compared).") && !folderAnalysis.attribution.joined().contains("Coverage:"), "folder-scope row without coverage block keeps the exact legacy attribution text")
+        let compDB = try create("comprehensive.sqlite3")
+        precondition(sqlite3_exec(compDB, "CREATE TABLE interval_evidence (reading_id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, evidence TEXT NOT NULL);", nil, nil, nil) == SQLITE_OK)
+        for (id, minutes, free, data) in [(1, 90.0, 40 * gb, 150 * gb), (2, 60.0, 38 * gb, 152 * gb), (3, 30.0, 37 * gb, 153 * gb), (4, 20.0, 35 * gb, 155 * gb), (5, 10.0, 34 * gb, 156 * gb), (6, 1.0, 33 * gb, 157 * gb), (7, 0.5, 32 * gb, 158 * gb)] {
+            write(compDB, "INSERT INTO readings VALUES(?,?,?,?,?,?)", [String(id), time(minutes), "A", String(free), String(245 * gb - free), attributionVolumes(data: data, vm: 2 * gb)])
+        }
+        func compEvidence(_ reading: Int, previous: Int, status: String = "complete", level: String = "comprehensive", changes: [[String: Any]] = [], moves: [[String: Any]] = [], concentration: [String: Any]? = nil, incomparable: Int = 0, inaccessibleActivity: Int = 0, openDeleted: [String: Any]? = nil, activity: String = "complete") -> String {
+            var folders: [String: Any] = ["scope": "comprehensive", "status": status, "method": "incremental", "measured": 40, "carried": 11000, "pending": 0, "changes": changes, "changes_total": changes.count, "incomparable": [], "incomparable_total": incomparable, "roots": [], "splits": 0, "moves": moves]
+            if let concentration { folders["concentration"] = concentration }
+            var processes: [String: Any] = ["status": "not_needed", "sampled": 0, "correlations": []]
+            if let openDeleted { processes["open_deleted"] = openDeleted }
+            let coverage: [String: Any] = ["scope": "comprehensive", "level": level, "region": "/System/Volumes/Data", "units": 11718, "monitored": 11500, "baselined": 11600, "inaccessible": 3, "excluded": 1, "pending": 0, "deferred": 0, "full_disk_access": "not_granted", "comprehensive_since": 1.0, "measured_allocated": 120 * gb, "inaccessible_examples": [["path": "/private/var/db", "state": "inaccessible", "reason": "eperm", "detail": "Operation not permitted"]], "inaccessible_activity": ["events": inaccessibleActivity, "regions": inaccessibleActivity > 0 ? [["path": "/private/var/db", "events": inaccessibleActivity, "reason": "eperm"]] : []], "interpretation": "fixture"]
+            return encoded(["version": 2, "reading_id": reading, "previous_reading_id": previous, "coverage": coverage, "folders": folders,
+                            "file_activity": ["status": activity, "events": 10, "distinct_paths": 8, "groups": [], "samples": [], "gaps": []], "processes": processes])
+        }
+        let growthChange = folderChange("~/Dev/app/build", "grew", 1_000_000_000, 2_500_000_000)
+        let smallGrowth = folderChange("~/Dev/app/cache", "grew", 0, 300_000_000)
+        let concentration: [String: Any] = ["growth": ["path": "~/Dev/app", "allocated": 1_600_000_000, "total": 1_800_000_000, "share": 0.89], "reduction": NSNull()]
+        let openDeleted: [String: Any] = ["status": "complete", "files": 2, "allocated_bytes": 5_000_000, "holders": [["pid": 11, "name": "Xcode", "files": 1, "allocated_bytes": 3_000_000], ["pid": 12, "name": "mds", "files": 1, "allocated_bytes": 2_000_000]], "note": "fixture"]
+        write(compDB, "INSERT INTO interval_evidence VALUES(?,?,?)", ["2", time(60), compEvidence(2, previous: 1, changes: [growthChange, smallGrowth], concentration: concentration, incomparable: 2, inaccessibleActivity: 7, openDeleted: openDeleted)])
+        write(compDB, "INSERT INTO interval_evidence VALUES(?,?,?)", ["3", time(30), compEvidence(3, previous: 2)])
+        var movedDir = folderChange("~/Dev/app/renamed", "moved", 900_000_000, 1_800_000_000); movedDir["moved_from"] = "~/Dev/app/old"
+        let movedIn = folderChange("~/Dev/other", "moved_in", 0, 700_000_000)
+        let movedOut = folderChange("~/Dev/app/old", "moved_out", 700_000_000, 0)
+        write(compDB, "INSERT INTO interval_evidence VALUES(?,?,?)", ["4", time(20), compEvidence(4, previous: 3, changes: [folderChange("~/Dev/grow", "grew", 0, 1_000_000_000), movedDir, movedIn, movedOut], moves: [["from": "~/Dev/app/old", "to": "~/Dev/app/renamed", "allocated": 900_000_000], ["from": "a", "to": "b", "allocated": 1], ["from": "c", "to": "d", "allocated": 1]])])
+        write(compDB, "INSERT INTO interval_evidence VALUES(?,?,?)", ["5", time(10), compEvidence(5, previous: 4, status: "busy", level: "unavailable")])
+        write(compDB, "INSERT INTO interval_evidence VALUES(?,?,?)", ["6", time(1), compEvidence(6, previous: 5, status: "baseline_only", level: "baseline_only")])
+        write(compDB, "INSERT INTO interval_evidence VALUES(?,?,?)", ["7", time(0.5), compEvidence(7, previous: 6, status: "partial", level: "partial", incomparable: 4, activity: "gap")])
+        func coverageLifecycle(_ state: String, units: Int = 11718, baselined: Int = 4210, pending: Int = 0, inaccessible: Int = 0, reconcile: Int = 0) -> String {
+            encoded(["version": 1, "state": state, "region": "/System/Volumes/Data", "units": units, "baselined": baselined, "discovered": 0, "pending": pending, "deferred": 0, "inaccessible": inaccessible, "excluded": 1, "stale": 0, "reconcile": reconcile, "splitPending": 0, "monitored": 11500, "measuredAllocated": 120 * gb, "fullDiskAccess": "not_granted", "establishedAt": 1.0, "comprehensiveSince": 2.0, "lastReconciledAt": 3.0, "lastContinuousAt": 4.0,
+                     "notes": [["path": "/private/var/db", "state": "inaccessible", "reason": "eperm", "detail": "Operation not permitted"]], "initializer": ["status": "running", "measurements": 4210]])
+        }
+        write(compDB, "INSERT INTO state VALUES(?,?)", ["coverage_lifecycle", coverageLifecycle("partial", inaccessible: 3, reconcile: 12)])
+        sqlite3_close(compDB)
+        let comp = try await HistoryReader(path: folder.appendingPathComponent("comprehensive.sqlite3").path).load()
+        func compAnalysis(_ id: Int) -> EventAnalysis { CauseAnalyzer.analyze(comp.events.first { $0.id == "reading:\(id)" }!) }
+        let compParsed = comp.events.first { $0.id == "reading:2" }!.interval!
+        try test(compParsed.isComprehensive && compParsed.coverageLevel == "comprehensive" && compParsed.inaccessibleCount == 3 && compParsed.fullDiskAccess == "not_granted" && compParsed.inaccessibleActivityEvents == 7 && compParsed.inaccessibleActivityPath == "/private/var/db" && compParsed.openDeletedFiles == 2 && compParsed.openDeletedHolders == ["Xcode", "mds"] && compParsed.growthConcentration?.path == "~/Dev/app" && compParsed.reductionConcentration == nil, "comprehensive coverage block parses (scope, level, FDA, inaccessible activity, concentration, open-deleted)")
+        // (b) concentration sentence and coverage line.
+        let concentrated = compAnalysis(2).attribution
+        try test(concentrated.first?.hasPrefix("Measured growth (file allocated sizes): about 1.80 GB across 2 areas.") == true && concentrated.contains { $0.hasPrefix("Approximately 1.60 GB of measured growth occurred under ~/Dev/app.") }, "comprehensive row with concentration states where the measured growth occurred")
+        try test(concentrated.last == "Coverage: all accessible areas of the startup volume were compared for this interval; 3 areas could not be read.", "comprehensive coverage line names unreadable areas")
+        try test(compAnalysis(2).causes.first { $0.title == "Data volume growth" }?.support.contains { $0.hasPrefix("Open but deleted files: about 5.00 MB still allocated by 2 files (held by Xcode, mds).") } == true, "open-but-deleted files >= 1 MB shown as a supporting line without blaming an application")
+        try test(compAnalysis(2).collection?.lines.contains("7 file events occurred in areas that could not be measured (for example /private/var/db).") == true, "file events in unmeasurable areas are reported")
+        // (c) zero changes with Data growth.
+        let unexplained = compAnalysis(3).attribution
+        try test(unexplained.first == "Storage decreased by 1.00 GB, but the available filesystem evidence does not explain the change." && unexplained.last?.hasPrefix("Coverage: all accessible areas") == true, "comprehensive row with no changes says the evidence does not explain the change")
+        // (d) moves are not growth or reduction.
+        let movedEvent = comp.events.first { $0.id == "reading:4" }!
+        try test(CauseAnalyzer.drivingFolders(movedEvent).map(\.path) == ["~/Dev/grow"] && movedEvent.interval!.changes.filter(\.isMove).count == 3 && movedEvent.interval!.changes.filter(\.isMove).allSatisfy { !$0.isGrowth }, "moved, moved_in and moved_out are excluded from driving areas")
+        let movedLines = compAnalysis(4).attribution
+        try test(movedLines.contains("3 moves within the volume were not counted as growth or reduction.") && movedLines.first?.contains("across 1 area.") == true, "moves are reported and not counted in measured growth")
+        // (f) busy, baseline_only and partial rows.
+        try test(compAnalysis(5).attribution == ["Filesystem coverage was being updated; evidence skipped for this reading."] && compAnalysis(5).collection?.lines.contains("Filesystem coverage was being updated; evidence skipped for this reading.") == true, "busy comprehensive row skips evidence with an explanation")
+        try test(compAnalysis(6).attribution == ["Comprehensive coverage began at this reading; changes can be compared from the next one."] && compAnalysis(6).collection?.lines.contains("Comprehensive coverage began at this reading; changes can be compared from the next one.") == true, "baseline_only comprehensive row says comparison starts next reading")
+        try test(compAnalysis(7).attribution.last == "Coverage: partial — 4 areas could not be compared; file history had a gap.", "partial comprehensive row states what could not be compared")
+        let folderCoverageRow = IntervalEvidence.parse(readingId: 9, json: encoded(["version": 2, "previous_reading_id": 8, "coverage": ["scope": "folders", "reason": "Comprehensive coverage is still being established (4210 of 11718 areas measured)."], "folders": ["status": "complete", "changes": [], "incomparable": []]]))!
+        try test(folderCoverageRow.coverageScope == "folders" && folderCoverageRow.hasCoverageBlock && folderCoverageRow.coverageReason?.contains("4210 of 11718") == true, "folder-scope coverage block keeps its reason")
+        // (e) coverage_lifecycle.
+        let ready = FilesystemCoverageStatus.parse(coverageLifecycle("ready"))!
+        try test(FilesystemCoverageStatus.parse(coverageLifecycle("initializing"))!.summary == "Initializing · 4,210 of 11,718 areas measured", "coverage lifecycle: initializing summary")
+        try test(ready.summary == "Comprehensive · 11,500 areas monitored", "coverage lifecycle: ready summary")
+        try test(FilesystemCoverageStatus.parse(coverageLifecycle("partial", inaccessible: 3))!.summary == "Comprehensive except 3 inaccessible areas" && FilesystemCoverageStatus.parse(coverageLifecycle("partial", pending: 5, inaccessible: 3, reconcile: 7))!.summary == "Comprehensive except 3 inaccessible areas · 12 pending", "coverage lifecycle: partial summary with and without pending work")
+        try test(FilesystemCoverageStatus.parse(coverageLifecycle("degraded", pending: 5, reconcile: 7))!.summary == "Reconciling after a file-history gap · 12 areas pending", "coverage lifecycle: degraded summary")
+        try test(ready.detail.contains("not APFS physical allocation") && ready.detail.contains("Full Disk Access: not granted") && ready.detail.contains("System Settings → Privacy & Security → Full Disk Access") && ready.detail.contains("/private/var/db — Operation not permitted"), "coverage detail explains measured sizes, Full Disk Access guidance and inaccessible regions")
+        try test(comp.filesystemCoverage?.summary == "Comprehensive except 3 inaccessible areas · 12 pending" && snapshot.filesystemCoverage == nil, "coverage_lifecycle read from the database; absent in older databases")
+
         // MARK: Live capacity and appearance
 
         final class FakeSource: @unchecked Sendable {

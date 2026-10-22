@@ -149,13 +149,14 @@ enum CauseAnalyzer {
     // Folder changes in the direction of the event, largest first.
     static func drivingFolders(_ event: StorageEvent) -> [FolderChange] {
         guard let interval = interval(event), interval.comparable, let net = event.delta, net != 0 else { return [] }
-        return interval.changes.filter { net < 0 ? $0.isGrowth : !$0.isGrowth }.sorted { abs($0.allocatedDelta) > abs($1.allocatedDelta) }
+        return interval.changes.filter { !$0.isMove && (net < 0 ? $0.isGrowth : !$0.isGrowth) }.sorted { abs($0.allocatedDelta) > abs($1.allocatedDelta) }
     }
     static func attribution(_ event: StorageEvent, breakdown: StorageBreakdown) -> [String] {
         guard let net = event.delta, net != 0, let data = breakdown.volumes.first(where: { $0.role == "Data" }), (net < 0) == (data.delta > 0), abs(data.delta) >= 1_000_000 else { return [] }
         let word = net < 0 ? "growth" : "reduction"
         guard let interval = event.interval else { return ["Responsible folders: not recorded for this event."] }
         guard interval.previousReadingId == event.previousMeasurement?.id else { return ["Responsible folders: folder measurements do not cover this exact interval."] }
+        if interval.isComprehensive { return comprehensiveAttribution(event, interval: interval, data: data, word: word) }
         guard interval.comparable else { return ["Responsible folders: tracking started at this reading, so folder growth can be compared from the next reading."] }
         let folders = drivingFolders(event)
         let total = folders.reduce(Int64(0)) { $0 + abs($1.allocatedDelta) }
@@ -164,15 +165,50 @@ enum CauseAnalyzer {
         if interval.incomparableTotal > 0 { coverage.append("\(interval.incomparableTotal) folder\(interval.incomparableTotal == 1 ? "" : "s") could not be compared") }
         if interval.activityStatus != "complete" { coverage.append("file-change history was incomplete, so folders were re-measured instead") }
         let caveat = coverage.isEmpty ? "" : " (" + coverage.joined(separator: "; ") + ")"
-        if folders.isEmpty { return ["Unattributed: no comparable monitored folder changed by 1 MB or more\(caveat), so the Data volume \(word) of \(changeMagnitude(data.delta)) is not explained by monitored folders."] }
+        let tail = interval.hasCoverageBlock ? ["Coverage: predefined monitored folders only."] : []
+        if folders.isEmpty { return ["Unattributed: no comparable monitored folder changed by 1 MB or more\(caveat), so the Data volume \(word) of \(changeMagnitude(data.delta)) is not explained by monitored folders."] + tail }
         let remainder = abs(data.delta) - total
         let summary = "Measured folder \(word) (file allocated sizes): about \(changeMagnitude(total)) across \(folders.count) folder\(folders.count == 1 ? "" : "s")\(caveat)."
-        if remainder > 1_000_000 { return [summary, "Estimated unattributed remainder: about \(changeMagnitude(remainder)) (Data volume \(word) minus measured folder \(word)). This is an estimate, not an APFS reconciliation: folder sizes are not physical allocation."] }
-        return [summary, "Measured folder \(word) is as large as the Data volume \(word). This is an estimate, not an APFS reconciliation: clones, compression and snapshots mean folder sizes do not prove physical allocation."]
+        if remainder > 1_000_000 { return [summary, "Estimated unattributed remainder: about \(changeMagnitude(remainder)) (Data volume \(word) minus measured folder \(word)). This is an estimate, not an APFS reconciliation: folder sizes are not physical allocation."] + tail }
+        return [summary, "Measured folder \(word) is as large as the Data volume \(word). This is an estimate, not an APFS reconciliation: clones, compression and snapshots mean folder sizes do not prove physical allocation."] + tail
+    }
+    // Comprehensive filesystem scope: areas rather than predefined folders.
+    private static func comprehensiveAttribution(_ event: StorageEvent, interval: IntervalEvidence, data: VolumeChange, word: String) -> [String] {
+        if interval.folderStatus == "busy" { return ["Filesystem coverage was being updated; evidence skipped for this reading."] }
+        if interval.folderStatus == "baseline_only" || interval.coverageLevel == "baseline_only" { return ["Comprehensive coverage began at this reading; changes can be compared from the next one."] }
+        guard interval.comparable else { return ["Responsible areas: filesystem evidence was not available for this reading."] }
+        let net = event.delta ?? 0
+        let areas = drivingFolders(event)
+        let total = areas.reduce(Int64(0)) { $0 + abs($1.allocatedDelta) }
+        var lines = [String]()
+        if areas.isEmpty {
+            lines.append("Storage \(net < 0 ? "decreased" : "increased") by \(changeMagnitude(net)), but the available filesystem evidence does not explain the change.")
+        } else {
+            lines.append("Measured \(word) (file allocated sizes): about \(changeMagnitude(total)) across \(areas.count) area\(areas.count == 1 ? "" : "s").")
+            if let c = net < 0 ? interval.growthConcentration : interval.reductionConcentration, c.total > 0, c.allocated > 0 {
+                lines.append("Approximately \(changeMagnitude(c.allocated)) of measured \(word) occurred under \(c.path).")
+            }
+            let remainder = abs(data.delta) - total
+            if remainder > 1_000_000 { lines.append("Estimated unattributed remainder: about \(changeMagnitude(remainder)) (Data volume \(word) minus measured \(word)). This is an estimate, not an APFS reconciliation: file sizes are not physical allocation.") }
+            else { lines.append("Measured \(word) is as large as the Data volume \(word). This is an estimate, not an APFS reconciliation: clones, compression and snapshots mean file sizes do not prove physical allocation.") }
+        }
+        if interval.movesCount > 0 { lines.append("\(interval.movesCount) move\(interval.movesCount == 1 ? "" : "s") within the volume \(interval.movesCount == 1 ? "was" : "were") not counted as growth or reduction.") }
+        lines.append(coverageLine(interval))
+        return lines
+    }
+    static func coverageLine(_ interval: IntervalEvidence) -> String {
+        if interval.coverageLevel == "partial" || interval.folderStatus == "partial" && interval.coverageLevel != "comprehensive" {
+            let compared = interval.incomparableTotal > 0 ? "\(interval.incomparableTotal) area\(interval.incomparableTotal == 1 ? "" : "s") could not be compared" : "some areas were still waiting to be re-measured"
+            return "Coverage: partial — \(compared)" + (interval.activityStatus == "gap" ? "; file history had a gap" : "") + "."
+        }
+        return "Coverage: all accessible areas of the startup volume were compared for this interval" + (interval.inaccessibleCount > 0 ? "; \(interval.inaccessibleCount) area\(interval.inaccessibleCount == 1 ? "" : "s") could not be read" : "") + "."
     }
     private static func folderSupport(_ event: StorageEvent) -> [String] {
         guard let interval = interval(event) else { return [] }
         var lines = [String]()
+        if interval.openDeletedBytes >= 1_000_000 {
+            lines.append("Open but deleted files: about \(changeMagnitude(interval.openDeletedBytes)) still allocated by \(interval.openDeletedFiles) file\(interval.openDeletedFiles == 1 ? "" : "s")" + (interval.openDeletedHolders.isEmpty ? "" : " (held by \(interval.openDeletedHolders.prefix(3).joined(separator: ", ")))") + ".")
+        }
         for folder in drivingFolders(event).prefix(2) {
             let logical = folder.logicalDelta != folder.allocatedDelta ? ", logical \(signedChange(folder.logicalDelta))" : ""
             lines.append("Measured folder \(folder.isGrowth ? "growth" : "reduction"): \(folder.path) \(signedChange(folder.allocatedDelta)) allocated\(logical).")
@@ -372,6 +408,9 @@ enum CauseAnalyzer {
             var summary = CollectionSummary(lines: folderLines, measured: measured, incomplete: notComparable, refusedLocations: 0)
             summary.headlineOverride = notComparable > 0 ? "\(notComparable) of \(measured) folders not comparable for this interval" : "All \(measured) folders comparable for this interval"
             if !interval.comparable { summary.headlineOverride = "Folder baseline started at this reading" }
+            if interval.isComprehensive {
+                summary.headlineOverride = interval.folderStatus == "busy" ? "Filesystem coverage was being updated" : (interval.comparable ? (notComparable > 0 ? "\(notComparable) of \(measured) areas not comparable for this interval" : "All \(measured) areas comparable for this interval") : "Comprehensive coverage began at this reading")
+            }
             return summary
         }
         let collectors = event.diagnostics.flatMap(\.collectors).filter { $0.status != .absent }
@@ -399,6 +438,14 @@ enum CauseAnalyzer {
     static func folderStatusLines(_ event: StorageEvent) -> [String] {
         guard let interval = interval(event) else { return [] }
         var lines = [String]()
+        if interval.isComprehensive {
+            if interval.folderStatus == "busy" { lines.append("Filesystem coverage was being updated; evidence skipped for this reading.") }
+            else if interval.folderStatus == "baseline_only" { lines.append("Comprehensive coverage began at this reading; changes can be compared from the next one.") }
+            else if interval.comparable && interval.incomparableTotal > 0 { lines.append("\(interval.incomparableTotal) areas could not be compared (incomplete, inaccessible, or not measured at the previous reading).") }
+            if interval.inaccessibleActivityEvents > 0 { lines.append("\(interval.inaccessibleActivityEvents) file events occurred in areas that could not be measured" + (interval.inaccessibleActivityPath.map { " (for example \($0))" } ?? "") + ".") }
+            if interval.activityStatus == "gap" { lines.append("File-change history has a gap, so changed paths may be incomplete.") }
+            return lines
+        }
         if interval.folderStatus == "baseline_only" { lines.append("Folder tracking began at this reading; changes can be compared from the next one.") }
         else if interval.firstMeasurements > 0 { lines.append("\(interval.firstMeasurements) folder\(interval.firstMeasurements == 1 ? " was" : "s were") measured for the first time; \(interval.firstMeasurements == 1 ? "it becomes" : "they become") comparable from the next reading.") }
         if interval.comparable && interval.incomparableTotal > 0 { lines.append("\(interval.incomparableTotal) folder\(interval.incomparableTotal == 1 ? "" : "s") could not be compared (incomplete, protected, or not measured at the previous reading).") }
