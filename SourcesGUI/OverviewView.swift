@@ -17,14 +17,57 @@ struct SeverityLabel: View {
 }
 
 struct OverviewView: View {
-    let snapshot: HistorySnapshot
+    let snapshot: HistorySnapshot?
     @ObservedObject var live: LiveCapacityMonitor
+    var historyMissing = false
+    var historyLoading = false
     var body: some View {
-        if let recorded = snapshot.latest {
+        if let recorded = snapshot?.latest {
             // Re-evaluates staleness every 15 s without touching the disk.
             TimelineView(.periodic(from: .now, by: 15)) { context in
                 content(recorded: recorded, now: context.date)
             }
+        } else {
+            TimelineView(.periodic(from: .now, by: 15)) { context in
+                liveOnly(now: context.date)
+            }
+        }
+    }
+    @ViewBuilder private func liveOnly(now: Date) -> some View {
+        let state = live.state
+        if let reading = state.reading {
+            let severity = EventSeverity.capacity(reading.free)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Label("Internal storage", systemImage: "internaldrive").font(.headline)
+                    Spacer(minLength: 8)
+                    SeverityLabel(severity: severity)
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 28) {
+                        available(free: reading.free, reading: reading, freshness: state.freshness(at: now), now: now).frame(minWidth: 230, alignment: .leading)
+                        usage(free: reading.free, total: reading.total, severity: severity).frame(minWidth: 220)
+                    }
+                    VStack(alignment: .leading, spacing: 14) {
+                        available(free: reading.free, reading: reading, freshness: state.freshness(at: now), now: now)
+                        usage(free: reading.free, total: reading.total, severity: severity)
+                    }
+                }
+                // One accurate explanation of why only a live reading is shown (D6).
+                Text(historyMissing ? "No history is recorded yet. Turn on background monitoring in Settings to record capacity at login and every 30 minutes. This live reading is not recorded."
+                     : historyLoading ? "Recorded history is still loading. Live capacity is read-only and does not create an event or alert."
+                     : "No capacity readings are recorded yet. Live capacity is read-only and does not create an event or alert.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }.padding(.horizontal, 22).padding(.top, 16).padding(.bottom, 14)
+        } else {
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Reading live capacity…").font(.headline)
+                    Text("Recorded history loads independently.").font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }.padding(.horizontal, 22).padding(.vertical, 16).accessibilityIdentifier("overview.liveLoading")
         }
     }
     @ViewBuilder private func content(recorded: Measurement, now: Date) -> some View {
@@ -53,8 +96,8 @@ struct OverviewView: View {
                 }
             }
             recordedLine(recorded,reading:reading)
-            if let coverage = snapshot.filesystemCoverage, coverage.state != "not_initialized" { filesystemCoverageLine(coverage) }
-            if let folders = snapshot.folderMonitoring, snapshot.filesystemCoverage?.establishedAt == nil { folderMonitoringLine(folders) }
+            if let coverage = snapshot?.filesystemCoverage, coverage.state != "not_initialized" { filesystemCoverageLine(coverage) }
+            if let folders = snapshot?.folderMonitoring, snapshot?.filesystemCoverage?.establishedAt == nil { folderMonitoringLine(folders) }
         }.padding(.horizontal,22).padding(.top,16).padding(.bottom,14)
     }
 
@@ -169,7 +212,7 @@ struct OverviewView: View {
         HStack(alignment:.firstTextBaseline,spacing:8) {
             VStack(alignment:.leading,spacing:2) {
                 Text(title).font(.subheadline).foregroundStyle(.secondary)
-                if let prior = snapshot.baseline(seconds:seconds) {
+                if let prior = snapshot?.baseline(seconds:seconds) {
                     Text(signedChange(current.free-prior.free)).font(.callout.weight(.medium)).monospacedDigit()
                     Text("Over \(duration(current.timestamp.timeIntervalSince(prior.timestamp)))").font(.caption).foregroundStyle(.secondary)
                         .help("Compared with \(prior.timestamp.formatted(date:.complete,time:.complete)), the nearest same-container reading at or before the requested baseline. No interpolation.")
@@ -248,7 +291,7 @@ struct CapacityChart: View {
                             }
                         }
                     }
-                }.frame(height:118)
+                }.frame(minHeight:72,idealHeight:118,maxHeight:118)   // gives way before content is clipped
                 .accessibilityIdentifier("capacity.chart")
                 .help("Actual recorded points. Lines connect adjacent readings only; gaps over 75 minutes and container changes are not joined. Hover snaps to a recorded measurement.")
             }

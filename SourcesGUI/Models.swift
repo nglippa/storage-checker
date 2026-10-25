@@ -680,5 +680,8 @@ enum EventProjector {
 
 enum HistoryError: Error, LocalizedError {
     case missing(String), sqlite(String), invalid(String)
-    var errorDescription: String? { switch self { case .missing(let path): return "No monitoring history at \(path). The background monitor has not created this database."; case .sqlite(let message): return "Could not read local history: \(message)"; case .invalid(let message): return "History contains an unreadable record: \(message)" } }
+    /// First launch: nothing is recorded until the person turns monitoring on.
+    static let noHistoryGuidance = "No monitoring history yet. Storage Monitor records free space only after you turn on background monitoring in Settings → Background Monitoring."
+    var isMissingHistory: Bool { if case .missing = self { return true }; return false }
+    var errorDescription: String? { switch self { case .missing: return Self.noHistoryGuidance; case .sqlite(let message): return "Could not read local history: \(message)"; case .invalid(let message): return "History contains an unreadable record: \(message)" } }
 }

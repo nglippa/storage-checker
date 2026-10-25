@@ -22,7 +22,7 @@ ICONS
 if ! /usr/bin/iconutil -c icns "$ROOT/build/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns" 2>"$ROOT/build/iconutil.log"; then
   /usr/bin/xcrun swift -module-cache-path "$ROOT/build/module-cache" "$ROOT/scripts/pack-icon.swift" "$ROOT/build/AppIcon.iconset" "$APP/Contents/Resources/AppIcon.icns"
 fi
-/usr/bin/xcrun swiftc -swift-version 5 -O -module-cache-path "$ROOT/build/module-cache" -framework AppKit -framework UserNotifications -parse-as-library "$ROOT/Sources/StorageMonitor.swift" "$ROOT/Sources/Diagnostics.swift" "$ROOT/Sources/Attribution.swift" "$ROOT/Sources/Coverage.swift" "$ROOT/Sources/CoverageSelfTest.swift" -o "$APP/Contents/MacOS/StorageMonitor"
+/usr/bin/xcrun swiftc -target arm64-apple-macos14.0 -swift-version 5 -O -module-cache-path "$ROOT/build/module-cache" -framework AppKit -framework UserNotifications -parse-as-library "$ROOT"/Sources/*.swift "$ROOT"/SourcesShared/*.swift "$ROOT/tests/InventoryTests.swift" -o "$APP/Contents/MacOS/StorageMonitor"
 /bin/cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

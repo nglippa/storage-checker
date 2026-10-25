@@ -80,9 +80,11 @@ func measure() throws -> Reading {
 
 final class Database {
     var db: OpaquePointer?
-    init(_ path: String) throws {
+    /// The busy timeout covers the moments another process (the check or the inventory worker) commits.
+    /// Background work can afford to wait; 10 s keeps the scheduled check from being starved (D9).
+    init(_ path: String, busyTimeout: Int32 = 10_000) throws {
         try required(sqlite3_open(path, &db) == SQLITE_OK, "Cannot open SQLite history")
-        sqlite3_busy_timeout(db, 3000)
+        sqlite3_busy_timeout(db, busyTimeout)
         try exec("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA auto_vacuum=INCREMENTAL; CREATE TABLE IF NOT EXISTS readings (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, container TEXT NOT NULL, free INTEGER NOT NULL, used INTEGER NOT NULL, volumes TEXT NOT NULL); CREATE INDEX IF NOT EXISTS readings_time ON readings(timestamp); CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, severity TEXT NOT NULL, reasons TEXT NOT NULL, free INTEGER NOT NULL, delta INTEGER, notification TEXT NOT NULL); CREATE TABLE IF NOT EXISTS diagnostics (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, snapshot TEXT NOT NULL); CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS interval_evidence (reading_id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, evidence TEXT NOT NULL); " +
             // Comprehensive coverage (additive; see Coverage.swift). Current state, not history: no retention.
             "CREATE TABLE IF NOT EXISTS coverage_units (id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, parent INTEGER, depth INTEGER NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, reason TEXT, inode INTEGER, logical INTEGER NOT NULL DEFAULT 0, allocated INTEGER NOT NULL DEFAULT 0, files INTEGER NOT NULL DEFAULT 0, entries INTEGER NOT NULL DEFAULT 0, complete INTEGER NOT NULL DEFAULT 0, measured_at REAL, valid_event INTEGER, valid_at REAL, valid_reading INTEGER, first_valid_reading INTEGER, listing_reading INTEGER, discovered_at REAL NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, last_attempt REAL, needs_split INTEGER NOT NULL DEFAULT 0, agg_logical INTEGER NOT NULL DEFAULT 0, agg_allocated INTEGER NOT NULL DEFAULT 0, agg_files INTEGER NOT NULL DEFAULT 0, agg_complete INTEGER NOT NULL DEFAULT 0, agg_holes INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS coverage_units_parent ON coverage_units(parent); CREATE TABLE IF NOT EXISTS coverage_epochs (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, reading_id INTEGER, scope TEXT NOT NULL, detail TEXT NOT NULL);")
@@ -250,41 +252,109 @@ func backupDatabase(_ directory: URL, keep: Int = 3) throws -> URL? {
     for name in old.dropLast(keep) { try? fm.removeItem(at: directory.appendingPathComponent(name)) }
     return target
 }
-func install() throws {
-    guard Bundle.main.bundleURL.pathExtension == "app" else { throw Failure("Build and run the bundled executable using bin/storage-monitor") }
-    let source = Bundle.main.bundleURL
-    try privateDirectory(defaultData)
-    if let backup = try backupDatabase(defaultData) { print("Backed up history to \(backup.path)") }   // before any replacement or migration
-    try fm.createDirectory(at: home.appendingPathComponent("Applications"), withIntermediateDirectories: true)
-    try fm.createDirectory(at: agentURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    // bootout only this monitor before replacing its executable. Preserve all user data.
-    _ = try launchctl(["bootout", "gui/\(getuid())/\(label)"], acceptable: true)
-    _ = try launchctl(["bootout", "gui/\(getuid())/\(baselineLabel)"], acceptable: true)
-    if source.standardizedFileURL != installedApp.standardizedFileURL {
-        let staging = installedApp.deletingLastPathComponent().appendingPathComponent(".MacBook Storage Monitor.staging.\(UUID().uuidString).app")
-        try fm.copyItem(at: source, to: staging)
-        if fm.fileExists(atPath: installedApp.path) {
-            _ = try fm.replaceItemAt(installedApp, withItemAt: staging)
-        } else { try fm.moveItem(at: staging, to: installedApp) }
+// Paths and launchd control are injectable so installation can be verified against an
+// isolated home with a recording launch control, never the user's real LaunchAgents.
+struct MonitorInstallLayout {
+    let home: URL
+    static let current = MonitorInstallLayout(home: fm.homeDirectoryForCurrentUser)
+    var data: URL { home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor") }
+    var app: URL { home.appendingPathComponent("Applications/MacBook Storage Monitor.app") }
+    var executable: String { app.appendingPathComponent("Contents/MacOS/StorageMonitor").path }
+    func agent(_ name: String) -> URL { home.appendingPathComponent("Library/LaunchAgents/\(name).plist") }
+    var agents: [(label: String, url: URL, plist: [String: Any])] {
+        [(label, agent(label), agentPlist(executable, data.path)),
+         (baselineLabel, agent(baselineLabel), baselineAgentPlist(executable, data.path)),
+         (inventoryLabel, agent(inventoryLabel), inventoryAgentPlist(executable, data.path))]
     }
-    let executable = installedApp.appendingPathComponent("Contents/MacOS/StorageMonitor").path
-    let data = try PropertyListSerialization.data(fromPropertyList: agentPlist(executable, defaultData.path), format: .xml, options: 0)
-    try data.write(to: agentURL, options: .atomic); _ = chmod(agentURL.path, 0o600)
-    _ = try run("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", ["-f", installedApp.path])
-    let baselineData = try PropertyListSerialization.data(fromPropertyList: baselineAgentPlist(executable, defaultData.path), format: .xml, options: 0)
-    try baselineData.write(to: baselineAgentURL, options: .atomic); _ = chmod(baselineAgentURL.path, 0o600)
-    _ = try launchctl(["enable", "gui/\(getuid())/\(label)"])
-    _ = try launchctl(["bootstrap", "gui/\(getuid())", agentURL.path])
-    _ = try launchctl(["enable", "gui/\(getuid())/\(baselineLabel)"])
-    _ = try launchctl(["bootstrap", "gui/\(getuid())", baselineAgentURL.path])
-    print("Installed \(agentURL.path)\nRuns at login and every :00/:30 (calendar catch-up after sleep).\nAuthorize notifications: bin/storage-monitor authorize")
 }
-func uninstall() throws {
-    _ = try launchctl(["bootout", "gui/\(getuid())/\(label)"], acceptable: true)
-    _ = try launchctl(["bootout", "gui/\(getuid())/\(baselineLabel)"], acceptable: true)
-    if fm.fileExists(atPath: agentURL.path) { try fm.removeItem(at: agentURL) }
-    if fm.fileExists(atPath: baselineAgentURL.path) { try fm.removeItem(at: baselineAgentURL) }
-    print("LaunchAgent removed. App and history retained: \(defaultData.path)")
+/// The inventory worker's periodic wake, issued after each scheduled check (:00/:30; launchd runs a
+/// missed calendar check once on wake). nil unless background monitoring is installed for this data
+/// directory, so disabling it stops maintenance. `kickstart` without `-k` never restarts a running
+/// worker, so wakes cannot overlap a run.
+func scheduledInventoryWake(directory: URL, layout: MonitorInstallLayout = .current) -> [String]? {
+    guard directory.standardizedFileURL == layout.data.standardizedFileURL, fm.fileExists(atPath: layout.agent(inventoryLabel).path) else { return nil }
+    return ["kickstart", "gui/\(getuid())/\(inventoryLabel)"]
+}
+typealias LaunchControl = (_ arguments: [String], _ acceptable: Bool) throws -> Void
+let systemLaunchControl: LaunchControl = { arguments, acceptable in _ = try launchctl(arguments, acceptable: acceptable) }
+
+/// Downloaded copies carry com.apple.quarantine; an unnotarized background helper may then be
+/// refused by Gatekeeper with no visible prompt. Detected and reported, never removed.
+func isQuarantined(_ url: URL) -> Bool { getxattr(url.path, "com.apple.quarantine", nil, 0, 0, 0) >= 0 }
+
+@discardableResult
+func install(layout: MonitorInstallLayout = .current, source: URL = Bundle.main.bundleURL, control: @escaping LaunchControl = systemLaunchControl,
+             fault: (InstallJournal.Phase) throws -> Void = { _ in }, rollbackOnFailure: Bool = true) throws -> [String] {
+    guard source.pathExtension == "app" else { throw Failure("Build and run the bundled executable using bin/storage-monitor") }
+    try privateDirectory(layout.data)
+    var notes = try recoverInterruptedInstall(layout: layout, control: control)
+    try fm.createDirectory(at: layout.app.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try fm.createDirectory(at: layout.agent(label).deletingLastPathComponent(), withIntermediateDirectories: true)
+    var transaction = try InstallTransaction.begin(layout, control: control)
+    do {
+        // Stop only this monitor's agents (by label, whatever program a stale agent points at).
+        try transaction.stopAgents()
+        try transaction.advance(.stopped); try fault(.stopped)
+        if fm.fileExists(atPath: layout.history.path) {
+            transaction.journal.schemaBefore = try schemaFingerprint(layout.history.path)
+            try snapshotDatabase(layout.history, to: layout.snapshot)
+            transaction.journal.snapshot = true
+            try transaction.advance(.snapshotted); try fault(.snapshotted)
+        }
+        if source.standardizedFileURL != layout.app.standardizedFileURL {
+            // The previous installation is moved aside, not discarded, until the update commits.
+            let staging = layout.app.deletingLastPathComponent().appendingPathComponent(".MacBook Storage Monitor.staging.\(UUID().uuidString).app")
+            try fm.copyItem(at: source, to: staging)
+            if fm.fileExists(atPath: layout.previousApp.path) { try fm.removeItem(at: layout.previousApp) }
+            if fm.fileExists(atPath: layout.app.path) { try fm.moveItem(at: layout.app, to: layout.previousApp) }
+            try fm.moveItem(at: staging, to: layout.app)
+        }
+        try transaction.advance(.swapped); try fault(.swapped)
+        try required(fm.isExecutableFile(atPath: layout.executable), "Installed background monitor is missing its executable: \(layout.executable)")
+        // This code's schema, applied while nothing else can write, so a failed migration rolls back.
+        _ = try Database(layout.history.path)
+        try initializeInventorySchema(databasePath: layout.history.path)
+        try transaction.advance(.migrated); try fault(.migrated)
+        if layout.home == MonitorInstallLayout.current.home {
+            _ = try run("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", ["-f", layout.app.path])
+        }
+        try privateDirectory(InventoryRequests.directory(database: layout.history.path))
+        for duplicate in layout.duplicateAgents { try fm.removeItem(at: duplicate) }
+        for agent in layout.agents {
+            let data = try PropertyListSerialization.data(fromPropertyList: agent.plist, format: .xml, options: 0)
+            try data.write(to: agent.url, options: .atomic); _ = chmod(agent.url.path, 0o600)
+        }
+        // From the first bootstrap a started agent may write history: a rollback no longer restores it.
+        try transaction.advance(.registering); try fault(.registering)
+        for agent in layout.agents {
+            try control(["enable", "\(transaction.domain)/\(agent.label)"], false)
+            try control(["bootstrap", transaction.domain, agent.url.path], false)
+            try control(["print", "\(transaction.domain)/\(agent.label)"], false)    // loaded, not just written
+        }
+        try transaction.advance(.registered); try fault(.registered)
+        notes += try transaction.commit()
+    } catch {
+        guard rollbackOnFailure else { throw error }
+        let restored: [String]
+        do { restored = try transaction.rollback() } catch let rollbackError {
+            throw Failure("\(error). Restoring the previous installation also failed (\(rollbackError)); run the update again to finish the repair.")
+        }
+        throw Failure(([("\(error). The previous installation and history were restored.")] + restored.filter { $0.hasPrefix("Could not restart") }).joined(separator: "\n"))
+    }
+    if isQuarantined(layout.app) {
+        notes.append("This copy was downloaded, so macOS may block the background monitor without showing a prompt. If no readings appear, open ~/Applications/MacBook Storage Monitor.app once in Finder and allow it in System Settings → Privacy & Security.")
+    }
+    notes.append("Installed \(layout.agent(label).path)\nRuns at login and every :00/:30 (calendar catch-up after sleep).")
+    return notes
+}
+
+@discardableResult
+func uninstall(layout: MonitorInstallLayout = .current, control: @escaping LaunchControl = systemLaunchControl) throws -> [String] {
+    var notes = try recoverInterruptedInstall(layout: layout, control: control)
+    for agent in layout.agents { try control(["bootout", "gui/\(getuid())/\(agent.label)"], true) }
+    for url in layout.agents.map(\.url) + layout.duplicateAgents where fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+    notes.append("Background monitoring disabled; LaunchAgents removed. App and history retained: \(layout.data.path)")
+    return notes
 }
 
 func log(_ directory: URL, _ message: String) {
@@ -362,6 +432,14 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         try db.retain(current.timestamp)
         let summary = "\(evaluation.severity.uppercased()) free=\(size(current.free)) used=\(size(current.used)) change=\(evaluation.delta.map(size) ?? "baseline") reasons=\(plan.signature.isEmpty ? "none" : plan.signature) notification=\(notification)"
         log(directory, summary); print(summary)
+        // Inventory only wakes after capacity and attribution are durable. Its traversal and
+        // event replay run in a separate process with their own short SQLite transactions.
+        // What macOS currently allows this helper to post, for Settings (D7). Only the installed helper
+        // reads it: permission belongs to this bundle, and test binaries have no notification identity.
+        if directory.standardizedFileURL == defaultData.standardizedFileURL, Bundle.main.bundleIdentifier == "local.macbook.storage-monitor" {
+            try? db.state("notification_authorization", notificationStatus().1)
+        }
+        if let wake = scheduledInventoryWake(directory: directory) { _ = try? run("/bin/launchctl", wake, timeout: 2) }
     } catch { log(directory, "ERROR \(error)"); throw error }
 }
 
@@ -505,22 +583,41 @@ func selfTest() throws {
     try attributionSelfTest(test)
     try baselineInitializationSelfTest(test)
     try coverageSelfTest(test)
+    try inventorySelfTest(test)
+    try installSelfTest(test)
     print("\(count) tests passed")
 }
 
-func runMain() throws {
+@MainActor func runMain() async throws {
     umask(0o077)
     var args = Array(CommandLine.arguments.dropFirst()), directory = defaultData
     if let i = args.firstIndex(of: "--data-dir") { try required(args.count > i+1, "--data-dir requires an absolute path"); try required(args[i+1].hasPrefix("/"), "--data-dir must be absolute"); directory = URL(fileURLWithPath: args[i+1]); args.removeSubrange(i...i+1) }
     let command = args.first ?? "help"
     if ["check", "diagnose", "initialize-baseline", "coverage-probe", "attribution-probe"].contains(command) { applyObservationalIOPolicy() }
     let limit = min(1000,max(1,Int(args.dropFirst().first ?? "10") ?? 10))
+    do { try await runCommand(command, args: args, directory: directory, limit: limit) }
+    catch {
+        // launchd discards stderr: record background failures where they can be found (D10).
+        if command.hasPrefix("inventory-") || command == "initialize-baseline" { logBackgroundFailure(directory, command: command, error: error) }
+        throw error
+    }
+}
+
+/// One `monitor.log` line for a failed background command, with the home folder shown as "~".
+func logBackgroundFailure(_ directory: URL, command: String, error: Error) {
+    let message = String(describing: error).replacingOccurrences(of: home.path, with: "~")
+    log(directory, "ERROR \(command) failed: \(message.prefix(512))")
+}
+
+@MainActor private func runCommand(_ command: String, args: [String], directory: URL, limit: Int) async throws {
     switch command {
+    case let value where value.hasPrefix("inventory-"):
+        try await inventoryCommand(value, args: args, directory: directory)
     case "check": try check(directory, retryNotifications: args.contains("--retry-notifications"))
     case "diagnose": try check(directory, forceDiagnostics: true)
     case "status", "history", "alerts", "diagnostics", "attribution": try show(directory,command,limit)
-    case "install": try install()
-    case "uninstall": try uninstall()
+    case "install": for note in try install() { print(note) }; print("Low-space notifications: allowed only if macOS permits them for MacBook Storage Monitor. Permission given to an earlier version carries over; Settings shows the current state (command line: authorize).")
+    case "uninstall": for note in try uninstall() { print(note) }
     case "authorize":
         if Bundle.main.bundleURL.standardizedFileURL != installedApp.standardizedFileURL || ProcessInfo.processInfo.environment["STORAGE_MONITOR_AUTH_IN_APP"] == nil {
             try required(fm.fileExists(atPath: installedApp.path), "Install first")
@@ -534,7 +631,11 @@ func runMain() throws {
         print(result); try required(result.hasPrefix("delivered:"), "Test notification was not confirmed delivered: \(result)")
     case "notification-status": print(notificationStatus().1)
     case "self-test":
-        if args.contains("--coverage") {   // only the comprehensive coverage tests
+        if args.contains("--inventory") {
+            var count = 0
+            try inventorySelfTest { value, description in try required(value, "FAIL: \(description)"); count += 1; print("PASS \(description)") }
+            print("\(count) inventory tests passed")
+        } else if args.contains("--coverage") {   // only the comprehensive coverage tests
             var count = 0
             try coverageSelfTest { value, description in try required(value, "FAIL: \(description)"); count += 1; print("PASS \(description)") }
             print("\(count) tests passed")
@@ -600,9 +701,11 @@ func runMain() throws {
         let evidence = collectIntervalEvidence(db: db, readingId: id, readingTime: now, previous: prior.map { (id: $0.readingId, time: $0.timestamp) }, marker: currentEventMarker(), roots: defaultMonitoredRoots() + configuredRoots(directory))
         try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [id, now, json(evidence)])
         print(json(evidence))
-    default: print("MacBook Storage Monitor\nCommands: install | uninstall | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | coverage-status [--units [state]] | authorize | notification-status | test-notification | self-test\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
+    default: print("MacBook Storage Monitor\nCommands: install | uninstall | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | coverage-status [--units [state]] | authorize | notification-status | test-notification | self-test\nInventory: inventory-status | inventory-children [node-id] | inventory-largest files|directories|all | inventory-search prefix | inventory-request [--path /absolute/path] | inventory-cancel | inventory-resume | inventory-initialize | inventory-update | inventory-work\nInventory query options: --limit 1..256 --offset N --under node-id\nInventory worker options: --budget seconds --batch 1..256; --root /absolute/path requires isolated data\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
     }
 }
+#if !INVENTORY_TESTS
 @main enum StorageMonitorEntry {
-    static func main() { do { try runMain() } catch { fputs("Storage Monitor: \(error)\n", stderr); exit(1) } }
+    static func main() async { do { try await runMain() } catch { fputs("Storage Monitor: \(error)\n", stderr); exit(1) } }
 }
+#endif

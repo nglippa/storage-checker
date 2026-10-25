@@ -229,28 +229,43 @@ func coverageGate(_ db: Database, region: CoverageRegion, fda: String) -> Consen
 // own connection and ends the process; launchd and the next check carry on without it.
 final class WalkWatchdog {
     static let shared = WalkWatchdog()
-    private let lock = NSLock()
-    private var current: (db: String, unit: Int64, path: String, limit: Date)?
+    private let lock = NSRecursiveLock()
+    private var current: (path: String, limit: Date, interval: TimeInterval, recover: () -> Void)?
     private var started = false
     var onStall: ((String) -> Void)?
     var exitOnStall = true                      // tests observe instead of exiting
     func begin(db: String, unit: Int64, path: String, allowed: TimeInterval) {
-        lock.lock(); current = (db, unit, path, Date().addingTimeInterval(allowed + 60)); let start = !started; started = true; lock.unlock()
+        begin(path: path, allowed: allowed + 60) {
+            // Preserve coverage's existing recovery: split recursive units, skip blocked listings.
+            if let db = try? Database(db) { try? db.write("UPDATE coverage_units SET state = CASE WHEN kind='tree' THEN 'pending' ELSE 'inaccessible' END, reason = CASE WHEN kind='tree' THEN 'blocked_split' ELSE 'blocked' END, kind='split', complete=0, valid_reading=NULL, last_attempt=? WHERE id=?", [Date().timeIntervalSince1970, unit]) }
+        }
+    }
+    func begin(path: String, allowed: TimeInterval, recover: @escaping () -> Void) {
+        lock.lock(); current = (path, Date().addingTimeInterval(allowed), allowed, recover); let start = !started; started = true; lock.unlock()
         if start { Thread.detachNewThread { self.watch() } }
     }
     func end() { lock.lock(); current = nil; lock.unlock() }
+    // Inventory's replay can be long but productive. Bound inactivity rather than
+    // total elapsed time; coverage retains its original fixed walk deadline.
+    func progress() {
+        lock.lock(); defer { lock.unlock() }
+        if var c = current { c.limit = Date().addingTimeInterval(c.interval); current = c }
+    }
     private func watch() {
         while true {
             Thread.sleep(forTimeInterval: 5)
-            lock.lock(); let c = current; lock.unlock()
-            guard let c, Date() > c.limit else { continue }
+            lock.lock()
+            guard let c = current, Date() > c.limit else { lock.unlock(); continue }
+            // Claim expiry while holding the same lock as begin/end. Keep it through
+            // recovery so a returned walk cannot start new work before process exit.
+            current = nil
             // A recursive unit is divided so its subfolders are tried one by one, converging on the
             // folder that blocks; a listing that blocks makes the unit itself inaccessible.
-            if let db = try? Database(c.db) { try? db.write("UPDATE coverage_units SET state = CASE WHEN kind='tree' THEN 'pending' ELSE 'inaccessible' END, reason = CASE WHEN kind='tree' THEN 'blocked_split' ELSE 'blocked' END, kind='split', complete=0, valid_reading=NULL, last_attempt=? WHERE id=?", [Date().timeIntervalSince1970, c.unit]) }
+            c.recover()
             onStall?(c.path)
             fputs("Storage Monitor: walk of \(c.path) did not return; marked blocked\n", stderr)
             if exitOnStall { _exit(75) }
-            end()
+            lock.unlock()
         }
     }
 }
@@ -533,9 +548,9 @@ func walkUnit(_ region: CoverageRegion, _ rel: String, isUnit: (String) -> Bool,
         case FTS_F:
             let st = entry.pointee.fts_statp.pointee
             if st.st_nlink > 1 && linked.count < 200_000 && !linked.insert(UInt64(st.st_ino)).inserted { walk.hardLinks += 1; continue }
-            walk.files += 1; walk.logical += Int64(st.st_size); walk.allocated += Int64(st.st_blocks) * 512
+            walk.files += 1; walk.logical += Int64(st.st_size); walk.allocated += inventoryAllocatedBytes(st)
         case FTS_SL, FTS_SLNONE, FTS_DEFAULT:
-            walk.allocated += Int64(entry.pointee.fts_statp.pointee.st_blocks) * 512
+            walk.allocated += inventoryAllocatedBytes(entry.pointee.fts_statp.pointee)
         case FTS_NS, FTS_ERR:
             if entry.pointee.fts_errno != ENOENT { walk.unreadable += 1 }
         default: break   // FTS_DC (not possible with FTS_PHYSICAL), FTS_DOT
@@ -547,6 +562,8 @@ func walkUnit(_ region: CoverageRegion, _ rel: String, isUnit: (String) -> Bool,
 // MARK: File events
 
 final class CoverageActivity {
+    // Inventory reuses this replay while acknowledging its own durable consumer cursor.
+    var onEvent: ((String, UInt32, UInt64) -> Void)?
     let store: CoverageStore, region: CoverageRegion
     let until: UInt64
     var countFrom: UInt64 = 0                 // interval statistics count only events after this ID
@@ -563,20 +580,29 @@ final class CoverageActivity {
     var events = 0, outside = 0
     var historyDone = false, doneAt: Date?, lastId: UInt64 = 0
     var allGap = false, gaps = [String]()
+    // Inventory distinguishes actual loss of event coverage from an unfinished or unavailable
+    // replay (retried from the same cursor); coverage keeps treating every case as allGap.
+    var lossDetected = false, timedOut = false, streamUnavailable = false
+    /// Set only after FSEventStreamFlushSync returned following HistoryDone: every event generated
+    /// before the stream was created has then been delivered, whatever order IDs arrived in.
+    var flushed = false
+    var lastDelivery: Date?                    // any callback, history or live: the replay is progressing
     init(store: CoverageStore, region: CoverageRegion, until: UInt64) { self.store = store; self.region = region; self.until = until }
     var finished: Bool { historyDone && (lastId >= until || Date().timeIntervalSince(doneAt ?? Date()) > 0.5) }
 
     func handle(_ path: String, _ flags: UInt32, _ id: UInt64) {
+        lastDelivery = Date()
+        onEvent?(path, flags, id)
         func has(_ flag: Int) -> Bool { flags & UInt32(flag) != 0 }
         if has(kFSEventStreamEventFlagHistoryDone) { historyDone = true; doneAt = Date(); lastId = max(lastId, id); return }
         lastId = max(lastId, id)
-        if has(kFSEventStreamEventFlagUserDropped) || has(kFSEventStreamEventFlagKernelDropped) { if id <= until { allGap = true; gaps.append("File events were dropped by macOS") }; return }
-        if has(kFSEventStreamEventFlagEventIdsWrapped) { allGap = true; gaps.append("File event IDs wrapped"); return }
+        if has(kFSEventStreamEventFlagUserDropped) || has(kFSEventStreamEventFlagKernelDropped) { if id <= until { allGap = true; lossDetected = true; gaps.append("File events were dropped by macOS") }; return }
+        if has(kFSEventStreamEventFlagEventIdsWrapped) { allGap = true; lossDetected = true; gaps.append("File event IDs wrapped"); return }
         guard let rel = region.relative(fromDevice: path) else { outside += 1; return }
         guard let unitId = store.deepest(rel), let unit = store[unitId] else { return }
-        if has(kFSEventStreamEventFlagRootChanged) && rel.isEmpty { allGap = true; gaps.append("The monitored root changed"); return }
+        if has(kFSEventStreamEventFlagRootChanged) && rel.isEmpty { allGap = true; lossDetected = true; gaps.append("The monitored root changed"); return }
         if has(kFSEventStreamEventFlagMustScanSubDirs) {
-            if rel.isEmpty { allGap = true; gaps.append("macOS asked for a full rescan") } else { mustScan.append(rel); gaps.append("macOS asked for a rescan of \(region.display(rel))") }
+            if rel.isEmpty { allGap = true; lossDetected = true; gaps.append("macOS asked for a full rescan") } else { mustScan.append(rel); gaps.append("macOS asked for a rescan of \(region.display(rel))") }
         }
         let isDir = has(kFSEventStreamEventFlagItemIsDir)
         let structural = isDir && (has(kFSEventStreamEventFlagItemCreated) || has(kFSEventStreamEventFlagItemRemoved) || has(kFSEventStreamEventFlagItemRenamed)) || has(kFSEventStreamEventFlagMount) || has(kFSEventStreamEventFlagUnmount)
@@ -613,10 +639,18 @@ final class CoverageActivity {
     func underRescan(_ rel: String) -> Bool { mustScan.contains { rel == $0 || rel.hasPrefix($0 + "/") || $0.hasPrefix(rel.isEmpty ? "" : rel + "/") } }
 }
 
+// With `whileDelivering`, `timeout` bounds a stall rather than the whole replay: a replay that
+// keeps delivering is not abandoned before `ceiling` (inventory retries would redo all of it).
+func replayDeadline(started: Date, lastDelivery: Date?, timeout: TimeInterval, whileDelivering: Bool, ceiling: TimeInterval) -> Date {
+    guard whileDelivering else { return started.addingTimeInterval(timeout) }
+    return min(started.addingTimeInterval(max(timeout, ceiling)), max(started, lastDelivery ?? started).addingTimeInterval(timeout))
+}
+
 // Replays this device's FSEvents history for (since, until] without staying resident. Paths are
 // device-relative, so every firmlinked spelling of an object arrives as one path.
-func replayCoverage(_ activity: CoverageActivity, since: UInt64, timeout: TimeInterval) {
-    guard activity.until > since else { activity.historyDone = true; activity.doneAt = .distantPast; activity.lastId = activity.until; return }
+func replayCoverage(_ activity: CoverageActivity, since: UInt64, timeout: TimeInterval, whileDelivering: Bool = false, ceiling: TimeInterval = 0) {
+    // Nothing can have been generated in an empty interval: the boundary is trivially complete.
+    guard activity.until > since else { activity.historyDone = true; activity.flushed = true; activity.doneAt = .distantPast; activity.lastId = activity.until; return }
     var context = FSEventStreamContext(version: 0, info: Unmanaged.passUnretained(activity).toOpaque(), retain: nil, release: nil, copyDescription: nil)
     let callback: FSEventStreamCallback = { _, info, count, paths, flags, ids in
         guard let info else { return }
@@ -626,20 +660,27 @@ func replayCoverage(_ activity: CoverageActivity, since: UInt64, timeout: TimeIn
     }
     let flags = UInt32(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer)
     guard let stream = FSEventStreamCreateRelativeToDevice(kCFAllocatorDefault, callback, &context, activity.region.device, [activity.region.prefix] as CFArray, since, 0, flags) else {
-        activity.allGap = true; activity.gaps.append("File event stream unavailable"); return
+        activity.allGap = true; activity.streamUnavailable = true; activity.gaps.append("File event stream unavailable"); return
     }
     let queue = DispatchQueue(label: "local.macbook.storage-monitor.coverage-events")
     FSEventStreamSetDispatchQueue(stream, queue)
     if FSEventStreamStart(stream) {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline && !queue.sync(execute: { activity.historyDone }) { Thread.sleep(forTimeInterval: 0.05) }
-        if queue.sync(execute: { activity.historyDone }) { FSEventStreamFlushSync(stream) }
+        let started = Date()
+        var deadline = started.addingTimeInterval(timeout)
+        func waiting() -> Bool {
+            queue.sync {
+                deadline = replayDeadline(started: started, lastDelivery: activity.lastDelivery, timeout: timeout, whileDelivering: whileDelivering, ceiling: ceiling)
+                return !activity.historyDone && Date() < deadline
+            }
+        }
+        while waiting() { Thread.sleep(forTimeInterval: 0.05) }
+        if queue.sync(execute: { activity.historyDone }) { FSEventStreamFlushSync(stream); activity.flushed = true }
         while Date() < deadline && !queue.sync(execute: { activity.finished }) { Thread.sleep(forTimeInterval: 0.05) }
         FSEventStreamStop(stream)
-    }
+    } else { activity.streamUnavailable = true }
     FSEventStreamInvalidate(stream); FSEventStreamRelease(stream)
     queue.sync {}
-    if !activity.historyDone { activity.allGap = true; activity.gaps.append("File event history did not finish within \(Int(timeout)) s") }
+    if !activity.historyDone { activity.allGap = true; activity.timedOut = true; activity.gaps.append("File event history did not finish within \(Int(timeout)) s") }
 }
 
 // MARK: Measurement pass

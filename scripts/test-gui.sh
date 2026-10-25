@@ -2,7 +2,7 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 /bin/mkdir -p "$ROOT/build/module-cache"
-/usr/bin/xcrun swiftc -swift-version 5 -O -parse-as-library -module-cache-path "$ROOT/build/module-cache" "$ROOT/SourcesGUI/Models.swift" "$ROOT/SourcesGUI/HistoryReader.swift" "$ROOT/SourcesGUI/DiagnosticAnalysis.swift" "$ROOT/SourcesGUI/EventPanelText.swift" "$ROOT/SourcesGUI/LiveCapacity.swift" "$ROOT/tests/GUIModelTests.swift" -o "$ROOT/build/GUIModelTests"
+/usr/bin/xcrun swiftc -swift-version 5 -O -parse-as-library -module-cache-path "$ROOT/build/module-cache" "$ROOT/SourcesGUI/Models.swift" "$ROOT/SourcesGUI/HistoryReader.swift" "$ROOT/SourcesGUI/DiagnosticAnalysis.swift" "$ROOT/SourcesGUI/EventPanelText.swift" "$ROOT/SourcesGUI/LiveCapacity.swift" "$ROOT/SourcesGUI/MonitoringSetup.swift" "$ROOT/SourcesShared/InventoryModels.swift" "$ROOT/SourcesShared/InventoryPresentation.swift" "$ROOT/SourcesShared/InventoryReloadPolicy.swift" "$ROOT/SourcesShared/InventoryExplorer.swift" "$ROOT/SourcesShared/InventoryChanges.swift" "$ROOT/SourcesShared/InventoryMap.swift" "$ROOT/SourcesShared/StorageAtlas.swift" "$ROOT/SourcesShared/LivingTree.swift" "$ROOT/tests/GUIModelTests.swift" "$ROOT/tests/LivingTreeTests.swift" -o "$ROOT/build/GUIModelTests"
 "$ROOT/build/GUIModelTests" "${1:-$ROOT/build/qa-fixtures}" "$ROOT/tests/fixtures"
 VIEWER="$ROOT/build/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer"
 if [ -x "$VIEWER" ]; then

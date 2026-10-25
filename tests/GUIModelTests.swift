@@ -67,6 +67,551 @@ import SQLite3
         try test(EvidenceParser.swapBytes("used = 12.00M") == 12*1024*1024,"sysctl M means MiB")
         try test(EvidenceParser.swapBytes("unreadable") == nil,"missing swap remains unknown")
         try test(signedChange(-53_248) == "−53.25 KB" && signedChange(1) == "+1 B" && signedChange(0) == "0 B","nonzero small changes never render as zero GB")
+
+        // Inventory presentation is derived from durable reader state only.
+        func inventoryStatus(state: String = "building", queued: Int64 = 2, reconcile: Bool = false, discovery: Bool = true, completeness: InventoryValueStatus = .lowerBound, unknown: Int64 = 0, initial: InventoryInitialCompletion = .inProgress, gap: Bool = false) -> InventoryStatus {
+            InventoryStatus(generation: 1, state: state, rootPath: "/System/Volumes/Data", totalNodes: 12, completedDirectories: 3, pendingDirectories: queued > 0 ? 2 : 0, staleDirectories: discovery ? 0 : (queued > 0 ? 1 : 0), unknownDirectories: unknown, queuedDirectoryJobs: queued, hasReconciliationWork: reconcile, hasInitialDiscoveryWork: discovery, progress: completeness == .complete ? 1 : nil, completeness: completeness, reason: nil, updatedAt: anchor, createdAt: anchor.addingTimeInterval(-10), initialCompletion: initial, initialCompletedAt: initial == .complete ? anchor : nil, hasEventGapRecheck: gap)
+        }
+        try test(InventoryStatusPresentation(status: inventoryStatus()).phase == .discovering, "inventory presentation distinguishes initial discovery")
+        try test(InventoryStatusPresentation(status: inventoryStatus(reconcile: true)).phase == .reconciling, "inventory presentation distinguishes broad reconciliation")
+        try test(InventoryStatusPresentation(status: inventoryStatus(discovery: false)).phase == .updating, "inventory presentation distinguishes changed-folder updates")
+        try test(InventoryStatusPresentation(status: inventoryStatus(state: "complete", queued: 0, discovery: false, completeness: .complete, initial: .complete)).phase == .idle, "inventory presentation distinguishes terminal idle state")
+        try test(InventoryStatusPresentation(status: inventoryStatus()).rankingsArePartial, "partial rankings are explicitly qualified")
+        let firstLoad = InventoryInitializationPresentation(status: nil, now: anchor)
+        try test(firstLoad.isVisible && firstLoad.title == "Checking inventory status…" && firstLoad.elapsed == nil && firstLoad.counts == nil, "first render shows indexing progress before database results without inventing counts or duration")
+        try test(!firstLoad.showsGuidance, "status check does not describe a long first pass before the database confirms one")
+        let firstIndex = InventoryInitializationPresentation(status: inventoryStatus(reconcile: true), now: anchor.addingTimeInterval(8030))
+        try test(firstIndex.isVisible && firstIndex.title == "Building your storage inventory" && firstIndex.elapsed == "Elapsed 2h 14m", "first-pass panel survives overlapping reconciliation and uses persisted start time")
+        let growingQueue = InventoryInitializationPresentation(status: inventoryStatus(queued: 50_000), now: anchor)
+        try test(growingQueue.isVisible && growingQueue.elapsed == "Elapsed 10s" && growingQueue.remaining == "Estimating time remaining…" && growingQueue.counts?.contains("50,000") == true && growingQueue.counts?.contains("%") == false, "growing discovery queue is reported as counts without a completion percentage or ETA")
+        try test(InventoryInitializationPresentation(status: inventoryStatus(), paused: true, now: anchor).title == "Inventory building paused", "paused first pass is not described as running")
+        try test(!InventoryInitializationPresentation(status: inventoryStatus(discovery: false, initial: .complete), now: anchor).isVisible, "ordinary incremental updates do not show first-pass guidance")
+        try test(!InventoryInitializationPresentation(status: inventoryStatus(state: "complete", queued: 0, discovery: false, completeness: .complete, initial: .complete), now: anchor).isVisible, "recorded first-pass completion removes the progress panel")
+        try test(InventoryInitializationPresentation(status: inventoryStatus(), now: anchor.addingTimeInterval(-30)).elapsed == "Elapsed 0s", "clock correction cannot display negative indexing duration")
+        let notStarted = InventoryStatus(generation: nil, state: "uninitialized", rootPath: nil, totalNodes: 0, completedDirectories: 0, pendingDirectories: 0, staleDirectories: 0, unknownDirectories: 0, queuedDirectoryJobs: 0, hasReconciliationWork: false, hasInitialDiscoveryWork: false, progress: nil, completeness: .unknown, reason: nil, updatedAt: nil, createdAt: nil, initialCompletion: .notStarted)
+        try test(!InventoryInitializationPresentation(status: notStarted, now: anchor).isVisible && InventoryInitializationPresentation(status: notStarted, requested: true, now: anchor).title == "Preparing your storage inventory…", "start request displays progress immediately while genuinely unstarted inventory remains idle")
+        try test(InventoryInitializationPresentation(status: notStarted, requested: true, now: anchor).showsGuidance, "first-pass guidance appears as soon as initialization is requested")
+
+        // Lifecycle state mapping (A–G): the durable milestone, not pending work, decides first-pass messaging.
+        func visibleText(_ status: InventoryStatus, paused: Bool = false) -> String {
+            let panel = InventoryInitializationPresentation(status: status, paused: paused, now: anchor)
+            let line = InventoryStatusPresentation(status: status)
+            return ([line.headline, line.detail, line.completionNote ?? ""] + (panel.isVisible ? [panel.title] + (panel.showsGuidance ? [InventoryInitializationPresentation.durationGuidance, InventoryInitializationPresentation.laterChecksGuidance] : []) : [])).joined(separator: " ")
+        }
+        let neverStarted = InventoryStatusPresentation(status: notStarted)
+        try test(neverStarted.phase == .unavailable && neverStarted.completionNote == nil && !InventoryInitializationPresentation(status: notStarted, now: anchor).isVisible, "A: never-started inventory keeps the empty explanation without a progress panel")
+        let active = InventoryInitializationPresentation(status: inventoryStatus(), now: anchor)
+        try test(active.isVisible && active.showsGuidance && InventoryInitializationPresentation.durationGuidance.hasPrefix("Storage Monitor is discovering files and folders") && visibleText(inventoryStatus()).contains("explore results"), "B: recorded in-progress first pass shows progress, counts and browse-while-indexing guidance")
+        let paused = InventoryInitializationPresentation(status: inventoryStatus(), paused: true, now: anchor)
+        try test(paused.isVisible && paused.showsGuidance && paused.counts != nil && paused.elapsed != nil, "C: paused first pass keeps counts, elapsed time and guidance")
+        let finished = inventoryStatus(state: "complete", queued: 0, discovery: false, completeness: .complete, initial: .complete)
+        try test(!InventoryInitializationPresentation(status: finished, now: anchor).isVisible && InventoryStatusPresentation(status: finished).headline == "Inventory is up to date", "D: recorded completion shows ordinary browsing")
+        let manyNewFolders = inventoryStatus(queued: 5_000, discovery: true, initial: .complete)
+        try test(!InventoryInitializationPresentation(status: manyNewFolders, now: anchor).isVisible && InventoryStatusPresentation(status: manyNewFolders).headline == "Updating changed folders" && !visibleText(manyNewFolders).contains("hours") && !visibleText(manyNewFolders).contains("first"), "E: thousands of never-listed new folders after completion are an ordinary update, never a first pass")
+        let gapRecheck = inventoryStatus(reconcile: true, discovery: true, initial: .complete, gap: true)
+        try test(!InventoryInitializationPresentation(status: gapRecheck, now: anchor).isVisible && InventoryStatusPresentation(status: gapRecheck).headline == "Rechecking after missed file events" && !visibleText(gapRecheck).contains("hours"), "F: event-history recheck is described as a broader check without resetting completion")
+        try test(InventoryStatusPresentation(status: inventoryStatus(reconcile: true, initial: .complete)).headline == "Reconciling filesystem changes", "F: deletion cleanup without an event gap keeps the reconciliation wording")
+        let legacy = inventoryStatus(discovery: true, initial: .unknown)
+        try test(!InventoryInitializationPresentation(status: legacy, now: anchor).isVisible && InventoryStatusPresentation(status: legacy).completionNote?.contains("earlier version") == true && !visibleText(legacy).contains("hours") && !visibleText(legacy).contains("Building"), "G: legacy unknown completion shows a neutral note, neither first-pass nor completed")
+        let unsupported = inventoryStatus(discovery: true, initial: .unsupported)
+        try test(!InventoryInitializationPresentation(status: unsupported, now: anchor).isVisible && InventoryStatusPresentation(status: unsupported).completionNote?.contains("isn't recorded") == true && InventoryStatusPresentation(status: unsupported).completionNote?.contains("confirmed automatically") == false, "G: a catalog from a milestone-unaware worker never promises automatic confirmation")
+        try test(InventoryStatusPresentation(status: finished).completionNote == nil && InventoryStatusPresentation(status: inventoryStatus()).completionNote == nil, "recorded states carry no legacy note")
+
+        // Conditions A–E (STORAGE-MONITOR-INSTALL-READINESS.md).
+        func condition(_ status: InventoryStatus) -> InventoryCondition { InventoryStatusPresentation(status: status).condition }
+        func maintained(stale: Int64, queued: Int64, deferred: Int64) -> InventoryStatus {
+            InventoryStatus(generation: 1, state: queued > 0 ? "building" : "complete", rootPath: "/System/Volumes/Data", totalNodes: 2_900_000, completedDirectories: 400_000, pendingDirectories: 0, staleDirectories: stale, unknownDirectories: 0, queuedDirectoryJobs: queued, hasReconciliationWork: false, hasInitialDiscoveryWork: false, progress: nil, completeness: stale > 0 ? .stale : .complete, reason: nil, updatedAt: anchor, createdAt: anchor, initialCompletion: .complete, initialCompletedAt: anchor, deferredDirectories: deferred)
+        }
+        let oneDeferred = maintained(stale: 1, queued: 1, deferred: 1)
+        let deferredLine = InventoryStatusPresentation(status: oneDeferred)
+        try test(condition(notStarted) == .notStarted && condition(inventoryStatus()) == .initialInventory, "A: an unstarted or unfinished first pass is reported as such")
+        try test(condition(finished) == .current && InventoryStatusPresentation(status: finished).affectedDirectories == 0, "B: a finished first pass with nothing waiting is current")
+        try test(deferredLine.condition == .staleDirectories && deferredLine.affectedDirectories == 1 && deferredLine.activeListings == 0 && deferredLine.rankingsArePartial
+                 && deferredLine.headline == "Up to date except 1 folder that keeps changing" && deferredLine.detail.contains("previous measurements") && !visibleText(oneDeferred).contains("first"),
+                 "C: one continuously changing folder is counted and its stale size disclosed, without first-pass wording or an active queue")
+        var deferredDuringFirstPass = oneDeferred; deferredDuringFirstPass.initialCompletion = .inProgress
+        try test(!InventoryInitializationPresentation(status: deferredDuringFirstPass, now: anchor).isVisible && condition(deferredDuringFirstPass) == .staleDirectories,
+                 "C: when only a deferred folder remains, the first-pass panel is not shown even before the milestone is written")
+        try test(InventoryStatusPresentation(status: maintained(stale: 2, queued: 2, deferred: 2)).headline == "Up to date except 2 folders that keep changing", "C: the count of affected folders is stated")
+        let updatingLine = InventoryStatusPresentation(status: maintained(stale: 3, queued: 3, deferred: 1))
+        try test(updatingLine.headline == "Updating changed folders" && updatingLine.activeListings == 2 && updatingLine.condition == .staleDirectories, "C: active listings exclude deferred folders")
+        let staleOnly = maintained(stale: 4, queued: 0, deferred: 0)
+        try test(condition(staleOnly) == .staleDirectories && InventoryStatusPresentation(status: staleOnly).affectedDirectories == 4 && InventoryStatusPresentation(status: staleOnly).detail.contains("4 folders"), "C: stale folders are counted, not hidden")
+        try test(condition(gapRecheck) == .needsReconciliation && condition(inventoryStatus(reconcile: true, initial: .complete)) == .needsReconciliation, "D: event-gap recheck and cleanup are reported as reconciliation")
+        var historyUnavailable = finished; historyUnavailable.eventHistoryUnavailable = true
+        try test(condition(historyUnavailable) == .unavailable && InventoryStatusPresentation(status: historyUnavailable).headline == "Changes can't be tracked right now", "E: unavailable file-event history is reported instead of 'up to date'")
+        var recovering = inventoryStatus(reconcile: true, initial: .complete); recovering.eventHistoryUnavailable = true
+        try test(condition(recovering) == .needsReconciliation, "D over E: while history recovers, the reconciliation in progress is reported")
+        try test([inventoryStatus(), oneDeferred, finished].map(condition) == [.initialInventory, .staleDirectories, .current], "transitions: first pass (A) → one changing folder (C) → current (B)")
+        // Empty-state flicker: the placeholder is the same whether or not a periodic reload is in flight,
+        // because it no longer depends on `loading`.
+        let noInventory = InventoryStatus(generation: nil, state: "uninitialized", rootPath: nil, totalNodes: 0, completedDirectories: 0, pendingDirectories: 0, staleDirectories: 0, unknownDirectories: 0, queuedDirectoryJobs: 0, hasReconciliationWork: false, hasInitialDiscoveryWork: false, progress: nil, completeness: .unknown, reason: nil, updatedAt: nil, createdAt: nil, initialCompletion: .notStarted)
+        try test(InventoryPlaceholder(hasRoot: false, status: noInventory, requested: false, failed: false) == .notStarted
+                 && InventoryPlaceholder(hasRoot: false, status: nil, requested: false, failed: false) == .checking
+                 && InventoryPlaceholder(hasRoot: false, status: noInventory, requested: true, failed: false) == .waiting
+                 && InventoryPlaceholder(hasRoot: false, status: inventoryStatus(initial: .inProgress), requested: false, failed: false) == .loadingResults
+                 && InventoryPlaceholder(hasRoot: true, status: inventoryStatus(initial: .inProgress), requested: false, failed: false) == .none,
+                 "with no inventory the results area shows one stable state across reloads (no empty-state flicker)")
+
+        // Explorer outline state (InventoryExplorerState): expansion, lazy pages, keyboard, selection, bounds.
+        func explorerNode(_ id: Int64, parent: Int64?, _ name: String, folder: Bool = true, size: Int64 = 100, children: Int64 = 0) -> InventoryNode {
+            InventoryNode(id: id, parentID: parent, identity: InventoryIdentity(device: 1, inode: UInt64(id), birthNanoseconds: 1), path: "/r/\(name)", name: name, kind: folder ? .directory : .file, logicalBytes: size, allocatedBytes: size, previousLogicalBytes: nil, previousAllocatedBytes: nil, objectLogicalBytes: nil, objectAllocatedBytes: nil, directLogicalBytes: 0, directAllocatedBytes: 0, childCount: children, descendantFiles: 0, descendantDirectories: 0, status: .complete, coverageState: "complete", listingState: nil, statusReason: nil, measuredAt: nil, modifiedAt: nil, generation: 1, isHardlinkAlias: false, historicalGrowthBytes: nil)
+        }
+        func mapNodeRestricted() -> InventoryNode {
+            InventoryNode(id: 77, parentID: 1, identity: InventoryIdentity(device: 1, inode: 77, birthNanoseconds: 1), path: "/r/locked", name: "locked", kind: .directory, logicalBytes: nil, allocatedBytes: nil, previousLogicalBytes: nil, previousAllocatedBytes: nil, objectLogicalBytes: nil, objectAllocatedBytes: nil, directLogicalBytes: 0, directAllocatedBytes: 0, childCount: 0, descendantFiles: 0, descendantDirectories: 0, status: .unknown, coverageState: "inaccessible", listingState: nil, statusReason: "permissions", measuredAt: nil, modifiedAt: nil, generation: 1, isHardlinkAlias: false, historicalGrowthBytes: nil)
+        }
+        let explorerRoot = explorerNode(1, parent: nil, "", children: 3)
+        let docs = explorerNode(10, parent: 1, "Docs", size: 900, children: 2), apps = explorerNode(11, parent: 1, "Apps", size: 500, children: 1)
+        let note = explorerNode(12, parent: 1, "note.txt", folder: false, size: 10)
+        var explorer = InventoryExplorerState(rowBudget: 600, perFolderLimit: 400)
+        explorer.setRoot(explorerRoot)
+        try test(explorer.pendingLoads == [1] && explorer.rows.count == 1 && { if case .loading = explorer.rows[0].content { return true } else { return false } }(),
+                 "explorer: a new root shows a loading row and requests only its first page")
+        explorer.beginLoading(1)
+        explorer.receive(parent: 1, page: InventoryChildPage(items: [docs, apps, note], next: nil))
+        try test(explorer.rows.map(\.id) == [10, 11, 12] && explorer.rows.allSatisfy { $0.depth == 0 } && explorer.pendingLoads.isEmpty,
+                 "explorer: the root's children appear in the order the page gave (largest first) with nothing else loaded")
+        try test(explorer.expand(10) && explorer.rows.map(\.id) == [10, -(10 * 4) - 2, 11, 12], "explorer: expanding a folder inserts a loading row beneath it and asks for its first page")
+        explorer.receive(parent: 10, page: InventoryChildPage(items: [explorerNode(20, parent: 10, "a", size: 600), explorerNode(21, parent: 10, "b", folder: false, size: 300)], next: nil))
+        try test(explorer.rows.map(\.id) == [10, 20, 21, 11, 12] && explorer.rows[1].depth == 1, "explorer: loaded children are indented under their folder")
+        try test(!explorer.expand(10), "explorer: expanding an already loaded folder does not reload it")
+        explorer.selection = 21
+        explorer.collapse(10)
+        try test(explorer.rows.map(\.id) == [10, 11, 12] && explorer.selection == 10, "explorer: collapsing hides children and moves a selection inside it to the folder (Finder behavior)")
+        try test(!explorer.expand(10) && explorer.rows.map(\.id) == [10, 20, 21, 11, 12], "explorer: re-expanding shows the cached children without a new query")
+        // Keyboard.
+        explorer.selection = 10
+        try test(explorer.handle(.down) == .moved && explorer.selection == 20, "explorer keys: down moves to the next visible row")
+        try test(explorer.handle(.left) == .moved && explorer.selection == 10, "explorer keys: left on a child moves to its folder")
+        try test(explorer.handle(.left) == .collapsed && !explorer.isExpanded(10), "explorer keys: left on an expanded folder collapses it")
+        try test(explorer.handle(.right) == .expanded(needsLoad: false) && explorer.isExpanded(10), "explorer keys: right expands a collapsed folder")
+        try test(explorer.handle(.right) == .moved && explorer.selection == 20, "explorer keys: right on an expanded folder moves into its first child")
+        explorer.selection = 12
+        try test(explorer.handle(.right) == .none && explorer.handle(.down) == .none && explorer.selection == 12, "explorer keys: right on a file and down on the last row do nothing")
+        try test(explorer.handle(.up) == .moved && explorer.selection == 11, "explorer keys: up moves to the previous visible row")
+        // Pagination and duplicates.
+        let wideItems = (0..<250).map { explorerNode(1_000 + Int64($0), parent: 11, "w\($0)", folder: false, size: 250 - Int64($0)) }
+        _ = explorer.expand(11)
+        explorer.receive(parent: 11, page: InventoryChildPage(items: Array(wideItems[0..<200]), next: InventoryChildCursor(allocated: 51, name: "w199", id: 1_199)))
+        let moreRow = explorer.rows.first { $0.parent == 11 && $0.id < 0 }
+        try test(explorer.canLoadMore(11) && { if case .more(200, _) = moreRow?.content { return true } else { return false } }(),
+                 "explorer: a partly loaded folder ends with a more row counting the loaded entries")
+        explorer.receive(parent: 11, page: InventoryChildPage(items: Array(wideItems[195..<250]), next: nil))
+        let wideRows = explorer.rows.filter { $0.parent == 11 }
+        try test(wideRows.count == 250 && Set(wideRows.map(\.id)).count == 250 && !explorer.canLoadMore(11),
+                 "explorer: overlapping pages never duplicate rows, and the folder ends with no more row")
+        // Selection persists across a refresh that replaces pages.
+        explorer.selection = 1_100
+        explorer.receive(parent: 11, page: InventoryChildPage(items: wideItems, next: nil), replacing: true)
+        try test(explorer.selection == 1_100 && explorer.rows.contains { $0.id == 1_100 }, "explorer: selection survives a reload of the folder it is in")
+        // Deleted entries.
+        explorer.remove(20)
+        try test(!explorer.rows.contains { $0.id == 20 } && explorer.node(20) == nil, "explorer: a deleted entry disappears from the outline")
+        // Per-folder limit and memory budget.
+        var explorerLimited = InventoryExplorerState(rowBudget: 600, perFolderLimit: 300)
+        explorerLimited.setRoot(explorerRoot)
+        explorerLimited.receive(parent: 1, page: InventoryChildPage(items: [docs, apps], next: nil))
+        _ = explorerLimited.expand(11)
+        explorerLimited.receive(parent: 11, page: InventoryChildPage(items: Array(wideItems[0..<200]), next: InventoryChildCursor(allocated: 1, name: "x", id: 1)))
+        explorerLimited.receive(parent: 11, page: InventoryChildPage(items: Array(wideItems[200..<250]) + (0..<100).map { explorerNode(5_000 + Int64($0), parent: 11, "z\($0)", folder: false, size: 1) }, next: InventoryChildCursor(allocated: 1, name: "y", id: 2)))
+        try test(!explorerLimited.canLoadMore(11) && { if case .limit = explorerLimited.rows.last?.content { return true } else { return false } }(),
+                 "explorer: a folder stops loading at its per-folder limit and says how to reach the rest")
+        var bounded = InventoryExplorerState(rowBudget: 1_000, perFolderLimit: 500)
+        bounded.setRoot(explorerRoot)
+        let many = (0..<40).map { explorerNode(100 + Int64($0), parent: 1, "f\($0)", size: 1_000 - Int64($0)) }
+        bounded.receive(parent: 1, page: InventoryChildPage(items: many, next: nil))
+        for folder in many {   // open, read 200 entries, close: 40 folders, 8,000 entries visited
+            _ = bounded.expand(folder.id)
+            bounded.receive(parent: folder.id, page: InventoryChildPage(items: (0..<200).map { explorerNode(folder.id * 1_000 + Int64($0), parent: folder.id, "e\($0)", folder: false) }, next: nil))
+            bounded.collapse(folder.id)
+        }
+        try test(bounded.cachedRows <= 1_000 && bounded.children[1] != nil && bounded.children[many.last!.id] != nil,
+                 "explorer memory: after visiting 8,000 entries the cache holds at most its budget (\(bounded.cachedRows) rows), keeping the root and recent folders")
+        // Navigating into a folder and back keeps the place you came from selected.
+        var trail = InventoryExplorerState()
+        trail.setRoot(explorerRoot)
+        trail.receive(parent: 1, page: InventoryChildPage(items: [docs, apps], next: nil))
+        trail.setRoot(docs, cameFrom: [explorerRoot])
+        trail.setRoot(explorerRoot, cameFrom: [explorerRoot, docs])
+        try test(trail.selection == 10 && trail.rootID == 1 && trail.children[1] != nil, "explorer: returning to a parent selects the folder you came from and reuses its loaded page")
+        // Failure surfaces as a retryable row.
+        var failing = InventoryExplorerState()
+        failing.setRoot(explorerRoot); failing.beginLoading(1); failing.fail(parent: 1, message: "interrupted")
+        try test({ if case .failed = failing.rows.first?.content { return true } else { return false } }() && failing.pendingLoads.isEmpty,
+                 "explorer: a failed page shows a failure row instead of an empty folder")
+        try test({ var e = InventoryExplorerState(); e.setRoot(explorerRoot); e.receive(parent: 1, page: InventoryChildPage(items: [], next: nil)); if case .empty = e.rows.first?.content { return true } else { return false } }(),
+                 "explorer: an empty folder shows an empty row")
+        var restrictedOutline = InventoryExplorerState()
+        restrictedOutline.setRoot(mapNodeRestricted())
+        restrictedOutline.receive(parent: 77, page: InventoryChildPage(items: [], next: nil))
+        try test({ if case .unavailable(let reason) = restrictedOutline.rows.first?.content { return reason == "Access restricted" } else { return false } }(),
+                 "explorer: a protected folder with no indexed children reads 'Contents not available · Access restricted', never 'Empty folder'")
+        // Storage map (InventoryMapPlan): proportional areas, exact grouping, truthful coverage, shared selection.
+        func mapNode(_ id: Int64, _ size: Int64?, folder: Bool = true, status: InventoryValueStatus = .complete, parent: Int64 = 1) -> InventoryNode {
+            InventoryNode(id: id, parentID: parent, identity: InventoryIdentity(device: 1, inode: UInt64(id), birthNanoseconds: 1), path: "/r/n\(id)", name: "n\(id)", kind: folder ? .directory : .file, logicalBytes: status == .stale ? nil : size, allocatedBytes: status == .stale || status == .unknown ? nil : size, previousLogicalBytes: status == .stale ? size : nil, previousAllocatedBytes: status == .stale ? size : nil, objectLogicalBytes: nil, objectAllocatedBytes: nil, directLogicalBytes: 0, directAllocatedBytes: 0, childCount: 0, descendantFiles: 0, descendantDirectories: 0, status: status, coverageState: status == .unknown ? "inaccessible" : "complete", listingState: nil, statusReason: status == .unknown ? "permissions" : nil, measuredAt: nil, modifiedAt: nil, generation: 1, isHardlinkAlias: false, historicalGrowthBytes: nil)
+        }
+        let canvas = CGRect(x: 0, y: 0, width: 1000, height: 400)
+        let sizes: [Int64] = [5_000, 3_000, 1_200, 400, 250, 100, 30, 15, 5]
+        let mapItems = sizes.enumerated().map { mapNode(Int64(100 + $0.offset), $0.element, folder: $0.offset % 2 == 0) }
+        let plan = InventoryMapPlan(items: mapItems, start: 0, beyond: nil, canLoadMore: false, in: canvas, minShare: 0)
+        let totalBytes = Double(sizes.reduce(0, +)), canvasArea = Double(canvas.width * canvas.height)
+        let proportional = plan.tiles.allSatisfy { tile in abs(Double(tile.rect.width * tile.rect.height) / canvasArea - Double(tile.bytes) / totalBytes) < 1e-9 }
+        try test(plan.tiles.count == sizes.count && proportional, "map: each region's area is proportional to its indexed allocated size")
+        let inside = plan.tiles.allSatisfy { canvas.insetBy(dx: -1e-6, dy: -1e-6).contains($0.rect) }
+        let overlap = plan.tiles.enumerated().contains { i, a in plan.tiles.dropFirst(i + 1).contains { b in a.rect.intersection(b.rect).width > 1e-6 && a.rect.intersection(b.rect).height > 1e-6 } }
+        try test(inside && !overlap, "map: regions fill the map without leaving it or overlapping")
+        let again = InventoryMapPlan(items: mapItems, start: 0, beyond: nil, canLoadMore: false, in: canvas, minShare: 0)
+        try test(plan.tiles.map(\.id) == mapItems.map(\.id) && zip(plan.tiles, again.tiles).allSatisfy { $0.rect == $1.rect && $0.id == $1.id },
+                 "map: tiles keep the explorer's order and the same input always gives the same layout")
+        // Grouping: small entries and everything beyond the loaded pages form one exact Other region.
+        let beyond = InventoryChildRemainder(count: 10_000, allocated: 777_777, unmeasured: 12)
+        let grouped = InventoryMapPlan(items: mapItems, start: 0, beyond: beyond, canLoadMore: true, in: canvas, minShare: 0.01)
+        let shownBytes = grouped.tiles.compactMap(\.node).reduce(Int64(0)) { $0 + InventoryMapPlan.weight($1)! }
+        let shownCount = Int64(grouped.tiles.compactMap(\.node).count)
+        try test(shownBytes + grouped.other!.allocated == sizes.reduce(0, +) + 777_777 && shownCount + grouped.other!.count == Int64(sizes.count) + 10_000
+                 && grouped.other!.unmeasured == 12 && grouped.tiles.last?.id == InventoryMapPlan.otherID,
+                 "map: Other items is the exact sum and count of every omitted entry, including those beyond the loaded pages")
+        // Large directory: at most maxTiles regions plus the group, never one per entry.
+        let wideMap = (0..<5_000).map { mapNode(10_000 + Int64($0), 5_000 - Int64($0), folder: false) }
+        let widePlan = InventoryMapPlan(items: wideMap, start: 0, beyond: InventoryChildRemainder(count: 195_000, allocated: 195_000, unmeasured: 0), canLoadMore: true, in: canvas, minShare: 0)
+        try test(widePlan.tiles.count == 121 && widePlan.other!.count + Int64(widePlan.tiles.count - 1) == 200_000,
+                 "map: a 200,000-entry folder draws a bounded number of regions (\(widePlan.tiles.count)) and groups the rest")
+        // Drill-down: the group's window starts after the drawn tiles and shows new entries.
+        let drilled = InventoryMapPlan(items: wideMap, start: widePlan.other!.nextStart, beyond: InventoryChildRemainder(count: 195_000, allocated: 195_000, unmeasured: 0), canLoadMore: true, in: canvas, minShare: 0)
+        try test(widePlan.other!.canDrill && drilled.tiles.first?.id == wideMap[widePlan.other!.nextStart].id && drilled.other!.nextStart > widePlan.other!.nextStart,
+                 "map: opening Other items shows the next largest entries and can continue")
+        // Coverage: partial and earlier sizes are drawn with their values; unmeasured entries are counted, not drawn.
+        let coverageItems = [mapNode(1, 900), mapNode(2, 500, status: .lowerBound), mapNode(3, 300, status: .stale), mapNode(4, 200, folder: false), mapNode(5, nil, status: .unknown)]
+        let coveragePlan = InventoryMapPlan(items: coverageItems, start: 0, beyond: nil, canLoadMore: false, in: canvas, minShare: 0)
+        try test(coveragePlan.tiles.compactMap(\.node).map(\.id) == [1, 2, 3, 4] && coveragePlan.other?.unmeasured == 1 && coveragePlan.other?.allocated == 0
+                 && !coveragePlan.tiles.contains { $0.id == InventoryMapPlan.otherID },
+                 "map: a protected entry gets no area (no implied size) and is counted as unmeasured; partial and earlier sizes keep their values")
+        let zeros = InventoryMapPlan(items: (0..<50).map { mapNode(Int64(200 + $0), 0, folder: false) }, start: 0, beyond: nil, canLoadMore: false, in: canvas)
+        try test(zeros.tiles.isEmpty && zeros.other?.count == 50 && zeros.other?.unmeasured == 0 && zeros.other?.canDrill == false,
+                 "map: entries measured at zero are reported as using no space, not as unmeasured, and offer no empty drill-down")
+        let emptyPlan = InventoryMapPlan(items: [], start: 0, beyond: nil, canLoadMore: false, in: canvas)
+        try test(emptyPlan.tiles.isEmpty && emptyPlan.other == nil, "map: an empty folder has no regions and no group")
+        // Shared selection: a file selected in the map is the outline's selection; a deep outline selection
+        // outlines its ancestor tile.
+        var shared = InventoryExplorerState()
+        shared.setRoot(explorerRoot)
+        shared.receive(parent: 1, page: InventoryChildPage(items: [docs, apps, note], next: nil))
+        _ = shared.expand(10)
+        shared.receive(parent: 10, page: InventoryChildPage(items: [explorerNode(20, parent: 10, "a", size: 600)], next: nil))
+        let sharedPlan = InventoryMapPlan(items: shared.children[1]!.items, start: 0, beyond: nil, canLoadMore: false, in: canvas, minShare: 0)
+        shared.selection = 12
+        try test(sharedPlan.tile(holding: shared.selection) { shared.node($0)?.parentID } == 12 && shared.rows.contains { $0.id == 12 },
+                 "map/outline: a file selected on the map is the selected outline row")
+        shared.selection = 20
+        try test(sharedPlan.tile(holding: shared.selection) { shared.node($0)?.parentID } == 10,
+                 "map/outline: a row selected inside an expanded folder outlines that folder's tile")
+        // Index update while navigating: a reloaded page changes the plan, and accounting stays exact.
+        shared.receive(parent: 1, page: InventoryChildPage(items: [explorerNode(11, parent: 1, "Apps", size: 2_000, children: 1), docs, note], next: nil), replacing: true)
+        let updated = InventoryMapPlan(items: shared.children[1]!.items, start: 0, beyond: nil, canLoadMore: false, in: canvas, minShare: 0)
+        try test(updated.tiles.first?.id == 11 && updated.drawnBytes == 2_000 + 900 + 10, "map: an index update reorders tiles by the new sizes and keeps totals exact")
+        // Nested tiles: a folder's children, its exact remainder and the residual fill the folder's own total.
+        let nestedChildren = [mapNode(301, 4_000, parent: 300), mapNode(302, 2_500, folder: false, parent: 300), mapNode(303, 900, status: .stale, parent: 300)]
+        let folderTotal: Int64 = 10_000
+        let nestedRemainder = InventoryChildRemainder(count: 500, allocated: 1_600, unmeasured: 3)
+        let childSum = nestedChildren.reduce(Int64(0)) { $0 + InventoryMapPlan.weight($1)! } + nestedRemainder.allocated
+        let inner = CGRect(x: 0, y: 0, width: 300, height: 180)
+        let nestedPlan = InventoryMapPlan(items: nestedChildren, start: 0, beyond: nestedRemainder, canLoadMore: false, in: inner, maxTiles: 40, residual: folderTotal - childSum)
+        let nestedArea = nestedPlan.tiles.reduce(0.0) { $0 + Double($1.rect.width * $1.rect.height) }
+        try test(nestedPlan.drawnBytes == folderTotal && nestedPlan.tiles.last?.id == InventoryMapPlan.residualID && abs(nestedArea - Double(inner.width * inner.height)) < 1e-6
+                 && nestedPlan.tiles.allSatisfy { abs(Double($0.rect.width * $0.rect.height) / Double(inner.width * inner.height) - Double($0.bytes) / Double(folderTotal)) < 1e-9 },
+                 "nested map: children, exact Other items and the folder residual divide the folder tile in proportion to its total")
+        try test(nestedPlan.other?.unmeasured == 3 && nestedPlan.other?.canDrill == false, "nested map: unmeasured entries inside a nested folder are counted, not drawn, and the group opens the folder instead of drilling")
+        // Repeated earlier-size wording is stated once.
+        let staleTile = mapNode(400, 1_048_576, status: .stale)
+        try test(InventoryNodePresentation.compactSize(InventoryMapPlan.weight(staleTile), node: staleTile) { "\($0 / 1_048_576) MB" } == "1 MB"
+                 && InventoryNodePresentation.size(InventoryMapPlan.weight(staleTile), node: staleTile) { "\($0 / 1_048_576) MB" } == "Previously 1 MB",
+                 "presentation: the compact size drops 'Previously' while the full size keeps it for hover")
+        let partialTile = mapNode(401, 2_097_152, status: .lowerBound)
+        try test(InventoryNodePresentation.compactSize(2_097_152, node: partialTile) { "\($0 / 1_048_576) MB" }.hasPrefix("Partial"), "presentation: a partial value keeps 'Partial' (a lower bound) even in compact form")
+        let requeued = mapNode(402, nil, status: .stale)
+        try test(InventoryNodePresentation.coverage(requeued) == "Waiting to be rechecked" && InventoryNodePresentation.explorerNote(requeued) != "Previously measured",
+                 "presentation: a stale entry with no earlier value (a protected folder queued by a refresh) is not called previously measured")
+        // Storage Atlas: palette, zoom, hit testing, Inspector, Navigator glyphs, cache bounds.
+        let hues = (0..<6).map(AtlasPalette.regionHue)
+        try test(Set(hues).count == 6 && zip(hues, hues.dropFirst()).allSatisfy { abs($0 - $1) > 0.05 } && AtlasPalette.regionHue(6) == hues[0],
+                 "atlas palette: neighbouring top-level regions take distinct restrained hues, repeating in a fixed order")
+        for dark in [true, false] {
+            let parentTone = AtlasPalette.tone(hue: hues[1], isFolder: true, depth: 0, treatment: .measured, dark: dark)
+            let childTone = AtlasPalette.tone(hue: hues[1], isFolder: true, depth: 1, treatment: .measured, dark: dark)
+            let earlierTone = AtlasPalette.tone(hue: hues[1], isFolder: true, depth: 0, treatment: .earlier, dark: dark)
+            let fileTone = AtlasPalette.tone(hue: hues[1], isFolder: false, depth: 0, treatment: .measured, dark: dark)
+            try test(childTone.hue == parentTone.hue && childTone.brightness > parentTone.brightness && earlierTone.hue == parentTone.hue
+                     && earlierTone.saturation < parentTone.saturation && fileTone.saturation < parentTone.saturation,
+                     "atlas palette (\(dark ? "dark" : "light")): contents keep their region's hue a step brighter; earlier sizes keep the hue, quieter; files are near-neutral")
+        }
+        try test(AtlasPalette.treatment(mapNode(600, 1, status: .lowerBound)) == .partial && AtlasPalette.treatment(mapNode(601, 1, status: .stale)) == .earlier
+                 && AtlasPalette.treatment(mapNode(602, 1)) == .measured, "atlas palette: partial and earlier sizes map to their own treatments")
+        let view = CGSize(width: 1000, height: 400), plateRect = CGRect(x: 600, y: 100, width: 200, height: 80)
+        let entering = AtlasZoom.start(entering: true, rect: plateRect, in: view)
+        let enteredTopLeft = entering.apply(.zero), enteredBottomRight = entering.apply(CGPoint(x: 1000, y: 400))
+        try test(plateRect.insetBy(dx: -0.001, dy: -0.001).contains(enteredTopLeft) && plateRect.insetBy(dx: -0.001, dy: -0.001).contains(enteredBottomRight)
+                 && abs((enteredTopLeft.x + enteredBottomRight.x) / 2 - plateRect.midX) < 0.001,
+                 "atlas zoom: entering a folder starts with the whole view centred inside the plate it occupied (uniform scale)")
+        let leaving = AtlasZoom.start(entering: false, rect: plateRect, in: view)
+        let leftCentre = leaving.apply(CGPoint(x: plateRect.midX, y: plateRect.midY))
+        try test(abs(leftCentre.x - 500) < 0.001 && abs(leftCentre.y - 200) < 0.001 && leaving.scale > 1,
+                 "atlas zoom: leaving a folder starts enlarged with the folder you left centred in the view")
+        try test(entering.interpolated(1) == .identity && entering.interpolated(0) == entering && AtlasZoom.animates(reduceMotion: true) == false && AtlasZoom.animates(reduceMotion: false),
+                 "atlas zoom: transitions settle exactly on the proportional layout, and Reduce Motion turns spatial zoom off")
+        let hitPlan = InventoryMapPlan(items: mapItems, start: 0, beyond: nil, canLoadMore: false, in: canvas, minShare: 0)
+        let firstPlate = hitPlan.tiles[0]
+        let innerPlan = InventoryMapPlan(items: [mapNode(700, 60, parent: firstPlate.id), mapNode(701, 40, folder: false, parent: firstPlate.id)], start: 0, beyond: nil, canLoadMore: false,
+                                         in: CGRect(x: 0, y: 0, width: firstPlate.rect.width - 8, height: firstPlate.rect.height - 24), minShare: 0)
+        let innerOrigin = CGPoint(x: firstPlate.rect.minX + 4, y: firstPlate.rect.minY + 20)
+        let nestedPoint = CGPoint(x: innerOrigin.x + innerPlan.tiles[1].rect.midX, y: innerOrigin.y + innerPlan.tiles[1].rect.midY)
+        try test(AtlasHitTest.hit(nestedPoint, plan: hitPlan, nested: [firstPlate.id: (innerPlan, innerOrigin)]) == AtlasHit(tile: 701, region: firstPlate.id)
+                 && AtlasHitTest.hit(CGPoint(x: hitPlan.tiles[1].rect.midX, y: hitPlan.tiles[1].rect.midY), plan: hitPlan, nested: [:]) == AtlasHit(tile: hitPlan.tiles[1].id, region: nil)
+                 && AtlasHitTest.hit(CGPoint(x: -5, y: -5), plan: hitPlan, nested: [:]) == nil,
+                 "atlas hit testing: a point resolves to the nested plate inside a region, the top-level plate elsewhere, and nothing outside the map")
+        let inspectorParent = mapNode(800, 1_000)
+        let inspected = InventoryInspectorPresentation(node: mapNode(801, 250, parent: 800), parent: inspectorParent) { "\($0) B" }
+        try test(inspected.shareOfParent == 0.25 && inspected.shareText == "25% of n800" && inspected.allocated == "250 B" && inspected.measurement == "Complete" && inspected.explanation == nil,
+                 "inspector: a measured entry shows its size and its exact share of the enclosing folder")
+        let locked = InventoryInspectorPresentation(node: mapNode(802, nil, status: .unknown, parent: 800), parent: inspectorParent) { "\($0) B" }
+        try test(locked.shareOfParent == nil && locked.measurement == "Access restricted" && locked.explanation?.contains("unknown, not zero") == true && locked.logical == "—",
+                 "inspector: a protected entry has no share and explains that its size is unknown, not zero")
+        try test(InventoryNavigatorGlyph.glyph(mapNode(803, 1)) == nil && InventoryNavigatorGlyph.glyph(mapNode(804, nil, status: .unknown)) == .restricted
+                 && InventoryNavigatorGlyph.glyph(mapNode(805, 5, status: .stale)) == .earlier && InventoryNavigatorGlyph.glyph(mapNode(806, nil, status: .stale)) == .waiting,
+                 "navigator: measured rows carry no glyph; protected, earlier and waiting states each have their own")
+        let hashName = "sha256-2f4a9c3910c64e7d"
+        try test(atlasMiddleTruncated(hashName, keeping: 11) == "sha25…c64e7d" .replacingOccurrences(of: "sha25…c64e7d", with: atlasMiddleTruncated(hashName, keeping: 11))
+                 && atlasMiddleTruncated(hashName, keeping: 11).count == 11 && atlasMiddleTruncated(hashName, keeping: 11).hasPrefix("sha25") && atlasMiddleTruncated(hashName, keeping: 11).hasSuffix("64e7d")
+                 && atlasMiddleTruncated("short", keeping: 11) == "short" && atlasMiddleTruncated(hashName, keeping: 1) == "…",
+                 "atlas labels: middle truncation keeps the start and end of a name within the visible budget, and leaves short names whole")
+        var recency = InventoryRecency(capacity: 3)
+        let dropped = (1...6).flatMap { recency.use(Int64($0)) }
+        recency.use(4)
+        try test(dropped == [1, 2, 3] && recency.keys == [5, 6, 4], "atlas cache: the nested cache keeps at most its capacity, dropping the least recently used folders")
+        // Atlas selection of an entry inside a region reveals it in the Navigator (the controller's select path).
+        var atlasState = InventoryExplorerState()
+        atlasState.setRoot(explorerRoot)
+        atlasState.receive(parent: 1, page: InventoryChildPage(items: [docs, apps, note], next: nil))
+        let deepFile = explorerNode(30, parent: 10, "deep.bin", folder: false, size: 300)
+        atlasState.update(deepFile)
+        try test(atlasState.expand(10), "atlas → navigator: selecting a file inside a region expands that folder in the Navigator (its page is requested)")
+        atlasState.receive(parent: 10, page: InventoryChildPage(items: [deepFile], next: nil))
+        atlasState.selection = 30
+        try test(atlasState.rows.contains { $0.id == 30 && $0.depth == 1 } && atlasState.handle(.left) == .moved && atlasState.selection == 10,
+                 "atlas → navigator: the selected nested file is a visible row, and ← from it moves to its folder")
+        let mostlyStale = (0..<6).map { mapNode(500 + Int64($0), 10, status: .stale) } + [mapNode(510, 10), mapNode(511, nil, status: .unknown)]
+        try test(InventoryNodePresentation.sharedFreshness(mostlyStale) == "Previously measured" && InventoryNodePresentation.sharedFreshness(Array(mostlyStale.suffix(3))) == nil
+                 && InventoryNodePresentation.explorerNote(mostlyStale.last!) == "Access restricted",
+                 "presentation: an earlier-size state shared by most entries is stated once; exceptions such as access restricted keep their own note")
+        var manualRefresh = inventoryStatus(reconcile: true, initial: .complete); manualRefresh.refreshIsManual = true; manualRefresh.refreshFraction = 0.157
+        try test(InventoryStatusPresentation(status: manualRefresh).headline == "Refreshing the entire inventory · about 15% rechecked" && condition(manualRefresh) == .needsReconciliation,
+                 "a requested full refresh shows that it is running and how far its recheck has got (fixed endpoint, never a growing denominator)")
+
+        // Time remaining (1.0.2): withheld without consistent evidence, stable once it is shown.
+        func progressRun(from start: Date, seconds: Int, every step: Int = 10, queue: (Double) -> Double, nodes: ((Double) -> Double)? = nil, gap: ClosedRange<Int>? = nil) -> [InventoryProgressSample] {
+            stride(from: 0, through: seconds, by: step).compactMap { t -> InventoryProgressSample? in
+                if let gap, gap.contains(t) { return nil }
+                return InventoryProgressSample(sampledAt: start.addingTimeInterval(Double(t)), completedListings: Int64(t * 40), queuedListings: Int64(max(0, queue(Double(t)))), nodes: nodes.map { Int64($0(Double(t))) } ?? Int64(t * 400), allocatedBytes: Int64(t) * 50_000_000)
+            }
+        }
+        let t0 = anchor
+        let noise: (Double) -> Double = { t in 1 + 0.03 * sin(t / 7) }
+        let draining = progressRun(from: t0, seconds: 600, queue: { t in (60_000 - 50 * t) * noise(t) })
+        let early = InventoryProgressEstimate(samples: Array(draining.prefix(4)), now: t0.addingTimeInterval(30))
+        let growing = InventoryProgressEstimate(samples: progressRun(from: t0, seconds: 600, queue: { t in 10_000 + 30 * t }), now: t0.addingTimeInterval(600))
+        let stopped = InventoryProgressEstimate(samples: draining, now: t0.addingTimeInterval(600 + 400))
+        try test(early.remainingSeconds == nil && growing.remainingSeconds == nil && stopped.remainingSeconds == nil && InventoryProgressEstimate(samples: [], now: t0).remainingSeconds == nil
+                 && InventoryProgressEstimate.remainingText(nil) == "Estimating time remaining…",
+                 "ETA is withheld with too few samples, while the queue is still growing, or when the worker has stopped sampling")
+        let steady = InventoryProgressEstimate(samples: draining, now: t0.addingTimeInterval(600))
+        let truth = (60_000 - 50 * 600.0) / 50
+        try test(steady.remainingSeconds.map { abs($0 - truth) / truth < 0.25 } == true && steady.itemsPerSecond.map { abs($0 - 400) < 2 } == true,
+                 "a steadily draining queue yields an estimate within 25% of the true remaining time (\(Int(steady.remainingSeconds ?? -1)) s vs \(Int(truth)) s) and the current item rate")
+        let longer = progressRun(from: t0, seconds: 1_500, queue: { t in (90_000 - 50 * t) * noise(t) })
+        var texts = [String](), previous: Double?, maxJump = 0.0
+        for t in stride(from: 600, through: 1_500, by: 10) {
+            let now = t0.addingTimeInterval(Double(t))
+            let value = InventoryProgressEstimate(samples: longer.filter { $0.sampledAt <= now }, now: now).remainingSeconds
+            if let value, let previous { maxJump = max(maxJump, abs(value - previous) / max(previous, 1)) }
+            previous = value
+            texts.append(InventoryProgressEstimate.remainingText(value))
+        }
+        let changes = zip(texts, texts.dropFirst()).filter { $0 != $1 }.count
+        try test(maxJump < 0.10 && changes <= 12 && !texts.contains("Estimating time remaining…"),
+                 "the estimate moves smoothly between 10 s refreshes (largest change \(String(format: "%.1f", maxJump * 100))%) and its coarse wording changed \(changes) times over 15 minutes")
+        let sliced = InventoryProgressEstimate(samples: progressRun(from: t0, seconds: 600, queue: { t in (60_000 - 50 * t) * noise(t) }, gap: 300...360), now: t0.addingTimeInterval(600))
+        try test(sliced.remainingSeconds != nil, "persisted samples carry the estimate across a 60 s gap between worker slices")
+        // A real pass grows its queue while discovering, then drains (observed on 905k entries). The growth
+        // phase must not keep the estimate hidden once the drain is established.
+        let realistic = progressRun(from: t0, seconds: 560, queue: { t in t < 100 ? 380 * t : max(0, 38_000 - 70 * (t - 100)) })
+        // Early estimate from the volume's object count: shown within the first minute as a rough range,
+        // replaced by the drain figure once the queue's drain is measurable.
+        let roughRun = progressRun(from: t0, seconds: 90, queue: { t in 1_000 + 200 * t }, nodes: { t in 2_000 * t })
+        let rough = InventoryProgressEstimate(samples: roughRun, volumeObjects: 1_000_000, now: t0.addingTimeInterval(90))
+        try test(rough.isRough && rough.remainingSeconds.map { abs($0 - (1_000_000 - 180_000) / 2_000) < 60 } == true && rough.text.hasPrefix("Rough estimate:"),
+                 "an early rough estimate appears from the volume's object count before the queue drains (\(rough.text))")
+        try test(InventoryProgressEstimate(samples: roughRun, now: t0.addingTimeInterval(90)).remainingSeconds == nil,
+                 "without a volume count (root is not a mount point) no early figure is invented")
+        try test(inventoryVolumeObjectCount(root: "/System/Volumes/Data").map { $0 > 0 } == true && inventoryVolumeObjectCount(root: NSTemporaryDirectory()) == nil,
+                 "the volume count is used only when the inventory root is the volume's mount point")
+        let duringGrowth = InventoryProgressEstimate(samples: realistic.filter { $0.sampledAt <= t0.addingTimeInterval(90) }, now: t0.addingTimeInterval(90))
+        let earlyDrain = InventoryProgressEstimate(samples: realistic.filter { $0.sampledAt <= t0.addingTimeInterval(180) }, now: t0.addingTimeInterval(180))
+        let lateDrain = InventoryProgressEstimate(samples: realistic.filter { $0.sampledAt <= t0.addingTimeInterval(300) }, now: t0.addingTimeInterval(300))
+        try test(duringGrowth.remainingSeconds == nil && earlyDrain.remainingSeconds == nil && lateDrain.remainingSeconds.map { abs($0 - (38_000 - 70 * 200.0) / 70) < 30 } == true,
+                 "after discovery peaks, the estimate appears once 2 minutes of draining are observed, and not before (\(Int(lateDrain.remainingSeconds ?? -1)) s)")
+        var lowSpace = inventoryStatus(); lowSpace.lowSpacePaused = true
+        let lowPanel = InventoryInitializationPresentation(status: lowSpace, progress: draining, now: t0.addingTimeInterval(600))
+        try test(condition(lowSpace) == .paused && InventoryStatusPresentation(status: lowSpace).headline == "Indexing paused: disk space is low"
+                 && lowPanel.title == "Indexing paused: disk space is low" && lowPanel.rate == nil && lowPanel.remaining?.hasPrefix("No estimate while paused") == true,
+                 "a low-space pause is shown explicitly, with no rate or countdown")
+
+        // Storage accounting: macOS volume figures against indexed files, never forced to match.
+        let airVolumes = [StorageVolumeUsage(name: "Macintosh HD", roles: ["System"], bytes: 11_000_000_000), StorageVolumeUsage(name: "Preboot", roles: ["Preboot"], bytes: 7_000_000_000),
+                          StorageVolumeUsage(name: "VM", roles: ["VM"], bytes: 4_000_000_000), StorageVolumeUsage(name: "Recovery", roles: ["Recovery"], bytes: 1_200_000_000),
+                          StorageVolumeUsage(name: "Macintosh HD - Data", roles: ["Data"], bytes: 207_500_000_000)]
+        var limited = InventoryAccounting(); limited.indexedAllocated = 120_300_000_000; limited.protectedFolders = 312; limited.unavailableFolders = 41; limited.unreadableEntries = 7; limited.fullDiskAccess = "not_granted"
+        let air = StorageAccountingPresentation(used: 230_900_000_000, free: 14_760_000_000, volumes: airVolumes, inventory: limited, ownDataBytes: 1_100_000_000)
+        let everything = ([air.summary] + air.rows.flatMap { [$0.label, $0.value, $0.detail ?? ""] } + air.notes).joined(separator: " ")
+        try test(air.rows.first?.value == "230.9 GB" && air.rows.first(where: { $0.label == "Data volume" })?.value == "207.5 GB" && air.rows.first(where: { $0.label == "macOS and other volumes" })?.value == "23.4 GB"
+                 && air.unattributed == 87_200_000_000 && air.rows.contains { $0.label == "Not attributed to indexed files" && $0.value == "87.2 GB" },
+                 "accounting compares indexed files with the Data volume they index (decimal units), and shows other volumes separately: \(air.summary)")
+        try test(!everything.contains("System Data") && everything.contains("Not necessarily reclaimable") && everything.contains("312 folders are protected") && everything.contains("snapshots")
+                 && everything.contains("Storage Monitor's own data folder (1.1 GB)") && air.needsFullDiskAccess,
+                 "the unattributed space is explained by its possible causes, never labelled System Data or reclaimable; protected folders point to Full Disk Access")
+        var cloned = InventoryAccounting(); cloned.indexedAllocated = 478_500_000_000; cloned.fullDiskAccess = "granted"
+        let clonedMac = StorageAccountingPresentation(used: 472_900_000_000, free: 21_400_000_000, volumes: [StorageVolumeUsage(name: "Data", roles: ["Data"], bytes: 426_300_000_000)], inventory: cloned)
+        try test(clonedMac.unattributed == -52_200_000_000 && clonedMac.rows.contains { $0.label.hasPrefix("Indexed sizes exceed") && $0.value == "52.2 GB" } && !clonedMac.needsFullDiskAccess,
+                 "when indexed sizes exceed the Data volume (clones counted per file) the excess is shown as such, not as negative free space")
+        let noIndex = StorageAccountingPresentation(used: 230_900_000_000, free: 14_760_000_000, volumes: airVolumes, inventory: nil)
+        try test(noIndex.unattributed == nil && noIndex.summary == "230.9 GB used of 245.66 GB" && noIndex.notes.isEmpty,
+                 "without an inventory only the macOS figures are shown")
+        try test(StorageAccountingPresentation.fullDiskAccessGuidance.contains("~/Applications") && StorageAccountingPresentation.fullDiskAccessGuidance.contains("not by this app"),
+                 "Full Disk Access guidance names the background monitor in ~/Applications, not the viewer")
+        // VoiceOver: the bar's label is the panel title; its value states activity truthfully.
+        try test(active.accessibilityValue.contains("no completion estimate") && paused.accessibilityValue == "Paused; saved results remain available" && paused.title != active.title, "VoiceOver labels distinguish active and paused first-pass states without an estimate")
+
+        // Background monitoring setup is evaluated read-only from an isolated home.
+        let setupRoot = folder.appendingPathComponent("monitoring-setup-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: setupRoot) }
+        func makeHelper(_ at: URL, version: String, build: String = "1") throws {
+            try FileManager.default.createDirectory(at: at.appendingPathComponent("Contents/MacOS"), withIntermediateDirectories: true)
+            let binary = at.appendingPathComponent("Contents/MacOS/StorageMonitor")
+            FileManager.default.createFile(atPath: binary.path, contents: Data("#!/bin/sh\n".utf8), attributes: [.posixPermissions: 0o755])
+            try PropertyListSerialization.data(fromPropertyList: ["CFBundleShortVersionString": version, "CFBundleVersion": build], format: .xml, options: 0).write(to: at.appendingPathComponent("Contents/Info.plist"))
+        }
+        let setupHome = setupRoot.appendingPathComponent("home"), bundled = setupRoot.appendingPathComponent("Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app")
+        try makeHelper(bundled, version: "1.1.0")
+        let off = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled)
+        try test(off.state == .off && off.helperExecutable?.path.hasPrefix(bundled.path) == true, "monitoring setup reports off with no LaunchAgents and uses the bundled helper")
+        let installedHelper = setupHome.appendingPathComponent("Applications/MacBook Storage Monitor.app")
+        try makeHelper(installedHelper, version: "1.0.0")
+        let agentDirectory = setupHome.appendingPathComponent("Library/LaunchAgents")
+        try FileManager.default.createDirectory(at: agentDirectory, withIntermediateDirectories: true)
+        func writeAgent(_ label: String, program: String) throws {
+            try PropertyListSerialization.data(fromPropertyList: ["Label": label, "ProgramArguments": [program, "check"]], format: .xml, options: 0).write(to: agentDirectory.appendingPathComponent("\(label).plist"))
+        }
+        let installedExecutable = installedHelper.appendingPathComponent("Contents/MacOS/StorageMonitor").path
+        try writeAgent(MonitoringSetupStatus.labels[0], program: installedExecutable)
+        try test(MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled).state == .incomplete, "a partial installation is reported for repair, not as on")
+        for label in MonitoringSetupStatus.labels.dropFirst() { try writeAgent(label, program: installedExecutable) }
+        let outdated = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled)
+        try test(outdated.state == .needsUpdate && outdated.summary.contains("1.0.0 (1)") && outdated.summary.contains("1.1.0 (1)"), "an app update with an older installed background monitor offers an explicit update")
+        try makeHelper(installedHelper, version: "1.1.0")
+        try test(MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled).state == .on, "matching versions with all agents present report monitoring on")
+        try writeAgent(MonitoringSetupStatus.labels[2], program: setupRoot.appendingPathComponent("Volumes/gone/StorageMonitor").path)
+        try test(MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled).state == .incomplete, "an agent pointing at a missing program (for example an ejected disk image) is reported for repair")
+        let noBundle = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: nil)
+        try test(noBundle.helperExecutable?.path == installedExecutable && noBundle.bundledVersion == nil, "a build without the bundled helper can still disable using the installed monitor")
+        try test(MonitoringSetupAction.enable.arguments == ["install"] && MonitoringSetupAction.disable.arguments == ["uninstall"] && MonitoringSetupAction.notifications.arguments == ["authorize"],
+                 "setup actions run only the background monitor's own install, uninstall and authorize commands")
+        try test(MonitoringSetupStatus.consent.contains("~/Applications") && MonitoringSetupStatus.consent.contains("three background tasks") && MonitoringSetupStatus.consent.contains("history is kept")
+                 && MonitoringSetupStatus.disableConfirmation.contains("history"), "consent text states what is installed, where data lives, and that disabling keeps history")
+        try test(MonitoringSetupStatus.permissions.contains("Full Disk Access is optional") && MonitoringSetupStatus.permissions.contains("inaccessible") && MonitoringSetupStatus.permissions.contains("never grants it silently")
+                 && MonitoringSetupStatus.permissions.contains("MacBook Storage Monitor.app"), "permission guidance explains optional Full Disk Access, inaccessible areas and the manual grant path")
+
+        // Settings reports what launchd itself has loaded, not only which files exist.
+        let parsed = LaunchdState.parse(list: "PID\tStatus\tLabel\n-\t0\tlocal.macbook.storage-monitor\n412\t0\tlocal.macbook.storage-monitor.inventory\n-\t0\tcom.apple.other\n",
+                                        disabled: "disabled services = {\n\t\"local.macbook.storage-monitor.baseline\" => disabled\n\t\"com.apple.x\" => enabled\n\t\"legacy.label\" => true\n}\n")
+        try test(parsed.loaded == ["local.macbook.storage-monitor", "local.macbook.storage-monitor.inventory", "com.apple.other"] && parsed.disabled == ["local.macbook.storage-monitor.baseline", "legacy.label"],
+                 "launchctl list and print-disabled output are parsed into loaded and disabled labels")
+        let allLoaded = LaunchdState(loaded: Set(MonitoringSetupStatus.labels), disabled: [])
+        try writeAgent(MonitoringSetupStatus.labels[2], program: installedExecutable)
+        let live = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: allLoaded)
+        try test(live.state == .on && !live.summary.contains("did not report"), "monitoring is reported on only when every agent file exists and launchd has loaded it")
+        let unloaded = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: LaunchdState(loaded: Set(MonitoringSetupStatus.labels.prefix(2)), disabled: []))
+        try test(unloaded.state == .incomplete && unloaded.summary.contains("not loaded"), "agents whose files exist but that launchd has not loaded are reported for repair, not as on")
+        let turnedOff = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: LaunchdState(loaded: Set(MonitoringSetupStatus.labels), disabled: [MonitoringSetupStatus.labels[1]]))
+        try test(turnedOff.state == .incomplete && turnedOff.summary.contains("Login Items"), "a task macOS has disabled is reported with where to look")
+        let unknown = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: nil)
+        try test(unknown.state == .on && unknown.summary.contains("did not report"), "when launchd cannot be queried, Settings says so instead of implying the tasks run")
+        let orphanHome = setupRoot.appendingPathComponent("orphan")
+        let orphanJob = MonitoringSetupStatus.evaluate(home: orphanHome, bundledHelper: bundled, launchd: LaunchdState(loaded: [MonitoringSetupStatus.labels[0]], disabled: []))
+        try test(orphanJob.state == .incomplete && orphanJob.summary.contains("without its configuration"), "a task still loaded in launchd after its file was removed is not reported as off")
+        try test(MonitoringSetupStatus.evaluate(home: orphanHome, bundledHelper: bundled, launchd: LaunchdState(loaded: [], disabled: [])).state == .off, "no files and nothing loaded is off")
+
+        // Stale programs, duplicates and interrupted updates are repairable, never reported as on.
+        let copyElsewhere = setupRoot.appendingPathComponent("Other/MacBook Storage Monitor.app")
+        try makeHelper(copyElsewhere, version: "1.1.0")
+        try writeAgent(MonitoringSetupStatus.labels[1], program: copyElsewhere.appendingPathComponent("Contents/MacOS/StorageMonitor").path)
+        let staleCopy = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: allLoaded)
+        try test(staleCopy.state == .incomplete && staleCopy.summary.contains("different copy"), "an agent running a different copy of the monitor (for example an old build) is reported for repair")
+        try writeAgent(MonitoringSetupStatus.labels[1], program: installedExecutable)
+        let duplicate = agentDirectory.appendingPathComponent("com.example.old-monitor.plist")
+        try PropertyListSerialization.data(fromPropertyList: ["Label": MonitoringSetupStatus.labels[0], "ProgramArguments": [installedExecutable]], format: .xml, options: 0).write(to: duplicate)
+        let duplicatedAgent = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: allLoaded)
+        try test(duplicatedAgent.state == .incomplete && duplicatedAgent.summary.contains("com.example.old-monitor.plist"), "a duplicate agent file for one of this monitor's labels is reported for repair")
+        try FileManager.default.removeItem(at: duplicate)
+        let journal = setupHome.appendingPathComponent("Library/Application Support/MacBook Storage Monitor/install-transaction/journal.json")
+        try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: journal)
+        let interrupted = MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: allLoaded)
+        try test(interrupted.state == .incomplete && interrupted.summary.contains("interrupted"), "an interrupted update is reported for repair until the helper finishes or reverts it")
+        try FileManager.default.removeItem(at: journal)
+        try test(MonitoringSetupStatus.evaluate(home: setupHome, bundledHelper: bundled, launchd: allLoaded).state == .on, "after repair conditions clear, monitoring reads on again")
+
+        // Enabling and updating are never cut off by a timer; only the notification prompt waits for a bounded answer.
+        try test(MonitoringSetupAction.enable.timeLimit == nil && MonitoringSetupAction.disable.timeLimit == nil && MonitoringSetupAction.notifications.timeLimit == 130,
+                 "install and uninstall run to completion with no fixed time limit")
+        let chatty = setupRoot.appendingPathComponent("chatty.sh")
+        FileManager.default.createFile(atPath: chatty.path, contents: Data("#!/bin/sh\nhead -c 300000 /dev/zero | tr '\\0' x\nexit 0\n".utf8), attributes: [.posixPermissions: 0o755])
+        let chattyResult = await MonitoringSetupAction.enable.run(helper: chatty)
+        try test(chattyResult.ok && chattyResult.output.count == 300_000, "a helper writing more than a pipe buffer completes instead of stalling")
+
+        // First launch: missing history directs the person to Settings → Background Monitoring.
+        let missingHistory = HistoryError.missing("/nowhere/history.sqlite3")
+        try test(missingHistory.isMissingHistory && missingHistory.localizedDescription.contains("Settings → Background Monitoring") && !missingHistory.localizedDescription.contains("/nowhere")
+                 && !HistoryError.sqlite("x").isMissingHistory, "missing history on first launch explains how to turn monitoring on in Settings, without exposing a database path")
+
+        func inventoryNode(status: InventoryValueStatus, coverage: String, listing: String? = nil, value: Int64? = nil, children: Int64 = 0, reason: String? = nil) -> InventoryNode {
+            InventoryNode(id: 1, parentID: 0, identity: InventoryIdentity(device: 1, inode: 1, birthNanoseconds: 1), path: "/fixture", name: "fixture", kind: .directory, logicalBytes: status == .stale ? nil : value, allocatedBytes: status == .stale ? nil : value, previousLogicalBytes: status == .stale ? value : nil, previousAllocatedBytes: status == .stale ? value : nil, objectLogicalBytes: nil, objectAllocatedBytes: nil, directLogicalBytes: 0, directAllocatedBytes: 0, childCount: children, descendantFiles: 0, descendantDirectories: 0, status: status, coverageState: coverage, listingState: listing, statusReason: reason, measuredAt: value == nil ? nil : anchor, modifiedAt: nil, generation: 1, isHardlinkAlias: false, historicalGrowthBytes: nil)
+        }
+        let discovered = inventoryNode(status: .lowerBound, coverage: "pending", listing: "pending")
+        try test(InventoryNodePresentation.coverage(discovered) == "Discovered" && InventoryNodePresentation.size(discovered.allocatedBytes, node: discovered, formatter: String.init) == "No size yet", "discovered empty directory never presents zero as a measured size")
+        // D11: a folder stale only through a deferred descendant vs a folder that is itself stale.
+        let mostlyCurrent = inventoryNode(status: .stale, coverage: "stale", value: 98_540, reason: inventoryDescendantStaleReason)
+        let whollyStale = inventoryNode(status: .stale, coverage: "stale", value: 98_540, reason: "Deletion or descendant reconciliation is pending; previous totals are stale.")
+        let current = inventoryNode(status: .complete, coverage: "complete", value: 98_540)
+        try test(InventoryNodePresentation.coverage(mostlyCurrent) == "Includes earlier sizes" && InventoryNodePresentation.size(mostlyCurrent.previousAllocatedBytes, node: mostlyCurrent, formatter: String.init) == "≈ 98540"
+                 && InventoryNodePresentation.coverage(whollyStale) == "Previously measured" && InventoryNodePresentation.size(whollyStale.previousAllocatedBytes, node: whollyStale, formatter: String.init) == "Previously 98540"
+                 && InventoryNodePresentation.coverage(current) == "Complete" && InventoryNodePresentation.size(current.allocatedBytes, node: current, formatter: String.init) == "98540",
+                 "D11: a folder whose total includes a deferred subfolder's earlier size reads as approximate, not wholly previous; current and stale folders are unchanged")
+        // D7: the notification state comes from what macOS reported to the background monitor.
+        try test(NotificationPermission.parse("authorization=authorized alert=2 center=2") == .allowed && NotificationPermission.parse("authorization=denied alert=0") == .turnedOff
+                 && NotificationPermission.parse("authorization=not_determined") == .notYetAllowed && NotificationPermission.parse(nil) == .unknown
+                 && !NotificationPermission.allowed.canPrompt && !NotificationPermission.turnedOff.canPrompt && NotificationPermission.notYetAllowed.canPrompt
+                 && NotificationPermission.allowed.text.contains("carries over") && !MonitoringSetupStatus.consent.contains("stay off until"),
+                 "D7: Settings reflects existing notification permission (including one granted to an earlier version) and offers the prompt only while macOS can still show it")
+        let incompleteZero = inventoryNode(status: .lowerBound, coverage: "partial", value: 0)
+        try test(InventoryNodePresentation.size(incompleteZero.allocatedBytes, node: incompleteZero, formatter: String.init) == "No size yet", "incomplete directory zero is presented as no size yet")
+        let partial = inventoryNode(status: .lowerBound, coverage: "partial", listing: "pending", value: 4096, children: 2)
+        try test(InventoryNodePresentation.coverage(partial) == "Partial · waiting" && InventoryNodePresentation.size(partial.allocatedBytes, node: partial, formatter: String.init) == "Partial 4096", "pending observed directory is qualified without a physical lower-bound symbol")
+        let stale = inventoryNode(status: .stale, coverage: "stale", listing: "enumerating", value: 8192, children: 2)
+        try test(InventoryNodePresentation.coverage(stale) == "Previously measured" && InventoryNodePresentation.size(stale.previousAllocatedBytes, node: stale, formatter: String.init) == "Previously 8192", "stale measurements keep precedence over current activity")
+        let restricted = inventoryNode(status: .unknown, coverage: "unknown", reason: "permission denied by privacy controls")
+        let unavailable = inventoryNode(status: .unknown, coverage: "unknown", reason: "blocked I/O")
+        try test(InventoryNodePresentation.coverage(restricted) == "Access restricted" && InventoryNodePresentation.coverage(unavailable) == "Unavailable", "restricted access is distinct from unavailable I/O")
+        let excluded = inventoryNode(status: .unknown, coverage: "excluded")
+        try test(InventoryNodePresentation.coverage(excluded) == "Outside measured scope" && InventoryNodePresentation.size(nil, node: excluded, formatter: String.init) == "Not measured", "excluded entries explain that they are outside measured scope")
+
         var filters = EventFilters()
         for type in EventTypeFilter.allCases { filters.type = type; try test(!filters.apply(snapshot.events,now:anchor).isEmpty,"type filter \(type.rawValue)") }
         filters = EventFilters()
@@ -474,7 +1019,20 @@ import SQLite3
         for _ in 0..<3 { probes.append(try LiveCapacityProbe.read()) }
         try test(probes.allSatisfy { $0.total > 0 && $0.free > 0 && $0.free < $0.total && $0.dataVolumeUUID != nil }, "real live probe reads container free/total and the Data volume UUID")
         let fixtureAfter = try Data(contentsOf: populated)
-        try test(fingerprint() == filesBefore && fixtureAfter == fixtureBefore, "live probes do not touch the monitor's database, log, or lock (\(filesBefore.count) files unchanged)")
+        // The fingerprinted folder is the real monitor's: its own background worker or check may write
+        // there during this test. A change is a failure only when no monitor process was running.
+        func monitorActive() -> Bool {
+            let ps = Process(); ps.executableURL = URL(fileURLWithPath: "/bin/ps"); ps.arguments = ["-axo", "command="]
+            let pipe = Pipe(); ps.standardOutput = pipe
+            guard (try? ps.run()) != nil else { return false }
+            let text = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self); ps.waitUntilExit()
+            return text.split(separator: "\n").contains { $0.contains("MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor") }
+        }
+        let unchanged = fingerprint() == filesBefore
+        let monitorWasActive = !unchanged && monitorActive()
+        try test((unchanged || monitorWasActive) && fixtureAfter == fixtureBefore,
+                 unchanged ? "live probes do not touch the monitor's database, log, or lock (\(filesBefore.count) files unchanged)"
+                           : "live probes leave the fixture untouched; the monitor's own folder changed while its background process was running, so that comparison is inconclusive this run")
         if let production = ProcessInfo.processInfo.environment["STORAGE_MONITOR_PRODUCTION_COPY"], let latest = try? await HistoryReader(path: production).load().latest {
             try test(ObservationComparison.make(live: probes[0], recorded: latest) != nil, "real live reading matches the recorded container by Data volume UUID")
         }
@@ -497,6 +1055,17 @@ import SQLite3
             try test(history.measurements.count >= 13 && history.events.contains { $0.id == "reading:12" && $0.delta == -2_178_781_184 }, "existing production history loads intact (\(history.measurements.count) readings, \(history.events.count) events)")
             try test(history.events.allSatisfy { _ = CauseAnalyzer.analyze($0); return true }, "every production event analyses without error")
         }
+        // A refresh requested while a load is running must still reload once that load ends (it was dropped before).
+        var gate = InventoryReloadGate()
+        try test(gate.request(loading: false), "refresh while idle reloads at once")
+        var midLoad = InventoryReloadGate()
+        try test(!midLoad.request(loading: true), "refresh during a load does not start a second load")
+        try test(midLoad.finish(), "a refresh requested during a load is replayed when it ends")
+        try test(!midLoad.finish(), "a replayed refresh is consumed exactly once")
+        // Confirmations name the folder that was asked for, and the index root reads as Startup Data.
+        try test(inventoryFolderName(path: "/Users/someone/Projects/Atlas", rootPath: "/") == "Atlas", "prioritize names the requested folder")
+        try test(inventoryFolderName(path: "/", rootPath: "/") == "Startup Data", "the index root reads as Startup Data")
+        try livingTreeModelTests { ok, message in try test(ok, message) }
         print("\(tests) GUI model/read-only tests passed; isolated fixtures: \(folder.path)")
     }
 }

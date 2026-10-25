@@ -12,12 +12,15 @@ struct HistoryView: View {
             if store.configuration.isQA {
                 Label("QA history · \(URL(fileURLWithPath:store.configuration.database).lastPathComponent)",systemImage:"testtube.2").font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,22).padding(.vertical,6).background(Color.yellow.opacity(0.08))
             }
-            if let snapshot = store.snapshot, snapshot.latest != nil { OverviewView(snapshot:snapshot,live:store.live); Divider() }
+            OverviewView(snapshot:store.snapshot,live:store.live,historyMissing:store.historyMissing,historyLoading:store.isLoading && store.snapshot == nil)
+            Divider()
             if let error = store.error {
                 HStack(alignment:.top) {
                     Image(systemName:"exclamationmark.triangle").foregroundStyle(.orange)
-                    VStack(alignment:.leading,spacing:4) { Text(store.snapshot == nil ? "History unavailable" : "Could not refresh history").font(.headline); Text(error).font(.caption).textSelection(.enabled) }
-                    Spacer(); Button("Retry") { store.refresh() }.accessibilityIdentifier("history.retry")
+                    VStack(alignment:.leading,spacing:4) { Text(store.historyMissing ? "Background monitoring is not on" : (store.snapshot == nil ? "History unavailable" : "Could not refresh history")).font(.headline); Text(error).font(.caption).textSelection(.enabled) }
+                    Spacer()
+                    if store.historyMissing { SettingsLink { Text("Open Settings…") }.accessibilityIdentifier("history.openSettings") }
+                    Button("Retry") { store.refresh() }.accessibilityIdentifier("history.retry")
                 }.padding(16).background(Color.orange.opacity(0.07)).accessibilityIdentifier("history.error")
                 Divider()
             }
@@ -53,13 +56,13 @@ struct HistoryView: View {
                     else {
                         VStack(spacing:10) {
                             Image(systemName:store.error != nil ? "externaldrive.badge.questionmark" : "line.3.horizontal.decrease.circle").font(.largeTitle).foregroundStyle(.secondary)
-                            Text(store.error != nil && store.snapshot == nil ? "Could not load history" : (store.snapshot?.events.isEmpty == false ? "No matching events" : "No recorded events yet")).font(.headline)
-                            Text(store.error != nil && store.snapshot == nil ? "Retry after checking that the monitor's database is available." : (store.snapshot?.events.isEmpty == false ? "Try another time range or clear your filters." : "The independent background monitor is configured to record capacity at login and every half hour.")).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            Text(store.historyMissing ? "No monitoring history yet" : store.error != nil && store.snapshot == nil ? "Could not load history" : (store.snapshot?.events.isEmpty == false ? "No matching events" : "No recorded events yet")).font(.headline)
+                            Text(store.historyMissing ? "Turn on background monitoring in Settings → Background Monitoring. The first reading is recorded right away." : store.error != nil && store.snapshot == nil ? "Retry after checking that the monitor's database is available." : (store.snapshot?.events.isEmpty == false ? "Try another time range or clear your filters." : "The independent background monitor is configured to record capacity at login and every half hour.")).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
                             if store.hasActiveFilters { Button("Clear Filters") { store.clearFilters(); order = [] } }
                         }.padding(25).frame(maxWidth:460).accessibilityIdentifier("history.empty")
                     }
                 }
-            }.frame(minHeight:170,maxHeight:.infinity)
+            }.frame(minHeight:72,maxHeight:.infinity)   // the scrollable table gives way first, so the view fits the minimum window
             HStack {
                 Text("\(events.count) of \(store.snapshot?.events.count ?? 0) events").accessibilityIdentifier("history.resultCount")
                 if let selection = store.selectedEvent { Text("· \(selection.category)").lineLimit(1) }

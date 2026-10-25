@@ -25,13 +25,15 @@ APFS volume differences are matched by UUID between the displayed readings, so e
 
 The secondary chart uses actual stored capacity points, snaps hover details to a real reading, and draws the 25 GB / 15 GB reference lines. It breaks lines at container changes and gaps over 75 minutes. Its time range is independent of history filters.
 
-The GUI opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`, takes short consistent read transactions, closes them before projecting events, and refreshes about every 30 seconds while the app is active with a visible window. Apart from the read-only live capacity reading described above, it performs no directory scans, launches no monitoring commands, and does not change the existing writer's journal mode, schema, data, or retention. Its only persisted changes are its own window/filter preferences.
+The GUI opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`, takes short consistent read transactions, closes them before projecting events, and refreshes about every 30 seconds while the app is active with a visible window. Apart from the read-only live capacity reading described above, it performs no directory scans and launches no monitoring commands except when you explicitly choose Enable, Update, Repair or Disable background monitoring, or Allow Low-Space Notifications, in Settings. Those actions run the bundled background monitor's own `install`, `uninstall` or `authorize` command after a confirmation that explains what changes. It does not change the existing writer's journal mode, schema, data, or retention. Its only persisted changes are its own window/filter preferences.
 
 **Live capacity.** The overview leads with *Available now*, a live reading of the APFS container's free and total space. It comes from one in-process `statfs()` on the Data volume, the same numbers as the monitor's `CapacityFree` and `CapacityCeiling`. The viewer reads it when it opens, when it becomes active, every 60 seconds while its window is visible and the app is active, and on ⌘R; overlapping requests are dropped. The status line shows when it last updated, and a reading older than 3 minutes, or one whose refresh failed, is marked *Stale*. Live readings are never stored, never evaluated for alerts, never notify, and never start the collector; the viewer does not link the notifications framework. The last background reading appears on its own line. Any difference from it is shown only when the live Data volume UUID belongs to the recorded container, and it is labelled an observation comparison, not a recorded event. Events, the inspector and the chart ("Recorded available capacity") use recorded readings only.
 
 **Appearance.** View → Appearance, or Storage Monitor → Settings (⌘,), offers System, Light and Dark. The choice is saved in the viewer's own preferences and applies only to Storage Monitor. System follows macOS, including later changes. The macOS appearance setting is never changed. The QA launch option `--appearance light|dark` overrides the choice for that launch without saving it.
 
-Build and install the desktop app independently:
+For a distributable, drag-to-Applications disk image with the background monitor bundled inside the app, see [PACKAGING.md](PACKAGING.md) (`scripts/build-dmg.sh`).
+
+Build and install the desktop app independently (development):
 
 ```sh
 scripts/build-gui.sh
