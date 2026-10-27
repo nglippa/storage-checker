@@ -66,7 +66,7 @@ func commitSizeChange(_ database: String, folder: Int64, delta: Int64) {
                 preserved.explorer.show(root: root, trail: preserved.breadcrumbs)
                 preserved.livingTree.show(root: root, trail: preserved.breadcrumbs)
                 if await waitUntil({ preserved.livingTree.model != nil }) {
-                    let renderer = ImageRenderer(content: LivingTreeView(browser: preserved, explorer: preserved.explorer, tree: preserved.livingTree).frame(width: panel.width, height: panel.height).environment(\.colorScheme, .dark))
+                    let renderer = ImageRenderer(content: LivingTreeView(browser: preserved, explorer: preserved.explorer, tree: preserved.livingTree).frame(width: panel.width, height: panel.height).environment(\.colorScheme, .dark).environment(\.livingTreeInteractive, false))
                     renderer.scale = 2
                     if let image = renderer.cgImage { writePNG(image, to: output.appendingPathComponent("living-tree-volume-earlier-sizes.png")); print("render living-tree-volume-earlier-sizes (as preserved)") }
                 }
@@ -89,7 +89,7 @@ func commitSizeChange(_ database: String, folder: Int64, delta: Int64) {
         print("tree elements=\(tree.model!.count) reads=\(tree.statistics.lastReads) build=\(String(format: "%.1f", tree.statistics.lastBuildSeconds * 1000))ms truncated=\(tree.model!.truncated)")
 
         func render<V: View>(_ name: String, size: CGSize, scheme: ColorScheme = .dark, _ view: V) -> Double {
-            let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height).environment(\.colorScheme, scheme))
+            let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height).environment(\.colorScheme, scheme).environment(\.livingTreeInteractive, false))
             renderer.scale = 2
             let started = Date()
             guard let image = renderer.cgImage else { print("render \(name) failed"); return 0 }
@@ -120,11 +120,12 @@ func commitSizeChange(_ database: String, folder: Int64, delta: Int64) {
         _ = render("living-tree-volume", size: panel, LivingTreeView(browser: browser, explorer: explorer, tree: tree))
 
         // 2. Draw timing of the static tree alone, and memory across repeated renders.
-        let model = tree.model!, layout = tree.layout(for: panel)!
+        tree.viewportChanged(panel)
+        let model = tree.model!, layout = tree.projected(for: panel)!
         var draws = [Double]()
         let before = footprint()
         for _ in 0..<20 {
-            let renderer = ImageRenderer(content: LivingTreeBaseCanvas(revision: tree.revision, size: panel, geometry: layout.geometry, model: model).frame(width: panel.width, height: panel.height))
+            let renderer = ImageRenderer(content: LivingTreeBaseCanvas(revision: tree.revision, size: panel, transform: layout.transform, zoom: 1, geometry: layout.geometry, model: model).frame(width: panel.width, height: panel.height))
             renderer.scale = 2
             let started = Date(); _ = renderer.cgImage; draws.append(Date().timeIntervalSince(started))
         }
@@ -171,7 +172,7 @@ func commitSizeChange(_ database: String, folder: Int64, delta: Int64) {
         _ = render("living-tree-signals", size: panel, LivingTreeView(browser: browser, explorer: explorer, tree: tree))
         var overlay = [Double]()
         for _ in 0..<10 {
-            let geometry = tree.layout(for: panel)!.geometry, current = tree.model!, light = tree.illumination
+            let geometry = tree.projected(for: panel)!.geometry, current = tree.model!, light = tree.illumination
             let renderer = ImageRenderer(content: Canvas { context, _ in
                 LivingTreePainter(geometry: geometry, model: current).paintOverlay(&context, now: Date(), illumination: light, reduceMotion: false, hovered: nil, chain: [], focus: nil)
             }.frame(width: panel.width, height: panel.height))

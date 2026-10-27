@@ -9,6 +9,7 @@ struct ViewerConfiguration {
     let isQA: Bool
     let readinessOutput: String?
     static let current: Self = {
+        if let runtime = NativeQARuntime.active { return Self(database: runtime.database, appearance: nil, windowSize: nil, isQA: true, readinessOutput: runtime.readiness) }
         let args = CommandLine.arguments
         func value(_ key: String) -> String? { guard let i = args.firstIndex(of: key), args.count > i+1 else { return nil }; return args[i+1] }
         let qaBundle = Bundle.main.bundleIdentifier == "local.macbook.storage-monitor.viewer.inventory-qa"
@@ -47,8 +48,10 @@ struct ViewerConfiguration {
         persist()
     }
     private func persist() {
-        guard let output,
-              let data = try? JSONSerialization.data(withJSONObject: ["scope": "model/data readiness; native rendering and interaction require separate verification", "model_started_at_unix": startedWall, "elapsed_seconds": milestones, "inventory_page_load_count": pageLoadCount, "inventory_page_load_seconds_last_16": pageLoads], options: [.prettyPrinted, .sortedKeys]) else { return }
+        guard let output else { return }
+        var payload: [String: Any] = ["scope": "model/data readiness; native rendering and interaction require separate verification", "model_started_at_unix": startedWall, "elapsed_seconds": milestones, "inventory_page_load_count": pageLoadCount, "inventory_page_load_seconds_last_16": pageLoads]
+        if let runtime = NativeQARuntime.active { payload["qa_runtime"] = runtime.destinations(); payload["pid"] = getpid() }
+        guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]) else { return }
         try? data.write(to: URL(fileURLWithPath: output), options: .atomic)
     }
 }
@@ -91,7 +94,8 @@ struct ViewerConfiguration {
         appearance = AppAppearance.load(preferences, override: configuration.appearance)
     }
     nonisolated static func preferences(for configuration: ViewerConfiguration) -> UserDefaults {
-        configuration.isQA ? UserDefaults(suiteName: "local.macbook.storage-monitor.viewer.qa")! : .standard
+        if NativeQARuntime.active != nil { return .standard }
+        return configuration.isQA ? UserDefaults(suiteName: "local.macbook.storage-monitor.viewer.qa")! : .standard
     }
     func applyAppearance() { Self.apply(appearance) }
     static func apply(_ appearance: AppAppearance) {
@@ -141,6 +145,7 @@ struct ViewerConfiguration {
         }
     }
     func start() {
+        if let runtime = NativeQARuntime.active { NativeQAWorker.shared.start(runtime) }
         guard loop == nil else { return }
         applyAppearance()
         refreshAll()
@@ -156,16 +161,18 @@ struct ViewerConfiguration {
             }
         }
     }
-    func stop() { loop?.cancel(); loop = nil }
+    func stop() { loop?.cancel(); loop = nil; if NativeQARuntime.active != nil { NativeQAWorker.shared.stopAndWait() } }
 }
 
 final class ViewerAppDelegate: NSObject, NSApplicationDelegate {
     var reopen: (() -> Void)?
+    func applicationWillTerminate(_ notification: Notification) { if NativeQARuntime.active != nil { NativeQAWorker.shared.stopAndWait() } }
     static let launchedAt = Date()
     // Apply the saved appearance before any window is created.
     func applicationWillFinishLaunching(_ notification: Notification) {
         _ = Self.launchedAt
         let configuration = ViewerConfiguration.current
+        if NativeQARuntime.active != nil { NSApp.disableRelaunchOnLogin() }
         MainActor.assumeIsolated { ViewerStore.apply(AppAppearance.load(ViewerStore.preferences(for: configuration), override: configuration.appearance)) }
     }
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -177,6 +184,21 @@ final class ViewerAppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main struct StorageMonitorViewerApp: App {
+    var body: some Scene { StorageMonitorApplication().body }
+    static func main() {
+        do {
+            let runtime = try NativeQABootstrap.prepare()
+            if CommandLine.arguments.contains("--qa-verify-only") {
+                guard let runtime else { try NativeQARuntime.reject("verification requires explicit QA activation") }
+                try NativeQABootstrap.verifyOnly(runtime); return
+            }
+            if let runtime { try NativeQABootstrap.redirectLogs(runtime) }
+            StorageMonitorApplication.main()
+        } catch { fputs("\(error)\n", stderr); exit(78) }
+    }
+}
+
+struct StorageMonitorApplication: App {
     @NSApplicationDelegateAdaptor(ViewerAppDelegate.self) private var delegate
     @StateObject private var store = ViewerStore()
     @Environment(\.openWindow) private var openWindow
@@ -213,10 +235,12 @@ private struct WindowSetup: NSViewRepresentable {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             guard let window else { return }
-            window.setFrameAutosaveName(ViewerConfiguration.current.isQA ? "StorageMonitorQA" : "StorageMonitorMain")
+            if NativeQARuntime.active != nil { window.isRestorable = false; window.disableSnapshotRestoration() }
+            else { window.setFrameAutosaveName(ViewerConfiguration.current.isQA ? "StorageMonitorQA" : "StorageMonitorMain") }
             window.minSize = NSSize(width:780,height:700)   // frame size: about 640 pt of content below the toolbar
             if let size = ViewerConfiguration.current.windowSize { window.setContentSize(size) }
-            if ViewerConfiguration.current.isQA { window.title = "Storage Monitor — QA: \(URL(fileURLWithPath:ViewerConfiguration.current.database).lastPathComponent)" }
+            if NativeQARuntime.active != nil { window.title = "Storage Monitor — Native QA — Disposable Fixtures" }
+            else if ViewerConfiguration.current.isQA { window.title = "Storage Monitor — QA: \(URL(fileURLWithPath:ViewerConfiguration.current.database).lastPathComponent)" }
             // QA-only capture of the actual rendered native content. This is
             // independent of WindowServer's animated/minimized screenshot state.
             let args = CommandLine.arguments
@@ -243,14 +267,19 @@ private struct WindowSetup: NSViewRepresentable {
 private struct AppearanceSettings: View {
     @ObservedObject var store: ViewerStore
     @Environment(\.openWindow) private var openWindow
-    @State private var monitoring = MonitoringSetupStatus.evaluate(home: FileManager.default.homeDirectoryForCurrentUser, bundledHelper: MonitoringSetupStatus.bundledHelper(in: Bundle.main.bundleURL), launchd: LaunchdState.current())
+    private static func monitoringState() -> MonitoringSetupStatus {
+        if let runtime = NativeQARuntime.active { return MonitoringSetupStatus(state: .off, summary: "QA fixture worker only. Production background monitoring is unavailable in this session.", installedVersion: nil, bundledVersion: nil, helperExecutable: nil, installedApp: URL(fileURLWithPath: runtime.root + "/no-installed-app")) }
+        return MonitoringSetupStatus.evaluate(home: FileManager.default.homeDirectoryForCurrentUser, bundledHelper: MonitoringSetupStatus.bundledHelper(in: Bundle.main.bundleURL), launchd: LaunchdState.current())
+    }
+    @State private var monitoring = Self.monitoringState()
     @State private var pending: MonitoringSetupAction?
     @State private var working = false
     @State private var result: String?
     private func refreshMonitoring() {
-        monitoring = MonitoringSetupStatus.evaluate(home: FileManager.default.homeDirectoryForCurrentUser, bundledHelper: MonitoringSetupStatus.bundledHelper(in: Bundle.main.bundleURL), launchd: LaunchdState.current())
+        monitoring = Self.monitoringState()
     }
     private func perform(_ action: MonitoringSetupAction) {
+        guard NativeQARuntime.active == nil else { return }
         guard let helper = monitoring.helperExecutable else { return }
         working = true; result = nil
         Task {
@@ -299,12 +328,15 @@ private struct AppearanceSettings: View {
                 Text(MonitoringSetupStatus.permissions).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
                 Button("Open Full Disk Access Settings…") {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") { NSWorkspace.shared.open(url) }
-                }.accessibilityIdentifier("settings.privacy.fullDiskAccess")
+                }.disabled(NativeQARuntime.active != nil).accessibilityIdentifier("settings.privacy.fullDiskAccess")
             }
         }
         .formStyle(.grouped)
         .frame(width:480)
-        .onAppear { refreshMonitoring() }
+        .onAppear {
+            refreshMonitoring()
+            if NativeQARuntime.active != nil { for window in NSApp.windows { window.isRestorable = false; window.disableSnapshotRestoration() } }
+        }
         .alert(pending == .disable ? "Disable background monitoring?" : (monitoring.state == .off ? "Enable background monitoring?" : "Update background monitoring?"),
                isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
             Button(pending == .disable ? "Disable" : (monitoring.state == .off ? "Enable" : "Update")) { if let action = pending { perform(action) }; pending = nil }

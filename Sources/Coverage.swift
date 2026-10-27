@@ -57,7 +57,17 @@ let systemFirmlinks: [Firmlink] = parseFirmlinks((try? String(contentsOfFile: "/
 // The Data-volume-relative form of an absolute path; nil when the path is not on the Data
 // volume (the sealed system volume, other volumes). Every spelling of one object maps to one key.
 func dataRelative(_ path: String, mount: String = dataVolumeMount, links: [Firmlink] = systemFirmlinks) -> String? {
-    var p = path
+    // FSEvents/refresh requests can retain the stable macOS aliases after an entry disappears.
+    // Normalize only these whole components; realpath would fail for the missing leaf and
+    // resolving arbitrary user symlinks would change the requested inventory boundary.
+    func systemAlias(_ value: String) -> String {
+        if value == "/tmp" || value.hasPrefix("/tmp/") || value == "/var" || value.hasPrefix("/var/") {
+            return "/private" + value
+        }
+        return value
+    }
+    var p = systemAlias(path)
+    let mount = systemAlias(mount)
     while p.count > 1 && p.hasSuffix("/") { p.removeLast() }
     if p == mount { return "" }
     if p.hasPrefix(mount + "/") { return String(p.dropFirst(mount.count + 1)) }

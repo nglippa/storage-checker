@@ -5,8 +5,8 @@ import SQLite3
 // Background-monitoring installation, verified against an isolated home with a recording
 // launch control: no real LaunchAgent, launchd job or user database is touched.
 func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
-    let root = URL(fileURLWithPath: "/private/tmp/storage-monitor-install-\(UUID().uuidString)")
-    defer { try? fm.removeItem(at: root) }
+    let root = monitorSelfTestFixture("install")
+    defer { finishMonitorSelfTestFixture(root) }
     let layout = MonitorInstallLayout(home: root.appendingPathComponent("home"))
     try test(!layout.home.path.hasPrefix(fm.homeDirectoryForCurrentUser.path) && layout.agents.allSatisfy { $0.url.path.hasPrefix(root.path) },
              "install verification uses an isolated home, never the real LaunchAgents")

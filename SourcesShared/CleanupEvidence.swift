@@ -1,0 +1,512 @@
+import Foundation
+import Darwin
+
+// Evidence collection for the Cleanup Inspector: bounded, read-only, and audited.
+//
+// The probe exposes only metadata (lstat, directory names, link targets, canonical paths, APFS private size) and
+// content reads of an explicit allowlist of small manifest-like files (package.json, pyvenv.cfg, Git pointers, a
+// release's package metadata, a tool launcher of at most 4 KB, .gitignore). Every content read is recorded so tests
+// can prove nothing else was read. Nothing is executed except Git, for linked worktrees, with repository-configured
+// commands disabled. Nothing is written.
+
+// MARK: Paths
+
+public enum ArtifactPaths {
+    /// The Data volume's firmlinked prefix: `/System/Volumes/Data/Users/x` is `/Users/x`.
+    public static let dataVolumePrefix = "/System/Volumes/Data"
+
+    /// The path as the user knows it (without the Data volume prefix), used for matching layouts and scopes.
+    public static func logical(_ path: String) -> String {
+        guard path.hasPrefix(dataVolumePrefix + "/") else { return path }
+        return String(path.dropFirst(dataVolumePrefix.count))
+    }
+
+    public static func components(_ path: String) -> [String] { logical(path).split(separator: "/", omittingEmptySubsequences: true).map(String.init) }
+
+    /// The home directory a path lies in (`/Users/<name>`), if any.
+    public static func home(of path: String) -> String? {
+        let parts = components(path)
+        guard parts.count >= 2, parts[0] == "Users", parts[1] != "Shared" else { return nil }
+        return "/Users/" + parts[1]
+    }
+
+    public static func isWithin(_ path: String, _ root: String) -> Bool {
+        let p = logical(path), r = logical(root)
+        return p == r || p.hasPrefix(r.hasSuffix("/") ? r : r + "/")
+    }
+
+    /// Relative components for two existing filesystem objects, after resolving both paths.
+    /// This is for evidence and protection decisions; callers must treat nil as unknown.
+    /// Keep the inventory/display path separately, and never infer ancestry from a string prefix.
+    public static func canonicalRelativeComponents(_ path: String, within root: String) -> [String]? {
+        guard let resolvedPath = realpath(path, nil) else { return nil }
+        defer { free(resolvedPath) }
+        guard let resolvedRoot = realpath(root, nil) else { return nil }
+        defer { free(resolvedRoot) }
+        let pathParts = components(String(cString: resolvedPath))
+        let rootParts = components(String(cString: resolvedRoot))
+        guard pathParts.count >= rootParts.count, Array(pathParts.prefix(rootParts.count)) == rootParts else { return nil }
+        return Array(pathParts.dropFirst(rootParts.count))
+    }
+
+    /// Locate a configured protection root that may not exist yet. Only missing trailing components
+    /// are appended; a broken link, loop, non-directory ancestor, or permission failure is unknown.
+    /// This is a protection-boundary location, never proof of an object's identity.
+    public static func canonicalProtectionLocation(_ path: String) -> String? {
+        guard path.hasPrefix("/") else { return nil }
+        var candidate = path, missing = [String]()
+        for _ in 0..<256 {
+            if let resolved = realpath(candidate, nil) {
+                defer { free(resolved) }
+                return missing.reversed().reduce(String(cString: resolved)) { ($0 as NSString).appendingPathComponent($1) }
+            }
+            guard errno == ENOENT else { return nil }
+            var metadata = stat()
+            guard lstat(candidate, &metadata) != 0, errno == ENOENT else { return nil }
+            let parent = (candidate as NSString).deletingLastPathComponent
+            guard parent != candidate else { return nil }
+            let component = (candidate as NSString).lastPathComponent
+            guard component != "." && component != ".." else { return nil }
+            missing.append(component)
+            candidate = parent
+        }
+        return nil
+    }
+}
+
+// MARK: Probe
+
+/// Why a file's content may be read. Each purpose names the only file names it may read and a size cap.
+public enum ArtifactReadPurpose: String, Sendable, CaseIterable {
+    case packageManifest, pythonEnvironment, gitPointer, releaseMetadata, launcherScript, ignoreRules, executableMagic
+
+    public var maximumBytes: Int {
+        switch self {
+        case .packageManifest: return 256 * 1024
+        case .pythonEnvironment, .gitPointer, .releaseMetadata, .launcherScript: return 4 * 1024
+        case .ignoreRules: return 64 * 1024
+        case .executableMagic: return 4
+        }
+    }
+
+    public func allows(fileName name: String) -> Bool {
+        switch self {
+        case .packageManifest: return name == "package.json"
+        case .pythonEnvironment: return name == "pyvenv.cfg"
+        case .gitPointer: return [".git", "HEAD", "commondir", "gitdir", "locked"].contains(name)
+        case .releaseMetadata: return name == "codex-package.json"
+        case .launcherScript: return name == "claude" || name == "codex"
+        case .ignoreRules: return name == ".gitignore"
+        case .executableMagic: return true
+        }
+    }
+}
+
+/// File metadata without following symlinks.
+public struct ArtifactFileInfo: Equatable, Sendable {
+    public enum Kind: String, Sendable { case file, directory, symlink, other }
+    public let kind: Kind
+    public let size: Int64
+    public let mode: UInt16
+    public let links: UInt16
+    public let device: Int64
+    public let inode: UInt64
+    public let birthNanoseconds: Int64
+    public let modified: Date
+    public let ownerIsCurrentUser: Bool
+    public var isExecutable: Bool { kind == .file && mode & 0o111 != 0 }
+}
+
+/// Bounded, read-only access to the filesystem for one inspection. Not thread-safe: one per inspection task.
+public final class ArtifactProbe: @unchecked Sendable {
+    public struct Budget: Sendable {
+        public var entries: Int, reads: Int, seconds: TimeInterval
+        public init(entries: Int = 4_000, reads: Int = 24, seconds: TimeInterval = 1.2) { self.entries = entries; self.reads = reads; self.seconds = seconds }
+        public static let standard = Budget()
+    }
+
+    public let budget: Budget
+    private let deadline: Date
+    public private(set) var entriesListed = 0
+    /// Every content read (path and purpose), for audits.
+    public private(set) var contentReads = [(path: String, purpose: ArtifactReadPurpose)]()
+    /// Reasons evidence is incomplete (permissions, budget, time).
+    public private(set) var incomplete = [String]()
+
+    public init(budget: Budget = .standard) { self.budget = budget; deadline = Date().addingTimeInterval(budget.seconds) }
+
+    public var timedOut: Bool { Date() > deadline }
+
+    func note(_ text: String) { if !incomplete.contains(text) { incomplete.append(text) } }
+
+    /// The error of the last failed `info` call (ENOENT: nothing there).
+    public private(set) var lastError: Int32 = 0
+
+    public func info(_ path: String) -> ArtifactFileInfo? {
+        var st = stat()
+        guard lstat(path, &st) == 0 else { lastError = errno; return nil }
+        let kind: ArtifactFileInfo.Kind
+        switch st.st_mode & S_IFMT {
+        case S_IFREG: kind = .file
+        case S_IFDIR: kind = .directory
+        case S_IFLNK: kind = .symlink
+        default: kind = .other
+        }
+        let birth = Int64(st.st_birthtimespec.tv_sec) * 1_000_000_000 + Int64(st.st_birthtimespec.tv_nsec)
+        let modified = Date(timeIntervalSince1970: Double(st.st_mtimespec.tv_sec) + Double(st.st_mtimespec.tv_nsec) / 1e9)
+        return ArtifactFileInfo(kind: kind, size: Int64(st.st_size), mode: UInt16(st.st_mode & 0o7777), links: UInt16(st.st_nlink), device: Int64(st.st_dev),
+                                inode: UInt64(st.st_ino), birthNanoseconds: birth, modified: modified, ownerIsCurrentUser: st.st_uid == getuid())
+    }
+
+    public func exists(_ path: String) -> Bool { info(path) != nil }
+
+    /// Entry names of a directory (no metadata), at most `limit` and within the probe's entry budget.
+    public func list(_ path: String, limit: Int = 512) -> (names: [String], complete: Bool)? {
+        guard !timedOut else { note("Inspection time limit reached"); return nil }
+        guard let dir = opendir(path) else {
+            if errno == EACCES || errno == EPERM { note("macOS did not allow reading \((path as NSString).lastPathComponent)") }
+            return nil
+        }
+        defer { closedir(dir) }
+        var names = [String](), complete = true
+        while let entry = readdir(dir) {
+            let name = withUnsafePointer(to: entry.pointee.d_name) { $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) } }
+            if name == "." || name == ".." { continue }
+            if names.count >= limit || entriesListed >= budget.entries { complete = false; break }
+            names.append(name); entriesListed += 1
+        }
+        if !complete { note("Directory listing limited to \(names.count) entries") }
+        return (names, complete)
+    }
+
+    public func link(_ path: String) -> String? {
+        var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN) + 1)
+        let count = readlink(path, &buffer, buffer.count - 1)
+        guard count > 0 else { return nil }
+        buffer[count] = 0
+        return String(cString: buffer)
+    }
+
+    /// A link's target as an absolute path (relative targets resolved against the link's folder), not followed further.
+    public func linkTarget(_ path: String) -> String? {
+        guard let target = link(path) else { return nil }
+        if target.hasPrefix("/") { return (target as NSString).standardizingPath }
+        return (((path as NSString).deletingLastPathComponent as NSString).appendingPathComponent(target) as NSString).standardizingPath
+    }
+
+    /// Canonical path (symlinks resolved by the kernel; nothing is opened or read).
+    public func canonical(_ path: String) -> String? {
+        guard let resolved = realpath(path, nil) else { return nil }
+        defer { free(resolved) }
+        return String(cString: resolved)
+    }
+
+    /// Reads a small allowlisted file. Refuses symlinks, other file names, files above the purpose's cap and anything
+    /// after the read budget; every read is recorded.
+    public func read(_ path: String, _ purpose: ArtifactReadPurpose) -> Data? {
+        let name = (path as NSString).lastPathComponent
+        guard purpose.allows(fileName: name), contentReads.count < budget.reads, !timedOut else { return nil }
+        guard let meta = info(path), meta.kind == .file else { return nil }
+        if purpose != .executableMagic && meta.size > Int64(purpose.maximumBytes) { note("\(name) is larger than the inspection reads"); return nil }
+        let fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
+        guard fd >= 0 else { if errno == EACCES || errno == EPERM { note("macOS did not allow reading \(name)") }; return nil }
+        defer { close(fd) }
+        contentReads.append((path, purpose))
+        var data = Data(count: purpose.maximumBytes)
+        let count = data.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, purpose.maximumBytes) }
+        guard count >= 0 else { return nil }
+        return data.prefix(count)
+    }
+
+    public func text(_ path: String, _ purpose: ArtifactReadPurpose) -> String? { read(path, purpose).flatMap { String(data: $0, encoding: .utf8) } }
+
+    /// APFS private size: bytes not shared with clones (what deleting the file itself could free, before snapshots).
+    public func privateSize(_ path: String) -> Int64? {
+        var request = attrlist()
+        request.bitmapcount = u_short(ATTR_BIT_MAP_COUNT)
+        request.commonattr = attrgroup_t(ATTR_CMN_RETURNED_ATTRS)
+        request.forkattr = attrgroup_t(ATTR_CMNEXT_PRIVATESIZE)
+        struct Reply { var length: UInt32 = 0; var returned = attribute_set_t(); var size: off_t = 0 }
+        var reply = Reply()
+        guard getattrlist(path, &request, &reply, MemoryLayout<Reply>.size, UInt32(FSOPT_ATTR_CMN_EXTENDED | FSOPT_NOFOLLOW)) == 0,
+              reply.returned.forkattr & attrgroup_t(ATTR_CMNEXT_PRIVATESIZE) != 0 else { return nil }
+        return Int64(reply.size)
+    }
+
+    /// Whether a file starts like a Mach-O executable (4 bytes; the file is never run).
+    public func isMachO(_ path: String) -> Bool? {
+        guard let data = read(path, .executableMagic), data.count == 4 else { return nil }
+        let magic = data.withUnsafeBytes { $0.load(as: UInt32.self) }
+        return [0xFEEDFACF, 0xCFFAEDFE, 0xFEEDFACE, 0xCEFAEDFE, 0xCAFEBABE, 0xBEBAFECA].contains(magic)
+    }
+}
+
+// MARK: Processes
+
+/// Executables and working directories of running processes, from the kernel's process table (no process is run).
+/// Processes of other users usually cannot be inspected: `unreadable` says how many, so absence is never proof.
+public struct ProcessObservation: Equatable, Sendable {
+    public let executables: [String]
+    public let workingDirectories: [String]
+    /// Paths of files held open by processes of the tools being inspected (bounded; only when requested).
+    public let openFiles: [String]
+    public let inspected: Int
+    public let unreadable: Int
+    public let takenAt: Date
+
+    public init(executables: [String], workingDirectories: [String], openFiles: [String] = [], inspected: Int, unreadable: Int, takenAt: Date = Date()) {
+        self.executables = executables.map(ArtifactPaths.logical); self.workingDirectories = workingDirectories.map(ArtifactPaths.logical)
+        self.openFiles = openFiles.map(ArtifactPaths.logical); self.inspected = inspected; self.unreadable = unreadable; self.takenAt = takenAt
+    }
+
+    public static let empty = ProcessObservation(executables: [], workingDirectories: [], inspected: 0, unreadable: 0)
+
+    public var complete: Bool { unreadable == 0 && inspected > 0 }
+
+    private func relates(_ observed: String, to path: String) -> Bool {
+        ArtifactPaths.canonicalRelativeComponents(observed, within: path) != nil || ArtifactPaths.isWithin(observed, path)
+    }
+    public func runs(within path: String) -> Bool { executables.contains { relates($0, to: path) } }
+    public func works(within path: String) -> Bool { workingDirectories.contains { relates($0, to: path) } }
+    public func holdsOpen(within path: String) -> Bool { openFiles.contains { relates($0, to: path) } }
+
+    /// The current process table. `openFilesOf` selects processes (by executable path) whose open files are listed.
+    public static func current(maximumProcesses: Int = 8_192, openFilesOf: (String) -> Bool = { _ in false }) -> ProcessObservation {
+        var pids = [pid_t](repeating: 0, count: maximumProcesses)
+        let count = Int(proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size)))
+        var executables = [String](), directories = [String](), open = [String](), unreadable = 0
+        var buffer = [CChar](repeating: 0, count: Int(4 * MAXPATHLEN))
+        for pid in pids.prefix(max(0, count)) where pid > 0 {
+            guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { unreadable += 1; continue }
+            let executable = String(cString: buffer)
+            executables.append(executable)
+            var vnode = proc_vnodepathinfo()
+            if proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vnode, Int32(MemoryLayout<proc_vnodepathinfo>.size)) > 0 {
+                let cwd = withUnsafePointer(to: vnode.pvi_cdir.vip_path) { $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) } }
+                if !cwd.isEmpty { directories.append(cwd) }
+            }
+            if openFilesOf(ArtifactPaths.logical(executable)) { open += openFilePaths(pid, limit: 256) }
+        }
+        return ProcessObservation(executables: executables, workingDirectories: directories, openFiles: open, inspected: max(0, count) - unreadable, unreadable: unreadable)
+    }
+
+    private static func openFilePaths(_ pid: pid_t, limit: Int) -> [String] {
+        let size = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
+        guard size > 0 else { return [] }
+        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: Int(size) / MemoryLayout<proc_fdinfo>.size)
+        let filled = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, &fds, size)
+        guard filled > 0 else { return [] }
+        var paths = [String]()
+        for fd in fds.prefix(Int(filled) / MemoryLayout<proc_fdinfo>.size) where fd.proc_fdtype == UInt32(PROX_FDTYPE_VNODE) {
+            var info = vnode_fdinfowithpath()
+            guard proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDVNODEPATHINFO, &info, Int32(MemoryLayout<vnode_fdinfowithpath>.size)) > 0 else { continue }
+            let path = withUnsafePointer(to: info.pvip.vip_path) { $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) } }
+            if !path.isEmpty { paths.append(path) }
+            if paths.count >= limit { break }
+        }
+        return paths
+    }
+}
+
+// MARK: Git
+
+/// Read-only state of a linked worktree. Nil counts mean "could not be established".
+public struct GitObservation: Equatable, Sendable {
+    public var branch: String?
+    public var detached = false
+    public var uncommitted: Int?
+    public var untracked: Int?
+    public var unpushed: Int?
+    public var error: String?
+    public init() {}
+}
+
+/// Inspects worktrees with Git in a non-mutating way: optional locks off (no index refresh is written), the
+/// filesystem monitor hook off, every configured content filter neutralized, no pager or prompts, a time limit.
+public struct GitInspector: Sendable {
+    public let executable: String
+    public let timeout: TimeInterval
+
+    public init(executable: String, timeout: TimeInterval = 2) { self.executable = executable; self.timeout = timeout }
+
+    /// A real Git installation (never the /usr/bin shim, which may offer to install developer tools).
+    public static func available() -> GitInspector? {
+        for path in ["/Library/Developer/CommandLineTools/usr/bin/git", "/Applications/Xcode.app/Contents/Developer/usr/bin/git", "/opt/homebrew/bin/git", "/usr/local/bin/git"]
+        where FileManager.default.isExecutableFile(atPath: path) { return GitInspector(executable: path) }
+        return nil
+    }
+
+    func run(_ arguments: [String], in directory: String, afterIdleRead: (() -> Void)? = nil) -> (status: Int32, output: String)? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = ["-C", directory, "--no-pager", "--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-c", "core.hooksPath=/dev/null"] + arguments
+        var environment = ["PATH": "/usr/bin:/bin", "GIT_OPTIONAL_LOCKS": "0", "GIT_CONFIG_NOSYSTEM": "1", "GIT_TERMINAL_PROMPT": "0", "GIT_PAGER": "cat", "LC_ALL": "C"]
+        if let runtime = NativeQARuntime.active {
+            guard directory == runtime.fixtures || directory.hasPrefix(runtime.fixtures + "/"),
+                  (try? NativeQARuntime.canonical(directory)) == directory else { return nil }
+            var ancestor = directory
+            while ancestor == runtime.fixtures || ancestor.hasPrefix(runtime.fixtures + "/") {
+                var value = stat()
+                if lstat(ancestor + "/.git", &value) == 0 { return nil } // Conservative QA block; never follow gitdir pointers.
+                if ancestor == runtime.fixtures { break }; ancestor = (ancestor as NSString).deletingLastPathComponent
+            }
+            environment["GIT_CEILING_DIRECTORIES"] = runtime.fixtures
+            environment["GIT_CONFIG_GLOBAL"] = "/dev/null"
+            environment["TMPDIR"] = runtime.temporary + "/"
+        } else if let home = ProcessInfo.processInfo.environment["HOME"] { environment["HOME"] = home }
+        process.environment = environment
+        let pipe = Pipe(), errors = Pipe()
+        process.standardOutput = pipe; process.standardError = errors; process.standardInput = FileHandle.nullDevice
+        do { try process.run() } catch { return nil }
+        // The parent must not retain writer handles: EOF must mean every child writer closed, rather than a
+        // momentary EAGAIN racing with the child writing its final status/configuration bytes and exiting.
+        try? pipe.fileHandleForWriting.close(); try? errors.fileHandleForWriting.close()
+        let deadline = Date().addingTimeInterval(timeout)
+        var output = Data()
+        let fd = pipe.fileHandleForReading.fileDescriptor, errorFD = errors.fileHandleForReading.fileDescriptor
+        _ = fcntl(fd, F_SETFL, O_NONBLOCK); _ = fcntl(errorFD, F_SETFL, O_NONBLOCK)
+        var buffer = [UInt8](repeating: 0, count: 8192), total = 0
+        var outputEOF = false, errorEOF = false
+        repeat {
+            if Date() >= deadline || total > 512 * 1024 || Task.isCancelled { if process.isRunning { process.terminate() }; return nil }
+            var received = false
+            for descriptor in [fd, errorFD] {
+                if (descriptor == fd ? outputEOF : errorEOF) { continue }
+                let count = Darwin.read(descriptor, &buffer, buffer.count)
+                if count > 0 {
+                    received = true; total += count
+                    if total > 512 * 1024 { if process.isRunning { process.terminate() }; return nil }
+                    if descriptor == fd { output.append(contentsOf: buffer.prefix(count)) }
+                } else if count == 0 {
+                    if descriptor == fd { outputEOF = true } else { errorEOF = true }
+                } else if errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK {
+                    if process.isRunning { process.terminate() }; return nil
+                }
+            }
+            if !received { afterIdleRead?() }
+            if !process.isRunning && outputEOF && errorEOF { break }
+            if !received { usleep(2_000) }
+        } while true
+        return (process.terminationStatus, String(decoding: output, as: UTF8.self))
+    }
+
+    public func inspect(worktree: String) -> GitObservation {
+        var result = GitObservation()
+        // Content filters configured for the repository could run commands during status: list them (reading
+        // configuration only) and neutralize each one for the status run.
+        var overrides = [String]()
+        guard let filters = run(["config", "--name-only", "--get-regexp", "^filter\\."], in: worktree), filters.status == 0 || filters.status == 1 else {
+            result.error = "Git content filters could not be reliably disabled"; return result
+        }
+        if filters.status == 0 {
+            let names = Set(filters.output.split(separator: "\n").compactMap { line -> String? in
+                let parts = line.split(separator: ".")
+                return parts.count >= 3 ? parts[1...(parts.count - 2)].joined(separator: ".") : nil
+            })
+            for name in names.sorted() { overrides += ["-c", "filter.\(name).clean=", "-c", "filter.\(name).smudge=", "-c", "filter.\(name).process=", "-c", "filter.\(name).required=false"] }
+        }
+        guard let status = run(overrides + ["status", "--porcelain=v1", "--branch", "--untracked-files=normal", "--ignore-submodules=all"], in: worktree) else {
+            result.error = "Git did not finish within \(Int(timeout)) seconds"; return result
+        }
+        guard status.status == 0 else { result.error = "Git could not read this worktree"; return result }
+        guard status.output.hasPrefix("## "), status.output.hasSuffix("\n") else { result.error = "Git returned an incomplete status header"; return result }
+        var changes = 0, untracked = 0
+        for line in status.output.split(separator: "\n", omittingEmptySubsequences: true) {
+            if line.hasPrefix("## ") {
+                // "main", "main...origin/main [ahead 1]", "No commits yet on main", "HEAD (no branch)".
+                var header = String(line.dropFirst(3))
+                if header.hasPrefix("HEAD (no branch)") { result.detached = true; continue }
+                if header.hasPrefix("No commits yet on ") { header = String(header.dropFirst("No commits yet on ".count)) }
+                result.branch = header.components(separatedBy: "...").first?.components(separatedBy: " [").first
+            } else if line.hasPrefix("?? ") { untracked += 1 } else { changes += 1 }
+        }
+        result.uncommitted = changes; result.untracked = untracked
+        // Commits on this worktree's HEAD that no other branch and no remote contains.
+        var revList = ["rev-list", "--count", "--max-count=1000", "HEAD", "--not"]
+        // The pattern for --branches is the bare branch name (Git rejects refs/heads/ prefixes there silently).
+        if let branch = result.branch, !result.detached { revList += ["--exclude=\(branch)"] }
+        revList += ["--branches", "--remotes"]
+        if let count = run(revList, in: worktree), count.status == 0, let value = Int(count.output.trimmingCharacters(in: .whitespacesAndNewlines)) { result.unpushed = value }
+        return result
+    }
+}
+
+// MARK: Environment
+
+/// What an inspection may consult besides the item itself: the home directory, PATH, the process table and Git.
+public struct ArtifactEnvironment: Sendable {
+    public var home: String
+    public var pathDirectories: [String]
+    public var processes: @Sendable () -> ProcessObservation
+    /// Trash checks all observable current-user process open files; ordinary inspection uses a cheaper snapshot.
+    public var safetyProcesses: (@Sendable () -> ProcessObservation)? = nil
+    public var git: GitInspector?
+    public var now: @Sendable () -> Date
+    /// Storage Monitor's own data folder (protected).
+    public var ownData: String?
+    /// Strict opt-in native QA adds a fixture-only boundary; normal safety checks remain mandatory.
+    public var qaRuntime: NativeQARuntime? = nil
+
+    public init(home: String, pathDirectories: [String], processes: @escaping @Sendable () -> ProcessObservation, git: GitInspector?, now: @escaping @Sendable () -> Date = { Date() }, ownData: String? = nil) {
+        self.home = home; self.pathDirectories = pathDirectories; self.processes = processes; self.git = git; self.now = now; self.ownData = ownData
+    }
+
+    /// The signed-in user's environment. PATH comes from the process environment plus the usual user tool folders
+    /// (an app launched from the Dock has a minimal PATH).
+    public static func current(ownData: String? = nil) -> ArtifactEnvironment {
+        let home = NSHomeDirectory()
+        var path = (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":").map(String.init)
+        for extra in ["\(home)/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", "\(home)/.bun/bin", "\(home)/.npm-global/bin"] where !path.contains(extra) { path.append(extra) }
+        // PATH often repeats folders; each is consulted once, in order.
+        var seen = Set<String>()
+        path = path.filter { seen.insert(($0 as NSString).standardizingPath).inserted }
+        var result = ArtifactEnvironment(home: home, pathDirectories: path, processes: { ProcessObservation.current(openFilesOf: { exe in
+            exe.contains("/.local/share/claude/versions/") || exe.contains("/packages/standalone/") || exe.contains("/packages/app-server-daemon/") || exe.hasSuffix("/claude") || exe.hasSuffix("/codex")
+        }) }, git: GitInspector.available(), ownData: ownData)
+        result.safetyProcesses = { ProcessObservation.currentUserSafety() }
+        return result
+    }
+}
+
+public extension ProcessObservation {
+    /// Bounded current-user snapshot. No process is launched and no file content is read. Partial observation
+    /// never establishes absence of executable/database use. System/other-user processes are outside this scope.
+    static func currentUserSafety(maximumProcesses: Int = 8192, maximumDescriptors: Int = 16384, seconds: TimeInterval = 0.8,
+                                  userIdentifier: ((pid_t) -> uid_t?)? = nil, descriptorSize: ((pid_t) -> Int32)? = nil) -> ProcessObservation {
+        let deadline = Date().addingTimeInterval(seconds)
+        var pids = [pid_t](repeating: 0, count: maximumProcesses)
+        let count = Int(proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size)))
+        var executables = [String](), directories = [String](), files = [String](), inspected = 0, unreadable = count <= 0 || count >= maximumProcesses ? 1 : 0
+        var buffer = [CChar](repeating: 0, count: Int(4 * MAXPATHLEN))
+        for pid in pids.prefix(max(0, min(count, maximumProcesses))) where pid > 0 {
+            if Date() >= deadline || files.count >= maximumDescriptors { unreadable += 1; break }
+            var bsd = proc_bsdinfo()
+            let uid: uid_t?
+            if let userIdentifier { uid = userIdentifier(pid) }
+            else { uid = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0 ? bsd.pbi_uid : nil }
+            guard let uid else { if kill(pid, 0) == 0 || errno != ESRCH { unreadable += 1 }; continue }
+            guard uid == getuid() else { continue }
+            guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { unreadable += 1; continue }
+            inspected += 1; executables.append(String(cString: buffer))
+            var vnode = proc_vnodepathinfo()
+            if proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vnode, Int32(MemoryLayout<proc_vnodepathinfo>.size)) > 0 {
+                let cwd = withUnsafePointer(to: vnode.pvi_cdir.vip_path) { $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) } }
+                if !cwd.isEmpty { directories.append(cwd) }
+            } else { unreadable += 1 }
+            let size = descriptorSize?(pid) ?? proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
+            if size <= 0 { if kill(pid, 0) == 0 || errno != ESRCH { unreadable += 1 }; continue }
+            if size > 512 * MemoryLayout<proc_fdinfo>.size { unreadable += 1; continue }
+            var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: Int(size) / MemoryLayout<proc_fdinfo>.size)
+            let filled = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, &fds, size)
+            if filled <= 0 { unreadable += 1; continue }
+            for fd in fds.prefix(Int(filled) / MemoryLayout<proc_fdinfo>.size) where fd.proc_fdtype == UInt32(PROX_FDTYPE_VNODE) {
+                if Date() >= deadline || files.count >= maximumDescriptors { unreadable += 1; break }
+                var info = vnode_fdinfowithpath()
+                guard proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDVNODEPATHINFO, &info, Int32(MemoryLayout<vnode_fdinfowithpath>.size)) > 0 else { unreadable += 1; continue }
+                let path = withUnsafePointer(to: info.pvip.vip_path) { $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXPATHLEN)) { String(cString: $0) } }
+                if !path.isEmpty { files.append(path) }
+            }
+        }
+        return ProcessObservation(executables: executables, workingDirectories: directories, openFiles: files, inspected: inspected, unreadable: unreadable)
+    }
+}

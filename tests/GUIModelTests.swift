@@ -1011,28 +1011,24 @@ import SQLite3
         try test(reloaded.events.map { [$0.id, String($0.delta ?? 0), String($0.currentFree ?? 0), $0.category] } == historyBefore && reloaded.measurements.map { "\($0.id):\($0.free)" } == chartBefore, "events and chart points are unchanged by live refreshes")
         try test(reloaded.events.count == snapshot.events.count && !reloaded.events.contains { $0.id.hasPrefix("live") }, "live readings never become events")
 
-        // Real probe: read-only, consistent with recorded APFS units, no side effects on monitoring files.
-        let dataDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/MacBook Storage Monitor")
+        // Real capacity probe, isolated state: production monitoring can write its own folder concurrently,
+        // so fingerprinting that folder cannot establish whether this probe writes. Use controlled history,
+        // log and lock fixtures and require them to remain unchanged; never open production data here.
+        let dataDir = folder
+        let logSentinel = dataDir.appendingPathComponent("live-probe-monitor.log")
+        let lockSentinel = dataDir.appendingPathComponent("live-probe-monitor.lock")
+        let sentinel = Data("isolated read-only probe fixture\n".utf8)
+        try sentinel.write(to: logSentinel); try sentinel.write(to: lockSentinel)
         func fingerprint() -> [String] { ((try? FileManager.default.contentsOfDirectory(atPath: dataDir.path)) ?? []).sorted().map { name in let a = try? FileManager.default.attributesOfItem(atPath: dataDir.appendingPathComponent(name).path); return "\(name):\((a?[.size] as? NSNumber)?.intValue ?? -1):\((a?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0)" } }
         let filesBefore = fingerprint(), fixtureBefore = try Data(contentsOf: populated)
         var probes = [LiveCapacityReading]()
         for _ in 0..<3 { probes.append(try LiveCapacityProbe.read()) }
         try test(probes.allSatisfy { $0.total > 0 && $0.free > 0 && $0.free < $0.total && $0.dataVolumeUUID != nil }, "real live probe reads container free/total and the Data volume UUID")
         let fixtureAfter = try Data(contentsOf: populated)
-        // The fingerprinted folder is the real monitor's: its own background worker or check may write
-        // there during this test. A change is a failure only when no monitor process was running.
-        func monitorActive() -> Bool {
-            let ps = Process(); ps.executableURL = URL(fileURLWithPath: "/bin/ps"); ps.arguments = ["-axo", "command="]
-            let pipe = Pipe(); ps.standardOutput = pipe
-            guard (try? ps.run()) != nil else { return false }
-            let text = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self); ps.waitUntilExit()
-            return text.split(separator: "\n").contains { $0.contains("MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor") }
-        }
         let unchanged = fingerprint() == filesBefore
-        let monitorWasActive = !unchanged && monitorActive()
-        try test((unchanged || monitorWasActive) && fixtureAfter == fixtureBefore,
-                 unchanged ? "live probes do not touch the monitor's database, log, or lock (\(filesBefore.count) files unchanged)"
-                           : "live probes leave the fixture untouched; the monitor's own folder changed while its background process was running, so that comparison is inconclusive this run")
+        let sentinelsUnchanged = try Data(contentsOf: logSentinel) == sentinel && Data(contentsOf: lockSentinel) == sentinel
+        try test(unchanged && fixtureAfter == fixtureBefore && sentinelsUnchanged,
+                 "real live probes leave isolated history, log and lock fixtures unchanged (\(filesBefore.count) files; production monitoring data not opened)")
         if let production = ProcessInfo.processInfo.environment["STORAGE_MONITOR_PRODUCTION_COPY"], let latest = try? await HistoryReader(path: production).load().latest {
             try test(ObservationComparison.make(live: probes[0], recorded: latest) != nil, "real live reading matches the recorded container by Data volume UUID")
         }
@@ -1066,6 +1062,13 @@ import SQLite3
         try test(inventoryFolderName(path: "/Users/someone/Projects/Atlas", rootPath: "/") == "Atlas", "prioritize names the requested folder")
         try test(inventoryFolderName(path: "/", rootPath: "/") == "Startup Data", "the index root reads as Startup Data")
         try livingTreeModelTests { ok, message in try test(ok, message) }
+        try livingTreeCameraTests { ok, message in try test(ok, message) }
+        try livingTree3DTests { ok, message in try test(ok, message) }
+        try livingTreeColorTests { ok, message in try test(ok, message) }
+        try cleanupInspectorTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-fixtures")) { ok, message in try test(ok, message) }
+        try cleanupTrashTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-trash-fixtures")) { ok, message in try test(ok, message) }
+        try cleanupTrashSafetyTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-trash-safety-fixtures")) { ok, message in try test(ok, message) }
+        try await cleanupReviewQueueTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-queue-fixtures")) { ok, message in try test(ok, message) }
         print("\(tests) GUI model/read-only tests passed; isolated fixtures: \(folder.path)")
     }
 }

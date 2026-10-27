@@ -3,6 +3,15 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 SDK_PATH=${STORAGE_MONITOR_SDK_PATH:-$(/usr/bin/xcrun --show-sdk-path)}
 APP="$ROOT/build/Storage Monitor.app"
+BUNDLE_ID=local.macbook.storage-monitor.viewer
+QA=false
+if [ "${1:-}" = "--qa-runtime" ] && [ "$#" -eq 1 ]; then
+  QA=true
+  APP="$ROOT/build/native-acceptance/runtime/Storage Monitor QA.app"
+  BUNDLE_ID=local.macbook.storage-monitor.viewer.native-qa
+elif [ "$#" -ne 0 ]; then
+  /usr/bin/printf '%s\n' 'Usage: scripts/build-gui.sh [--qa-runtime]' >&2; exit 1
+fi
 ICON="$ROOT/build/MacBook Storage Monitor.app/Contents/Resources/AppIcon.icns"
 if [ ! -f "$ICON" ]; then ICON="$HOME/Applications/MacBook Storage Monitor.app/Contents/Resources/AppIcon.icns"; fi
 if [ ! -f "$ICON" ]; then /usr/bin/printf '%s\n' 'Build the background monitor icon resource first with scripts/build.sh.' >&2; exit 1; fi
@@ -26,5 +35,10 @@ if [ ! -f "$ICON" ]; then /usr/bin/printf '%s\n' 'Build the background monitor i
 <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict></plist>
 PLIST
-/usr/bin/codesign --force --sign - --identifier local.macbook.storage-monitor.viewer "$APP"
+if [ "$QA" = true ]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Storage Monitor QA" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c 'Add :StorageMonitorQAInventory bool true' "$APP/Contents/Info.plist"
+fi
+/usr/bin/codesign --force --sign - --identifier "$BUNDLE_ID" "$APP"
 /usr/bin/printf '%s\n' "Built $APP"

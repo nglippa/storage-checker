@@ -37,7 +37,7 @@ struct MonitorRootView: View {
 }
 
 enum InventoryBrowserMode: String, CaseIterable, Identifiable {
-    case explorer = "Explorer", contents = "Contents", directories = "Largest folders", files = "Largest files", all = "Largest items"
+    case explorer = "Explorer", contents = "Contents", directories = "Largest folders", files = "Largest files", all = "Largest items", review = "Review Candidates"
     var id: Self { self }
 }
 
@@ -74,6 +74,16 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     lazy var explorer = InventoryExplorerController(database: database)
     /// The Living Tree of the explorer's current folder; created the first time the tree is shown.
     lazy var livingTree = LivingTreeController(database: database)
+    /// A bounded review of this catalog, independent of the currently open folder.
+    lazy var reviewQueue = CleanupReviewQueueController(database: database)
+    /// Cleanup Inspector evidence for the Inspector's subject (read-only; created on first use).
+    lazy var cleanup: CleanupInspectorController = {
+        var environment = ArtifactEnvironment.current(ownData: (database as NSString).deletingLastPathComponent)
+        environment.qaRuntime = NativeQARuntime.active
+        let controller = CleanupInspectorController(database: database, environment: environment)
+        controller.allowsTrash = !ViewerConfiguration.current.isQA || NativeQARuntime.active != nil
+        return controller
+    }()
     /// A search result opened in its folder: selected there and revealed in the Living Tree.
     var pendingReveal: InventoryNode?
     let reader: InventoryReader
@@ -106,6 +116,11 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         guard let parent = node.parentID else { return }
         pendingReveal = node
         parentID = parent; mode = folderMode; search = ""; offset = 0; selected = nil; revision &+= 1
+    }
+    /// Review Queue uses the same pending-reveal path as search, Atlas and Living Tree selections.
+    func revealReviewCandidate(_ node: InventoryNode) {
+        mode = .explorer
+        showEnclosingFolder(of: node)
     }
     func loadDeferredFolders() async {
         deferredFoldersState = .loading
@@ -146,7 +161,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
             return
         }
         do {
-            if !search.isEmpty { try await Task.sleep(for: .milliseconds(180)) }
+            if mode != .review && !search.isEmpty { try await Task.sleep(for: .milliseconds(180)) }
             let newStatus = try await reader.status()
             try Task.checkCancellation()
             accounting = try? await reader.accounting()
@@ -188,7 +203,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
             }
             let page: InventoryPage
             let effectiveMode = resetToRoot ? InventoryBrowserMode.contents : mode
-            let effectiveSearch = resetToRoot ? "" : search
+            let effectiveSearch = resetToRoot || effectiveMode == .review ? "" : search
             let effectiveOffset = resetToRoot ? 0 : offset
             let under = scopeToFolder && folder.id != newRoot.id ? folder.id : nil
             if !effectiveSearch.isEmpty { page = try await reader.search(text: effectiveSearch, under: under, offset: effectiveOffset, limit: 100) }
@@ -196,7 +211,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
                 switch effectiveMode {
                 // The explorer reads its own pages (InventoryExplorerView); this load keeps only the status,
                 // current folder and breadcrumbs it shares with the other modes.
-                case .explorer: page = InventoryPage(items: [], hasMore: false)
+                case .explorer, .review: page = InventoryPage(items: [], hasMore: false)
                 case .contents: page = try await reader.children(parentID: folder.id, offset: effectiveOffset, limit: 100, sort: sort)
                 case .directories: page = try await reader.largest(kind: .directories, under: under, offset: effectiveOffset, limit: 100)
                 case .files: page = try await reader.largest(kind: .files, under: under, offset: effectiveOffset, limit: 100)
@@ -303,9 +318,11 @@ struct DiskInventoryView: View {
     @ObservedObject var history: ViewerStore
     @ObservedObject var model: InventoryBrowserModel
     @AppStorage("inventory.header.details") private var showingIndexDetails = false
+    @ObservedObject private var qaWorker = NativeQAWorker.shared
     private var workerAvailable: Bool {
         let data = URL(fileURLWithPath: configuration.database).deletingLastPathComponent()
         let path = configuration.isQA ? data.appendingPathComponent("inventory-worker.plist").path : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/local.macbook.storage-monitor.inventory.plist").path
+        if NativeQARuntime.active != nil { return qaWorker.failure == nil }
         return FileManager.default.fileExists(atPath: path)
     }
     private var indexingActive: Bool {
@@ -328,7 +345,9 @@ struct DiskInventoryView: View {
                 }.padding(14).accessibilityIdentifier("inventory.error")
                 Divider()
             }
-            if model.mode == .explorer && model.search.isEmpty {
+            if model.mode == .review {
+                CleanupReviewQueueView(browser: model, queue: model.reviewQueue)
+            } else if model.mode == .explorer && model.search.isEmpty {
                 InventoryExplorerView(browser: model)
             } else {
             inventoryTable
@@ -345,6 +364,7 @@ struct DiskInventoryView: View {
             Text("File allocation may include shared APFS blocks. Totals count hard links once and do not represent reclaimable physical storage." + (model.databaseBytes.map { " Inventory database: " + ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) + "." } ?? ""))
                 .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 22).padding(.vertical, 9)
         }
+        .overlay(alignment: .top) { if NativeQARuntime.active != nil, let failure = qaWorker.failure { Text("QA fixture worker stopped: " + failure).font(.caption).padding().background(.background) } }
         .background(Color(nsColor: .windowBackgroundColor))
         .task(id: model.queryID) { await model.load() }
         // Reuse the viewer's one visible-window clock; inventory adds no scanner or loop.
@@ -578,7 +598,7 @@ struct DiskInventoryView: View {
             HStack {
                 Picker("Browse", selection: $model.mode) { ForEach(InventoryBrowserMode.allCases) { Text($0.rawValue).tag($0) } }
                     .labelsHidden().fixedSize().accessibilityIdentifier("inventory.mode")
-                Button("Go to folder…") { model.chooseFolder() }.accessibilityIdentifier("inventory.goToFolder")
+                if model.mode != .review { Button("Go to folder…") { model.chooseFolder() }.accessibilityIdentifier("inventory.goToFolder") }
                 if model.mode == .contents && model.search.isEmpty {
                     Picker("Sort", selection: $model.sort) {
                         Text("Allocated size").tag(InventorySort.allocated); Text("Name").tag(InventorySort.name)
@@ -586,12 +606,14 @@ struct DiskInventoryView: View {
                     }.frame(maxWidth: 210).accessibilityIdentifier("inventory.sort")
                 }
                 Spacer()
-                TextField("Search name or path prefix", text: $model.search).textFieldStyle(.roundedBorder).frame(minWidth: 180, maxWidth: 290).accessibilityIdentifier("inventory.search")
+                if model.mode != .review {
+                    TextField("Search name or path prefix", text: $model.search).textFieldStyle(.roundedBorder).frame(minWidth: 180, maxWidth: 290).accessibilityIdentifier("inventory.search")
+                }
             }
-            if (model.mode != .contents && model.mode != .explorer) || !model.search.isEmpty {
+            if model.mode != .review && ((model.mode != .contents && model.mode != .explorer) || !model.search.isEmpty) {
                 Toggle("Only inside the selected folder", isOn: $model.scopeToFolder).font(.caption).accessibilityIdentifier("inventory.scope")
             }
-            if model.mode != .contents && model.mode != .explorer, let status = model.status, InventoryStatusPresentation(status: status).rankingsArePartial {
+            if model.mode != .review && model.mode != .contents && model.mode != .explorer, let status = model.status, InventoryStatusPresentation(status: status).rankingsArePartial {
                 Text("Ranked from measurements available so far; incomplete folders can move as indexing continues.")
                     .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.rankingQualification")
             }

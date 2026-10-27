@@ -44,7 +44,14 @@ public enum InventoryRequests {
         URL(fileURLWithPath: database).deletingLastPathComponent().appendingPathComponent("inventory-requests", isDirectory: true)
     }
     @discardableResult public static func enqueue(database: String, action: String, path: String? = nil) throws -> UUID {
-        guard ["refresh", "pause", "resume", "focus"].contains(action) else { throw CocoaError(.validationMissingMandatoryProperty) }
+        guard ["refresh", "pause", "resume", "focus"].contains(action) else {
+            throw NSError(domain: "StorageMonitor.InventoryRequests", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Unsupported inventory request action."])
+        }
+        if let runtime = NativeQARuntime.active {
+            guard database == runtime.database else { try NativeQARuntime.reject("request database is not the QA catalog") }
+            try runtime.validateRequest(path, action: action)
+        }
         let folder = directory(database: database)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let boundary = action == "refresh" ? try InventoryRequestBoundary.capture(database: database) : nil

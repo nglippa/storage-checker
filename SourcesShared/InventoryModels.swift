@@ -272,7 +272,7 @@ private final class InventoryReadConnection {
     }
 }
 
-public actor InventoryReader {
+public actor InventoryReader: CleanupReviewInventoryReading {
     private let databasePath: String
     private let maximumPageSize = 256
 
@@ -290,19 +290,111 @@ public actor InventoryReader {
         return try fetchOne(connection, sql: Self.baseSelect + " WHERE n.id=? AND n.generation_id=? LIMIT 1", values: [id,generation])
     }
 
+    /// Metadata-only discovery. The LIMIT applies to all examined rowids, before recognition hints:
+    /// sparse matches cannot hide a multi-million-row scan inside one page. Only potential matches
+    /// pay for inventory ancestry/path hydration. No live directory listing or schema change occurs.
+    public func cleanupDiscoveryPage(after cursor: CleanupDiscoveryCursor?, limit: Int = 128) throws -> CleanupDiscoveryPage {
+        let connection = try InventoryReadConnection(databasePath)
+        guard sqlite3_exec(connection.db, "BEGIN", nil, nil, nil) == SQLITE_OK else { throw InventoryReaderError.query(String(cString: sqlite3_errmsg(connection.db))) }
+        defer { sqlite3_exec(connection.db, "COMMIT", nil, nil, nil) }
+        guard let generation = try activeGeneration(connection) else {
+            return CleanupDiscoveryPage(nodes: [], scannedRows: 0, next: nil, generation: nil, journal: nil, inventoryStale: true, resynchronized: cursor != nil)
+        }
+        let resynchronized = cursor != nil && cursor?.generation != generation
+        let after = cursor?.generation == generation ? cursor!.afterID : 0
+        let wanted = min(256, max(1, limit))
+        let statement = try connection.statement("SELECT id,parent_id,name,kind,generation_id FROM inventory_nodes WHERE id>? ORDER BY id LIMIT ?", [after, wanted + 1])
+        defer { sqlite3_finalize(statement) }
+        var scanned = 0, last = after, hasMore = false, matches = [Int64](), seen = Set<Int64>()
+        while true {
+            try Task.checkCancellation()
+            let code = sqlite3_step(statement)
+            if code == SQLITE_DONE { break }
+            guard code == SQLITE_ROW else { throw InventoryReaderError.query(String(cString: sqlite3_errmsg(connection.db))) }
+            if scanned == wanted { hasMore = true; break }
+            scanned += 1; last = sqlite3_column_int64(statement, 0)
+            guard sqlite3_column_int64(statement, 4) == generation else { continue }
+            let name = text(statement, 2) ?? "", kind = InventoryNodeKind(rawValue: text(statement, 3) ?? "other") ?? .other
+            guard CleanupDiscoveryHints.isPotential(name: name, kind: kind) else { continue }
+            let target = CleanupDiscoveryHints.targetsParent(name: name) ? sqlite3_column_int64(statement, 1) : last
+            if target > 0, seen.insert(target).inserted { matches.append(target) }
+        }
+        var nodes = [InventoryNode]()
+        for id in matches {
+            try Task.checkCancellation()
+            if let node = try fetchOne(connection, sql: Self.baseSelect + " WHERE n.id=? AND n.generation_id=?", values: [id,generation]) { nodes.append(node) }
+        }
+        let clock = try changeClock(connection)
+        let journal = clock.map { InventoryChangeCursor(journalID: $0.journal, sequence: $0.sequence) }
+        let stale = try connection.scalarInt("SELECT event_availability<>'available' OR EXISTS(SELECT 1 FROM inventory_invalidations i WHERE i.generation_id=g.id) FROM inventory_generations g WHERE id=?", [generation]) != 0
+        return CleanupDiscoveryPage(nodes: nodes, scannedRows: scanned, next: hasMore ? CleanupDiscoveryCursor(generation: generation, afterID: last) : nil,
+                                    generation: generation, journal: journal, inventoryStale: stale || clock == nil, resynchronized: resynchronized)
+    }
+
+    /// Revisit one changed indexed listing, using its existing parent/name index. The cursor bounds SQL
+    /// work before recognition and does not depend on directory sizes or scan unrelated inventory branches.
+    public func cleanupListingDiscoveryPage(directoryID: Int64, after cursor: CleanupListingCursor?, limit: Int = 128) throws -> CleanupListingDiscoveryPage {
+        let connection = try InventoryReadConnection(databasePath)
+        guard sqlite3_exec(connection.db, "BEGIN", nil, nil, nil) == SQLITE_OK else { throw InventoryReaderError.query(String(cString: sqlite3_errmsg(connection.db))) }
+        defer { sqlite3_exec(connection.db, "COMMIT", nil, nil, nil) }
+        guard let generation = try activeGeneration(connection) else {
+            return CleanupListingDiscoveryPage(nodes: [], scannedRows: 0, next: nil, generation: nil, journal: nil, inventoryStale: true)
+        }
+        let wanted = min(256, max(1, limit))
+        var condition = "", values: [Any?] = [directoryID,generation]
+        if let cursor, cursor.generation == generation {
+            condition = " AND name COLLATE NOCASE>=? AND (name COLLATE NOCASE>? OR (name=? COLLATE NOCASE AND id>?))"
+            values += [cursor.name,cursor.name,cursor.name,cursor.id]
+        }
+        values.append(wanted + 1)
+        let statement = try connection.statement("SELECT id,name,kind FROM inventory_nodes WHERE parent_id=? AND +generation_id=?\(condition) ORDER BY name COLLATE NOCASE,id LIMIT ?", values)
+        defer { sqlite3_finalize(statement) }
+        var scanned = 0, last: CleanupListingCursor?, hasMore = false, matches = [Int64](), seen = Set<Int64>()
+        while true {
+            try Task.checkCancellation()
+            let code = sqlite3_step(statement)
+            if code == SQLITE_DONE { break }
+            guard code == SQLITE_ROW else { throw InventoryReaderError.query(String(cString: sqlite3_errmsg(connection.db))) }
+            if scanned == wanted { hasMore = true; break }
+            scanned += 1
+            let id = sqlite3_column_int64(statement, 0), name = text(statement, 1) ?? "", kind = InventoryNodeKind(rawValue: text(statement, 2) ?? "other") ?? .other
+            last = CleanupListingCursor(generation: generation,name: name,id: id)
+            guard CleanupDiscoveryHints.isPotential(name: name, kind: kind) else { continue }
+            let target = CleanupDiscoveryHints.targetsParent(name: name) ? directoryID : id
+            if seen.insert(target).inserted { matches.append(target) }
+        }
+        var nodes = [InventoryNode]()
+        for id in matches {
+            if let node = try fetchOne(connection, sql: Self.baseSelect + " WHERE n.id=? AND n.generation_id=?", values: [id,generation]) { nodes.append(node) }
+        }
+        let clock = try changeClock(connection)
+        let journal = clock.map { InventoryChangeCursor(journalID: $0.journal,sequence: $0.sequence) }
+        let stale = try connection.scalarInt("SELECT event_availability<>'available' OR EXISTS(SELECT 1 FROM inventory_invalidations i WHERE i.generation_id=g.id) FROM inventory_generations g WHERE id=?", [generation]) != 0
+        return CleanupListingDiscoveryPage(nodes: nodes,scannedRows: scanned,next: hasMore ? last : nil,generation: generation,journal: journal,inventoryStale: stale || clock == nil || cursor.map { $0.generation != generation } == true)
+    }
+
     // Resolve only indexed parent/name relationships. Never traverses the filesystem
     // or follows symlinks; an unindexed target returns its closest known directory.
     public func locateDirectory(path: String) throws -> (node: InventoryNode, exact: Bool) {
         let c = try InventoryReadConnection(databasePath)
         guard let generation = try activeGeneration(c),
               let root = try fetchOne(c, sql: Self.baseSelect + " WHERE n.generation_id=? AND n.parent_id IS NULL", values: [generation]) else { throw InventoryReaderError.query("Inventory discovery has not started yet") }
-        var target = path
+        // Match only stable macOS aliases, including absent/unindexed descendants. Do not resolve
+        // filesystem symlinks: navigation must keep using indexed parent/name relationships.
+        func systemAlias(_ value: String) -> String {
+            if value == "/tmp" || value.hasPrefix("/tmp/") || value == "/var" || value.hasPrefix("/var/") {
+                return "/private" + value
+            }
+            return value
+        }
+        var target = systemAlias(path)
+        let rootPath = systemAlias(root.path)
         while target.count > 1 && target.hasSuffix("/") { target.removeLast() }
         let data = "/System/Volumes/Data"
-        if root.path.hasPrefix(data), !target.hasPrefix(data) { target = data + target }
-        guard target == root.path || target.hasPrefix(root.path + "/"),
+        if (rootPath == data || rootPath.hasPrefix(data + "/")), target != data && !target.hasPrefix(data + "/") { target = data + target }
+        guard target == rootPath || target.hasPrefix(rootPath + "/"),
               !target.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) else { throw InventoryReaderError.query("Choose a directory inside the indexed startup Data scope") }
-        let parts = target == root.path ? [] : String(target.dropFirst(root.path.count+1)).split(separator: "/")
+        let parts = target == rootPath ? [] : String(target.dropFirst(rootPath.count+1)).split(separator: "/")
         guard parts.count < 1024 else { throw InventoryReaderError.query("Directory path is too deep") }
         var current = root
         for part in parts {

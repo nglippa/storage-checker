@@ -2,6 +2,8 @@
 
 Status, 2026-10-25: implemented; verified by model, catalog and headless controller tests, and by offscreen renders of an APFS clone of the 2.96M-node catalog. Uncommitted, not packaged or installed. No production database, monitoring history, LaunchAgent or installed app was touched; no full-volume scan was run. **Nothing was checked in a real window** (checklist in section 11).
 
+**Update 2026-10-26:** the tree now has a 2D camera (pan, zoom, focus, fit), a fuller fit, collision-aware labels whose number grows with zoom, and layout in a fixed space off the main thread. Where this record differs (labels in section 3, interaction in section 4, layout per canvas size in section 2), `LIVING-TREE-CAMERA.md` describes the current behaviour.
+
 Evidence: `build/living-tree-1/evidence/` (renders), `build/living-tree-bench.log` (benchmark), `build/living-tree-render.log` (render timing), `build/living-tree-*-tests.log`.
 
 ## 1. Files changed

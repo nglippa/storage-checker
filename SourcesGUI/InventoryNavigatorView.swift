@@ -168,8 +168,13 @@ struct InventoryActions {
 struct InventoryInspectorView: View {
     @ObservedObject var browser: InventoryBrowserModel
     @ObservedObject var explorer: InventoryExplorerController
+    /// Review Queue uses the same Inspector for an indexed item outside the expanded Navigator pages.
+    var reviewSubject: InventoryNode? = nil
+    var showsTrash = true
+    var usesQueueEvidence = false
 
     private var subject: (node: InventoryNode, isSelection: Bool)? {
+        if let reviewSubject { return (reviewSubject, true) }
         if let id = explorer.selection, let node = explorer.state.node(id) { return (node, true) }
         if let root = explorer.state.rootID, let node = explorer.state.node(root) { return (node, false) }
         return nil
@@ -187,20 +192,26 @@ struct InventoryInspectorView: View {
                     sizes(info)
                     if let share = info.shareOfParent, let text = info.shareText { shareView(share, text: text) }
                     measurement(info, node: node)
+                    CleanupInspectorSection(cleanup: browser.cleanup, node: node, showsTrash: showsTrash)
                     actions(node)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // A new subject replaces the content outright and starts at the top (a cross-fade overlapped the two
+                // layouts); the same subject keeps its content and scroll position through refreshes.
                 .id(node.id)
-                .transition(.opacity)
             } else {
                 Text("Select an item to see its details.").font(.callout).foregroundStyle(.secondary).padding(16)
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .windowBackgroundColor))
-        .animation(.easeOut(duration: 0.15), value: subject?.node.id)
         .accessibilityIdentifier("inventory.inspector")
+        // Evidence follows the subject and its inventory row (identity, size, measurement state).
+        .onAppear { if !usesQueueEvidence { browser.cleanup.update(subject?.node) { explorer.state.node($0) != nil } } }
+        .onChange(of: subject.map { CleanupInspectorController.fingerprint($0.node) }) { _, _ in if !usesQueueEvidence { browser.cleanup.update(subject?.node) { explorer.state.node($0) != nil } } }
+        // The inventory reported changes: a recognized item's evidence is collected again (processes, Git state).
+        .onChange(of: browser.revision) { _, _ in if !usesQueueEvidence { browser.cleanup.inventoryChanged(subject?.node) } }
     }
 
     private func identity(_ node: InventoryNode, info: InventoryInspectorPresentation, isSelection: Bool) -> some View {

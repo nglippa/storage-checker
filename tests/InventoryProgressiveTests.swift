@@ -42,15 +42,30 @@ func progressiveFixture(_ check: (Bool, String) throws -> Void, keep: Bool) asyn
     let reader = InventoryReader(path: path), status = try await reader.status(), rootNode = try await reader.root()!
     let page = try await reader.children(parentID: rootNode.id)
     let firstDirectorySeconds = elapsed() - initialStart
-    let gate = DispatchSemaphore(value: 0)
-    let cancelledRead = Task { gate.wait(); return try await reader.children(parentID: rootNode.id) }
-    cancelledRead.cancel(); gate.signal()
+    actor ReadGate {
+        var opened = false
+        var continuation: CheckedContinuation<Void, Never>?
+        func wait() async {
+            guard !opened else { return }
+            await withCheckedContinuation { continuation = $0 }
+        }
+        func release() { opened = true; continuation?.resume(); continuation = nil }
+    }
+    let gate = ReadGate()
+    let cancelledRead = Task { await gate.wait(); return try await reader.children(parentID: rootNode.id) }
+    cancelledRead.cancel(); await gate.release()
     var cancellationHonored = false
     do { _ = try await cancelledRead.value } catch is CancellationError { cancellationHonored = true }
     try check(cancellationHonored, "rapid navigation cancels obsolete queued read work before opening SQLite")
     let target = page.items.first { $0.name == "focus" }!
     let unknownPath = try await reader.locateDirectory(path: root + "/focus/deep/a/b/c")
     try check(!unknownPath.exact && unknownPath.node.id == target.id, "unindexed path opens its known ancestor without filesystem traversal")
+    let alternateRoot = root.hasPrefix("/private/tmp/") ? "/tmp/" + String(root.dropFirst("/private/tmp/".count)) : "/private" + root
+    let alternatePath = try await reader.locateDirectory(path: alternateRoot + "/focus/deep/a/b/c")
+    try check(!alternatePath.exact && alternatePath.node.id == target.id, "unindexed navigation through either /tmp spelling returns the same indexed ancestor")
+    var refusedSibling = false
+    do { _ = try await reader.locateDirectory(path: root + "-neighbor/focus") } catch { refusedSibling = true }
+    try check(refusedSibling, "stable alias navigation does not admit a same-prefix sibling outside the indexed root")
     var refusedLink = false
     do { _ = try await reader.locateDirectory(path: root + "/shortcut/deep") } catch { refusedLink = true }
     try check(refusedLink, "path navigation refuses symbolic links instead of starting another tree")

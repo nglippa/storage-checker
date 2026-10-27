@@ -474,8 +474,8 @@ func selfTest() throws {
     try test(evaluate(r(7200,45*gb), r(5400,47*gb), [r(0,50*gb)]).growth.contains("drop_5gb_within_2h"), "5 GB inclusive two-hour boundary")
     try test(evaluate(r(7201,45*gb), r(5400,47*gb), [r(0,50*gb)]).growth.isEmpty, "outside two-hour window excluded")
     try test(evaluate(r(7200,45*gb), nil, [r(0,100*gb,"external")]).growth.isEmpty, "container isolation")
-    let folder = fm.temporaryDirectory.appendingPathComponent("storage-monitor-test-\(UUID().uuidString)")
-    try privateDirectory(folder); defer { try? fm.removeItem(at: folder) }
+    let folder = monitorSelfTestFixture("test")
+    try privateDirectory(folder); defer { finishMonitorSelfTestFixture(folder) }
     let db = try Database(folder.appendingPathComponent("test.sqlite3").path)
     let now = Date().timeIntervalSince1970
     for time in [now-retention-1, now-retention, now] { try db.write("INSERT INTO readings(timestamp,container,free,used,volumes) VALUES(?,?,?,?,?)", [time,"test",50*gb,195*gb,"[]"]); try db.write("INSERT INTO alerts(timestamp,severity,reasons,free,notification) VALUES(?,?,?,?,?)",[time,"warning","test",50*gb,"test"]); try db.write("INSERT INTO diagnostics(timestamp,snapshot) VALUES(?,?)", [time,"{}"] ) }
@@ -590,6 +590,9 @@ func selfTest() throws {
 
 @MainActor func runMain() async throws {
     umask(0o077)
+    if CommandLine.arguments.contains("--qa-runtime-root") || CommandLine.arguments.contains(where: { $0.hasPrefix("--qa-") }) {
+        try await runNativeQAWorker(arguments: CommandLine.arguments); return
+    }
     var args = Array(CommandLine.arguments.dropFirst()), directory = defaultData
     if let i = args.firstIndex(of: "--data-dir") { try required(args.count > i+1, "--data-dir requires an absolute path"); try required(args[i+1].hasPrefix("/"), "--data-dir must be absolute"); directory = URL(fileURLWithPath: args[i+1]); args.removeSubrange(i...i+1) }
     let command = args.first ?? "help"

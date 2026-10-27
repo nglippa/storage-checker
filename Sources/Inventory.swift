@@ -597,6 +597,10 @@ private final class InventoryOpenDirectory {
 
 func runInventory(databasePath: String, directory: URL, region: CoverageRegion, options: InventoryRunOptions = InventoryRunOptions(), fdaOverride: String? = nil, gatedOverride: ConsentGate? = nil, cancelled: @escaping () -> Bool = { false }) -> InventoryRunResult {
     do {
+        if let runtime = NativeQARuntime.active {
+            guard databasePath == runtime.database, directory.path == runtime.support, region.root == runtime.fixtures else { try NativeQARuntime.reject("worker database/root does not match profile") }
+            try runtime.validateStorage()
+        }
         try initializeInventorySchema(databasePath: databasePath)
         guard let lock = FileLock(directory.appendingPathComponent("inventory.lock").path, wait: 0) else {
             return InventoryRunResult(outcome: "busy", generation: nil, entries: 0, directories: 0, pending: 0, reason: "Another inventory worker is active")
@@ -670,6 +674,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
             // listing cannot certify a directory that changed while another was read.
             for item in ready {
                 let path = item.job.relative.isEmpty ? item.job.root : item.job.root + "/" + item.job.relative
+                try NativeQARuntime.active?.validateRequest(path, action: "refresh")
                 var value = stat()
                 let unchanged = withThrottledIO { lstat(path, &value) == 0 && InventoryDirectorySnapshot(value) == item.snapshot }
                 if unchanged { valid.append(item) }
@@ -742,6 +747,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
             if useFocus { interactiveStreak += 1; InventoryProfile.current?.add("interactive_quanta") }
             else { interactiveStreak = 0; InventoryProfile.current?.add("background_quanta") }
             let absolute = job.relative.isEmpty ? job.root : job.root + "/" + job.relative
+            try NativeQARuntime.active?.validateRequest(absolute, action: "refresh")
             InventoryProfile.current?.add("job_quanta")
             var activeJob = try beginInventoryListing(connection, job: job)
             var keepListing = true

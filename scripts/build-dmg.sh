@@ -59,11 +59,11 @@ fi
 monitors=""; viewers=""
 for arch in $ARCHS; do
   echo "==> Compile background monitor ($arch, macOS $MIN_MACOS+)"
-  /usr/bin/xcrun swiftc -target "$arch-apple-macos$MIN_MACOS" -swift-version 5 -O -module-cache-path "$ROOT/build/module-cache" \
+  /usr/bin/xcrun swiftc -D STORAGE_MONITOR_DISTRIBUTION -target "$arch-apple-macos$MIN_MACOS" -swift-version 5 -O -module-cache-path "$ROOT/build/module-cache" \
     -framework AppKit -framework UserNotifications -parse-as-library \
     "$ROOT"/Sources/*.swift "$ROOT"/SourcesShared/*.swift "$ROOT/tests/InventoryTests.swift" -o "$WORK/bin/StorageMonitor-$arch"
   echo "==> Compile desktop app ($arch, macOS $MIN_MACOS+)"
-  /usr/bin/xcrun swiftc -sdk "$SDK" -target "$arch-apple-macos$MIN_MACOS" -swift-version 5 -O -parse-as-library -module-cache-path "$ROOT/build/module-cache" \
+  /usr/bin/xcrun swiftc -D STORAGE_MONITOR_DISTRIBUTION -sdk "$SDK" -target "$arch-apple-macos$MIN_MACOS" -swift-version 5 -O -parse-as-library -module-cache-path "$ROOT/build/module-cache" \
     -framework SwiftUI -framework Charts -framework AppKit \
     "$ROOT"/SourcesGUI/*.swift "$ROOT"/SourcesShared/*.swift -o "$WORK/bin/StorageMonitorViewer-$arch"
   monitors="$monitors $WORK/bin/StorageMonitor-$arch"; viewers="$viewers $WORK/bin/StorageMonitorViewer-$arch"

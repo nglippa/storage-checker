@@ -5,9 +5,17 @@ import SQLite3
 // Synthetic inventory tests. The fixture and database live under /private/tmp; no production
 // database, launch agent, or user content is read or changed.
 func inventorySelfTest(_ test: (Bool, String) throws -> Void) throws {
-    let root = "/private/tmp/storage-monitor-inventory-\(UUID().uuidString)"
+    let aliasLinks: [Firmlink] = [("/private", "private")]
+    try test(dataRelative("/tmp/absent/leaf", links: aliasLinks) == dataRelative("/private/tmp/absent/leaf", links: aliasLinks)
+             && dataRelative("/var/absent/leaf", links: aliasLinks) == dataRelative("/private/var/absent/leaf", links: aliasLinks)
+             && dataRelative("/tmp-neighbor/absent", links: aliasLinks) == nil && dataRelative("/variety/absent", links: aliasLinks) == nil,
+             "inventory invalidation keys normalize missing /tmp and /var entries without matching same-prefix siblings")
+    try test(dataRelative("/tmp/fixture/missing", mount: "/private/tmp/fixture", links: []) == "missing"
+             && dataRelative("/private/tmp/fixture/missing", mount: "/tmp/fixture", links: []) == "missing",
+             "inventory scoped refresh aliases resolve the same missing leaf for either mount spelling")
+    let root = monitorSelfTestFixture("inventory").path
     let state = URL(fileURLWithPath: root + "-state")
-    defer { try? FileManager.default.removeItem(atPath: root); try? FileManager.default.removeItem(at: state) }
+    defer { finishMonitorSelfTestFixture(URL(fileURLWithPath: root)); finishMonitorSelfTestFixture(state) }
     try FileManager.default.createDirectory(atPath: root + "/a/sub", withIntermediateDirectories: true)
     try FileManager.default.createDirectory(atPath: root + "/b", withIntermediateDirectories: true)
     try FileManager.default.createDirectory(atPath: root + "/many", withIntermediateDirectories: true)

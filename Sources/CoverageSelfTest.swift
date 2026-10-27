@@ -6,13 +6,13 @@ import SQLite3
 // Comprehensive coverage tests. Everything runs on synthetic fixtures in a fresh folder under
 // /private/tmp (FSEvents records it); no real user file is created, changed or removed.
 func coverageSelfTest(_ test: (Bool, String) throws -> Void) throws {
-    let sandbox = "/private/tmp/storage-monitor-coverage-\(UUID().uuidString)"
+    let sandbox = monitorSelfTestFixture("coverage").path
     let dataDir = URL(fileURLWithPath: sandbox + "-state")
     var mounted = false
     defer {
         _ = chmod(sandbox + "/home/locked", 0o700)
         if mounted { _ = try? run("/usr/bin/hdiutil", ["detach", sandbox + "/mnt", "-force"], timeout: 30) }
-        try? fm.removeItem(atPath: sandbox); try? fm.removeItem(at: dataDir); try? fm.removeItem(atPath: sandbox + "-image.dmg")
+        finishMonitorSelfTestFixture(URL(fileURLWithPath: sandbox)); finishMonitorSelfTestFixture(dataDir); finishMonitorSelfTestFixture(URL(fileURLWithPath: sandbox + "-image.dmg"))
     }
     func dir(_ path: String) throws { try fm.createDirectory(atPath: sandbox + "/" + path, withIntermediateDirectories: true) }
     func write(_ path: String, _ bytes: Int) throws { try Data(count: bytes).write(to: URL(fileURLWithPath: sandbox + "/" + path)) }
@@ -51,7 +51,7 @@ func coverageSelfTest(_ test: (Bool, String) throws -> Void) throws {
     try write("hard/one.bin", 2_000_000); _ = link(sandbox + "/hard/one.bin", sandbox + "/hard/two.bin")
     // A separate filesystem mounted inside the covered tree (a 4 MB disk image).
     let image = try run("/usr/bin/hdiutil", ["create", "-size", "4m", "-fs", "HFS+", "-volname", "SMCoverageTest", "-layout", "NONE", sandbox + "-image.dmg"], timeout: 60)
-    if image.status == 0 { mounted = (try run("/usr/bin/hdiutil", ["attach", "-nobrowse", "-noverify", "-mountpoint", sandbox + "/mnt", sandbox + "-image.dmg"], timeout: 60)).status == 0 }
+    if image.status == 0 { mounted = (try run("/usr/bin/hdiutil", ["attach", "-nobrowse", "-noautoopen", "-noverify", "-mountpoint", sandbox + "/mnt", sandbox + "-image.dmg"], timeout: 60)).status == 0 }
     if mounted { try? Data(count: 1_000_000).write(to: URL(fileURLWithPath: sandbox + "/mnt/inside.bin")) }
 
     guard let region = coverageRegion(root: sandbox) else { throw Failure("FAIL: sandbox is not on the Data volume") }

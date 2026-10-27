@@ -183,6 +183,7 @@ private func consumeInventoryRequestsNow(database: String, directory: URL, regio
             catch is DecodingError { log(directory, "Ignored malformed inventory focus request") }
         } else { log(directory, "Ignored invalid inventory focus request metadata") }
         if let request, request.action == "focus", let path = request.path {
+            try NativeQARuntime.active?.validateRequest(path, action: request.action)
             do { try requestInventoryFocus(databasePath: database, path: path, requestedAt: request.requestedAt.timeIntervalSince1970) }
             catch InventoryEngineError.invalidRoot(_) { log(directory, "Ignored out-of-scope inventory focus request") }
             // SQL/I/O failures propagate with the claimed file retained for recovery.
@@ -196,6 +197,7 @@ private func consumeInventoryRequestsNow(database: String, directory: URL, regio
         var info = stat()
         guard lstat(url.path, &info) == 0, info.st_mode & S_IFMT == S_IFREG, info.st_uid == getuid(), info.st_size <= 65_536 else { continue }
         let request = try JSONDecoder().decode(InventoryWorkRequest.self, from: Data(contentsOf: url))
+        try NativeQARuntime.active?.validateRequest(request.path, action: request.action)
         switch request.action {
         case "pause", "resume": break // enqueue applies current intent immediately; old requests cannot reverse it
         case "refresh":
@@ -274,7 +276,7 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
             region = candidate
         }
         let started = Date()
-        let fda = fullDiskAccessState()
+        let fda = NativeQARuntime.active != nil ? "qa-fixtures-only" : fullDiskAccessState()
         if directory.standardizedFileURL == defaultData.standardizedFileURL,
            fm.fileExists(atPath: database) {
             var source: OpaquePointer?, statement: OpaquePointer?
@@ -302,14 +304,14 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
         // Full Disk Access belongs to this process (the helper launchd runs), not to the viewer, so the
         // viewer reads what the worker itself observed.
         try? legacy.state("inventory_full_disk_access", fda)
-        let gate = coverageGate(legacy, region: region, fda: fda)
+        let gate: ConsentGate = NativeQARuntime.active != nil ? [] : coverageGate(legacy, region: region, fda: fda)
         try initializeInventorySchema(databasePath: database)
         try consumeInventoryRequests(database: database, directory: directory, region: region)
         if args.contains("--resume") {
             let cancel = directory.appendingPathComponent("inventory.cancel")
             if fm.fileExists(atPath: cancel.path) { try fm.removeItem(at: cancel) }
         }
-        if try await reader.root() != nil { try reconcileInventoryEvents(database: database, directory: directory, region: region) }
+        if try await reader.root() != nil { try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil) }
         let budget = min(3_600, max(0.01, Double(value("--budget") ?? "20") ?? 20))
         var result = runInventory(databasePath: database, directory: directory, region: region,
                                   options: InventoryRunOptions(maxDuration: budget, batchSize: Int(value("--batch") ?? "256") ?? 256,
@@ -321,7 +323,7 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
             // was walking. Replay once more and persist invalidation before going idle.
             // Do not extend this process into an unbounded catch-up loop on a busy disk.
             try consumeInventoryRequests(database: database, directory: directory, region: region)
-            try reconcileInventoryEvents(database: database, directory: directory, region: region)
+            try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil)
             let final = runInventory(databasePath: database, directory: directory, region: region,
                                      options: InventoryRunOptions(maxDuration: 0, cancelFile: directory.appendingPathComponent("inventory.cancel").path),
                                      fdaOverride: fda, gatedOverride: gate)

@@ -337,6 +337,8 @@ public struct LivingTreeArrangement: Sendable, Equatable {
         public let stagger: Double
         /// -1…1, a gentle sideways bend.
         public let bend: Double
+        /// The smoothed share of the parent's bytes (kept within the dead-band, so small changes do not move it).
+        public var share: Double = 1
     }
     public let placements: [LivingTreeKey: Placement]
     /// Each folder's drawn children from left to right.
@@ -349,6 +351,10 @@ public enum LivingTreeArranger {
     public static let fan = 1.38
     /// Relative change of a child's computed angular room below which its previous room is kept.
     public static let roomDeadBand = 0.15
+    /// Absolute change (a fraction of the parent's span) below which the previous room or share is kept too. A small
+    /// folder's room follows how many elements are drawn beneath it, which a rebuild can change by a few; without this,
+    /// such a change would cross the relative dead-band and nudge every sibling laid after it.
+    public static let absoluteDeadBand = 0.01
 
     /// Arranges `model`, reusing and then updating `memory` (sibling slots and smoothed room). Deterministic: the
     /// same model and memory always give the same arrangement.
@@ -365,7 +371,7 @@ public enum LivingTreeArranger {
         var slots = [LivingTreeKey: Double](), room = [LivingTreeKey: Double](), smoothedShare = [LivingTreeKey: Double]()
         /// Keeps the remembered value while the new one stays within the dead-band of it.
         func smoothed(_ raw: Double, _ kept: Double?) -> Double {
-            if let kept, kept > 0, abs(raw - kept) / kept < roomDeadBand { return kept }
+            if let kept, kept > 0, abs(raw - kept) / kept < roomDeadBand || abs(raw - kept) < absoluteDeadBand { return kept }
             return raw
         }
 
@@ -426,7 +432,7 @@ public enum LivingTreeArranger {
                 // Deep folders fork at their tip, so many small siblings fan out instead of running as parallel strands.
                 let spread = childElement.depth == 1 ? 0.16 : (childElement.depth == 2 ? 0.12 : 0.04)
                 let stagger = min(1, max(0.8, 1 - spread * (1 - root) * (0.35 + 0.65 * child.noise(5))))
-                placements[child] = Placement(lower: lower, upper: upper, angle: angle, reach: reach, stagger: stagger, bend: (child.noise(6) - 0.5) * 2)
+                placements[child] = Placement(lower: lower, upper: upper, angle: angle, reach: reach, stagger: stagger, bend: (child.noise(6) - 0.5) * 2, share: share)
             }
         }
         // Remember this tree (bounded to its elements).
@@ -453,6 +459,8 @@ public struct LivingTreeGeometry: Sendable {
         public let sizeKnown: Bool
         /// Radius of the soft light at the tip of a terminal element or twig; 0 at a fork.
         public let glow: CGFloat
+        /// Depth shading in a 3D view: 1 nearest the viewer (and always in 2D), lower further away.
+        public var shade: CGFloat = 1
 
         public func point(at t: CGFloat) -> CGPoint {
             let u = 1 - t
@@ -482,6 +490,8 @@ public struct LivingTreeGeometry: Sendable {
     /// Parents before children.
     public let branches: [Branch]
     public let index: [LivingTreeKey: Int]
+    /// 3D: a ring on the ground under the crown (an orientation cue); empty in 2D.
+    public var ground: [CGPoint] = []
     public subscript(key: LivingTreeKey) -> Branch? { index[key].map { branches[$0] } }
 
     /// The area covered by `keys` (an element and its subtree, for example).
@@ -603,11 +613,13 @@ public struct LivingTreeHitIndex: Sendable {
     private let buckets: [Int64: [Int32]]
     private let segments: [Segment]
     private let geometry: LivingTreeGeometry
+    private let maxHalfWidth: CGFloat
     public let tolerance: CGFloat
 
     public init(_ geometry: LivingTreeGeometry, cell: CGFloat = 24, tolerance: CGFloat = 4) {
         self.geometry = geometry; self.cell = cell; self.tolerance = tolerance
         var segments = [Segment](), buckets = [Int64: [Int32]]()
+        var widest: CGFloat = 0
         for (number, branch) in geometry.branches.enumerated() {
             let steps = 8
             var previous = branch.start
@@ -617,6 +629,7 @@ public struct LivingTreeHitIndex: Sendable {
                 // A tip is a little easier to hit than its width.
                 let half = max(branch.width(at: t - 0.5 / CGFloat(steps)) / 2, step == steps ? min(branch.glow, 3) : 0)
                 segments.append(Segment(a: previous, b: point, halfWidth: half, branch: number, tip: step == steps))
+                widest = max(widest, half)
                 let pad = half + tolerance
                 let minX = Int64(floor((min(previous.x, point.x) - pad) / cell)), maxX = Int64(floor((max(previous.x, point.x) + pad) / cell))
                 let minY = Int64(floor((min(previous.y, point.y) - pad) / cell)), maxY = Int64(floor((max(previous.y, point.y) + pad) / cell))
@@ -624,30 +637,66 @@ public struct LivingTreeHitIndex: Sendable {
                 previous = point
             }
         }
-        self.segments = segments; self.buckets = buckets
+        self.segments = segments; self.buckets = buckets; maxHalfWidth = widest
     }
 
     public var segmentCount: Int { segments.count }
 
+    /// The element at `point` in layout space (no camera).
     public func hit(_ point: CGPoint) -> LivingTreeKey? {
-        let x = Int64(floor(point.x / cell)), y = Int64(floor(point.y / cell))
-        guard let candidates = buckets[(x << 32) ^ (y & 0xFFFF_FFFF)] else { return nil }
+        nearest(point, transform: .identity, tolerance: tolerance, detail: false, tips: true)?.key
+    }
+
+    /// The element nearest to view point `point` when drawn through `transform`, scored in view points: the distance
+    /// from its drawn edge (layout distance × scale minus layout half-width × width scale) within `tolerance`.
+    /// - Parameters:
+    ///   - detail: skip elements left out at this scale (level of detail).
+    ///   - tips: a point on an element's tip belongs to it even over a thicker branch, and the thinner, deeper
+    ///     element wins a tie (hit testing). Otherwise the widest element within reach is returned (occupancy).
+    func nearest(_ point: CGPoint, transform: LivingTreeTransform, tolerance: CGFloat, detail: Bool, tips: Bool, widest: Bool = false) -> (key: LivingTreeKey, width: CGFloat)? {
+        let s = transform.scale, ws = transform.widthScale
+        guard s > 0 else { return nil }
+        let p = transform.invert(point)
+        // Buckets are padded by each segment's half-width plus the build tolerance in layout units; zoomed out (or with
+        // a wider reach than that) neighbouring cells are searched as well. Distances are then measured on screen.
+        let extra = max(0, tolerance / s - self.tolerance + max(0, ws / s - 1) * maxHalfWidth)
+        let x0 = Int64(floor((p.x - extra) / cell)), x1 = Int64(floor((p.x + extra) / cell))
+        let y0 = Int64(floor((p.y - extra) / cell)), y1 = Int64(floor((p.y + extra) / cell))
         var best: (score: CGFloat, depth: Int, width: CGFloat, branch: Int)?
-        for number in candidates {
-            let segment = segments[Int(number)]
-            let score = Self.distance(point, segment.a, segment.b) - segment.halfWidth
-            guard score <= tolerance else { continue }
-            let branch = geometry.branches[segment.branch]
-            // A point on an element's tip belongs to that element, even where a thicker branch passes beneath it.
-            let onTip = segment.tip && hypot(point.x - segment.b.x, point.y - segment.b.y) <= max(3, segment.halfWidth)
-            let candidate = (score: onTip ? -1 : max(0, score), depth: branch.depth, width: branch.startWidth, branch: segment.branch)
-            if let current = best {
-                // Inside two curves at once (a twig crossing its thick parent): the thinner, deeper one wins.
-                let better = candidate.score < current.score - 0.5 || (abs(candidate.score - current.score) <= 0.5 && (candidate.depth > current.depth || (candidate.depth == current.depth && candidate.width < current.width)))
-                if better { best = candidate }
-            } else { best = candidate }
+        for x in x0...x1 {
+            for y in y0...y1 {
+                guard let candidates = buckets[(x << 32) ^ (y & 0xFFFF_FFFF)] else { continue }
+                for number in candidates {
+                    let segment = segments[Int(number)]
+                    let a = transform.apply(segment.a), b = transform.apply(segment.b)
+                    let half = segment.halfWidth * ws
+                    let score = Self.distance(point, a, b) - half
+                    guard score <= tolerance else { continue }
+                    let branch = geometry.branches[segment.branch]
+                    if detail && !LivingTreeDetail.isDrawn(branch, through: transform) { continue }
+                    let width = branch.startWidth * ws
+                    if widest {
+                        if best == nil || width > best!.width { best = (score, branch.depth, width, segment.branch) }
+                        continue
+                    }
+                    // A point on an element's tip belongs to that element, even where a thicker branch passes beneath it.
+                    // Where tips crowd together, the nearest tip wins.
+                    let toTip = hypot(point.x - b.x, point.y - b.y)
+                    let onTip = tips && segment.tip && toTip <= max(3, half)
+                    let candidate = (score: onTip ? toTip - 100 : max(0, score), depth: branch.depth, width: width, branch: segment.branch)
+                    if let current = best {
+                        // Inside two curves at once (a twig crossing its thick parent): the thinner, deeper one wins.
+                        // In a 3D view the branch nearer the viewer wins first.
+                        let nearer = branch.shade - geometry.branches[current.branch].shade
+                        let tie = abs(candidate.score - current.score) <= 0.5
+                        let better = candidate.score < current.score - 0.5 || (tie && nearer > 0.05)
+                            || (tie && abs(nearer) <= 0.05 && (candidate.depth > current.depth || (candidate.depth == current.depth && candidate.width < current.width)))
+                        if better { best = candidate }
+                    } else { best = candidate }
+                }
+            }
         }
-        return best.map { geometry.branches[$0.branch].key }
+        return best.map { (geometry.branches[$0.branch].key, $0.width) }
     }
 
     static func distance(_ p: CGPoint, _ a: CGPoint, _ b: CGPoint) -> CGFloat {
@@ -808,8 +857,15 @@ public enum LivingTreePalette {
     /// Branches fade gently toward the tips; an earlier (stale) size is quieter and a partial one slightly
     /// quieter; an unknown size is a faint marked hairline.
     public static func opacity(depth: Int, status: InventoryValueStatus, sizeKnown: Bool) -> Double {
-        guard sizeKnown else { return 0.34 }
-        var value = depth == 0 ? 0.84 : max(0.28, 0.78 * pow(0.88, Double(depth - 1)))
+        opacity(depth: depth, status: status, sizeKnown: sizeKnown, zoom: 1)
+    }
+
+    /// As above, with the fade toward the tips weakening as the view zooms in (relative to the fit), so finer
+    /// structure comes out when it is inspected closely.
+    public static func opacity(depth: Int, status: InventoryValueStatus, sizeKnown: Bool, zoom: Double) -> Double {
+        guard sizeKnown else { return zoom > 1 ? min(0.5, 0.34 + 0.05 * log2(zoom)) : 0.34 }
+        let fade = Double(max(0, depth - 1)) / (1 + 0.6 * log2(max(1, zoom)))
+        var value = depth == 0 ? 0.84 : max(0.28, 0.78 * pow(0.88, fade))
         switch status {
         case .stale: value *= 0.6
         case .lowerBound: value *= 0.88

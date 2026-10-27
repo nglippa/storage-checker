@@ -746,9 +746,9 @@ func initializeBaseline(dbPath: String, directory: URL, roots candidates: [Monit
 
 func attributionSelfTest(_ test: (Bool, String) throws -> Void) throws {
     // FSEvents records /private/tmp; the per-user temporary folder is not used here.
-    let sandbox = "/private/tmp/storage-monitor-attribution-\(UUID().uuidString)"
+    let sandbox = monitorSelfTestFixture("attribution").path
     let rootA = sandbox + "/rootA"
-    defer { _ = chmod(rootA + "/c_locked", 0o700); try? fm.removeItem(atPath: sandbox) }
+    defer { _ = chmod(rootA + "/c_locked", 0o700); finishMonitorSelfTestFixture(URL(fileURLWithPath: sandbox)) }
     func dir(_ name: String) throws { try fm.createDirectory(atPath: rootA + "/" + name, withIntermediateDirectories: true) }
     func write(_ path: String, _ bytes: Int) throws { try Data(count: bytes).write(to: URL(fileURLWithPath: rootA + "/" + path)) }
     func append(_ path: String, _ bytes: Int) throws { let h = try FileHandle(forWritingTo: URL(fileURLWithPath: rootA + "/" + path)); try h.seekToEnd(); try h.write(contentsOf: Data(count: bytes)); try h.close() }
@@ -868,8 +868,8 @@ func attributionSelfTest(_ test: (Bool, String) throws -> Void) throws {
 }
 
 func baselineInitializationSelfTest(_ test: (Bool, String) throws -> Void) throws {
-    let sandbox = "/private/tmp/storage-monitor-init-\(UUID().uuidString)"
-    defer { _ = chmod(sandbox + "/messy/locked", 0o700); try? fm.removeItem(atPath: sandbox) }
+    let sandbox = monitorSelfTestFixture("init").path
+    defer { _ = chmod(sandbox + "/messy/locked", 0o700); finishMonitorSelfTestFixture(URL(fileURLWithPath: sandbox)) }
     func make(_ root: String, _ children: [String: Int]) throws {
         for (name, bytes) in children {
             if name.hasSuffix(".bin") { try fm.createDirectory(atPath: sandbox + "/" + root, withIntermediateDirectories: true); try Data(count: bytes).write(to: URL(fileURLWithPath: sandbox + "/" + root + "/" + name)) }
