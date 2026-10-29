@@ -348,8 +348,9 @@ public struct NodeDetector: ArtifactDetector {
         if nested { contradicting.append(ArtifactObservation(.layout, .contradicts, "It is inside another node_modules folder (part of an installed package).")) }
         if project != nil { supporting.append(ArtifactObservation(.manifest, .supports, "package.json found in the enclosing folder (\(projectName)).")) }
         else { contradicting.append(ArtifactObservation(.manifest, .contradicts, "No package.json in the enclosing folder.")) }
-        let siblings = c.probe.list(parent, limit: 400)?.names ?? []
-        let lock = Self.lockfiles.first { siblings.contains($0) }
+        // Exact-name lookups: a large parent (pnpm's .pnpm store) would truncate a listing and hide the lockfile.
+        c.probe.readable(parent)
+        let lock = Self.lockfiles.first { c.probe.info(ArtifactContext.join(parent, $0)) != nil }
         facts.reproducible = lock != nil
         if let lock { supporting.append(ArtifactObservation(.manifest, .supports, "Lockfile \(lock) pins the dependency versions.")) }
         else if project != nil { unknowns.append("No lockfile: reinstalling may resolve different versions.") }
@@ -360,10 +361,12 @@ public struct NodeDetector: ArtifactDetector {
         let relations = project != nil ? [ArtifactRelation(label: projectName, path: parent, roles: [.project])] : []
 
         if c.name == "node_modules" {
-            let inside = c.probe.list(c.subject.path, limit: 64)?.names ?? []
-            let marker = [".package-lock.json": "npm", ".modules.yaml": "pnpm", ".yarn-state.yml": "Yarn", ".yarn-integrity": "Yarn"].first { inside.contains($0.key) }
-            if let marker { supporting.append(ArtifactObservation(.layout, .supports, "Installed by \(marker.value) (its install record is present).")); facts.generatedEvidence = true }
-            else if inside.contains(".bin") { supporting.append(ArtifactObservation(.layout, .supports, "Contains installed command links (.bin).")); facts.generatedEvidence = true }
+            // Look the install records up by name: a large folder's truncated listing would miss them.
+            c.probe.readable(c.subject.path)
+            func inside(_ name: String) -> Bool { c.probe.info(ArtifactContext.join(c.subject.path, name)) != nil }
+            let marker = [(".package-lock.json", "npm"), (".modules.yaml", "pnpm"), (".yarn-state.yml", "Yarn"), (".yarn-integrity", "Yarn")].first { inside($0.0) }
+            if let marker { supporting.append(ArtifactObservation(.layout, .supports, "Installed by \(marker.1) (its install record is present).")); facts.generatedEvidence = true }
+            else if inside(".bin") { supporting.append(ArtifactObservation(.layout, .supports, "Contains installed command links (.bin).")); facts.generatedEvidence = true }
             var characteristics: Set<ArtifactCharacteristic> = [.generated]
             if facts.reproducible == true { characteristics.insert(.reinstallable) }
             if busy { characteristics.insert(.active) }
@@ -376,8 +379,9 @@ public struct NodeDetector: ArtifactDetector {
 
         // Build output: requires positive evidence beyond the folder's name.
         guard !nested else { return nil }
-        let inside = c.probe.list(c.subject.path, limit: 64)?.names ?? []
-        if inside.contains("package.json") || inside.contains(".git") { contradicting.append(ArtifactObservation(.layout, .contradicts, "It contains its own project files (package.json or .git), unlike generated output.")) }
+        c.probe.readable(c.subject.path)
+        func inside(_ name: String) -> Bool { c.probe.info(ArtifactContext.join(c.subject.path, name)) != nil }
+        if inside("package.json") || inside(".git") { contradicting.append(ArtifactObservation(.layout, .contradicts, "It contains its own project files (package.json or .git), unlike generated output.")) }
         if let project {
             if c.name == ".next", dependsOn(project, { $0 == "next" }) { facts.generatedEvidence = true; supporting.append(ArtifactObservation(.manifest, .supports, "The project depends on Next.js, which writes .next.")) }
             if c.name == "storybook-static", dependsOn(project, { $0 == "storybook" || $0.hasPrefix("@storybook/") }) { facts.generatedEvidence = true; supporting.append(ArtifactObservation(.manifest, .supports, "The project uses Storybook, which builds storybook-static.")) }
@@ -471,9 +475,9 @@ public struct PythonDetector: ArtifactDetector {
             else { unknowns.append("No command on PATH links into this tool environment.") }
         } else {
             let parent = c.parent
-            let siblings = c.probe.list(parent, limit: 400)?.names ?? []
-            let manifest = Self.manifests.first { siblings.contains($0) }
-            let lock = Self.locks.first { siblings.contains($0) }
+            c.probe.readable(parent)
+            let manifest = Self.manifests.first { c.probe.info(ArtifactContext.join(parent, $0)) != nil }
+            let lock = Self.locks.first { c.probe.info(ArtifactContext.join(parent, $0)) != nil }
             facts.projectFound = manifest != nil
             facts.reproducible = lock != nil
             if let manifest { supporting.append(ArtifactObservation(.manifest, .supports, "Its folder has a Python project (\(manifest))."));

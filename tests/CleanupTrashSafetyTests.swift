@@ -140,6 +140,16 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
     let expired = try token(ordinary, environment: expiredEnvironment)
     try test(CleanupTrashPolicy.perform(confirmation: expired, overrideAccepted: true, environment: env, trash: { _ in nil }) == .refused("The confirmation expired. Review the item again."),
              "trash safety: expired confirmation refuses before any adapter")
+    var nearExpiry = env; nearExpiry.now = { Date().addingTimeInterval(-59.6) }
+    let late = try token(ordinary, environment: nearExpiry)
+    var slowRecheck = env; let observe = env.safetyProcesses ?? env.processes
+    slowRecheck.safetyProcesses = {
+        Thread.sleep(forTimeInterval: 0.35); let o = observe()
+        return ProcessObservation(executables: o.executables, workingDirectories: o.workingDirectories, openFiles: o.openFiles, inspected: o.inspected, unreadable: o.unreadable, takenAt: Date())
+    }
+    let lateOutcome = CleanupTrashPolicy.perform(confirmation: late, overrideAccepted: true, environment: slowRecheck, trash: { _ in nil })
+    try test(lateOutcome == .refused("The confirmation expired during the final check. Review the item again."),
+             "trash safety: a confirmation that expires during the final check refuses before any adapter (\(lateOutcome))")
 
     let running = try file("executables/running")
     try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: running)
@@ -167,9 +177,23 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
     let emptyFinalOutcome = CleanupTrashPolicy.perform(confirmation: emptyFinalToken, overrideAccepted: true, environment: finalAbsent, trash: { _ in emptyFinalAdapterCalls += 1; return nil })
     try test(refused(emptyFinalOutcome) && emptyFinalProvider.calls == 2 && emptyFinalAdapterCalls == 0,
              "trash safety: a provider becoming unavailable at final observation blocks before any adapter")
-    // Partial observations are not global non-use proof; executable/database checks below still require completeness.
+    // Partial observations are not global non-use proof. Programs and databases then require the explicit
+    // program-use warning; any observed use (above) still blocks.
     var partial = env; partial.processes = { ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 1) }
-    try test(try blocked(running, environment: partial), "trash safety: incomplete required executable check fails closed")
+    func requiresProgramWarning(_ path: String, environment: ArtifactEnvironment) throws -> Bool {
+        let prepared = try token(path, environment: environment)
+        guard case .allowed(true, let warnings) = prepared.decision, warnings.first == CleanupTrashPolicy.programUseWarning else { return false }
+        var calls = 0
+        let outcome = CleanupTrashPolicy.perform(confirmation: prepared, overrideAccepted: false, environment: environment, trash: { _ in calls += 1; return nil })
+        return outcome == .refused("The warning was not accepted.") && calls == 0 && FileManager.default.fileExists(atPath: path)
+    }
+    try test(try requiresProgramWarning(running, environment: partial), "trash safety: partially observed program requires the program-use warning and an unaccepted warning moves nothing")
+    // A complete observation still covers only the current user's processes, so programs always carry the warning.
+    try test(try requiresProgramWarning(running, environment: env), "trash safety: a completely observed program still requires the program-use warning")
+    let plainToken = try token(ordinary)
+    let plainHasProgramWarning: Bool = { if case .allowed(_, let warnings) = plainToken.decision { return warnings.contains(CleanupTrashPolicy.programUseWarning) }; return true }()
+    CleanupTrashPolicy.cancel(plainToken)
+    try test(!plainHasProgramWarning, "trash safety: an ordinary file without programs has no program-use warning")
     let partialCandidate = try token(((generated as NSString).deletingLastPathComponent as NSString).deletingLastPathComponent, environment: partial)
     var partialCandidateAdapterCalls = 0
     let partialCandidateOutcome = CleanupTrashPolicy.perform(confirmation: partialCandidate, overrideAccepted: false, environment: partial, trash: { _ in partialCandidateAdapterCalls += 1; return nil })
@@ -194,7 +218,7 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
     for suffix in ["-wal", "-shm", "-journal"] {
         let companion = try file("databases/user.sqlite3" + suffix)
         try test(try blocked(companion, environment: openBase), "trash safety: an observed active database hard-blocks its " + suffix + " companion")
-        try test(try blocked(companion, environment: partial), "trash safety: incomplete database-use evidence blocks a " + suffix + " companion")
+        try test(try requiresProgramWarning(companion, environment: partial), "trash safety: incomplete database-use evidence requires the program-use warning for a " + suffix + " companion")
         let aliasBase = db.hasPrefix("/private/tmp/") ? "/tmp/" + String(db.dropFirst("/private/tmp/".count)) : "/private" + db
         var aliasBaseUse = env; aliasBaseUse.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [aliasBase], inspected: 100, unreadable: 0) }
         try test(try blocked(companion, environment: aliasBaseUse), "trash safety: active database alias blocks its " + suffix + " companion")
@@ -211,7 +235,85 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
         try test(refused(companionOutcome) && companionObservation.count == 2 && companionAdapterCalls == 0,
                  "trash safety: base becoming active at the final observation blocks its " + suffix + " companion before any adapter")
     }
-    try test(try blocked(db, environment: partial), "trash safety: incomplete required database-use check fails closed")
+    try test(try requiresProgramWarning(db, environment: partial), "trash safety: incomplete database-use check requires the program-use warning")
+    // An unresolvable open file elsewhere (a system service's restricted store) is irrelevant; one beside the database fails closed.
+    // A symbolic-link loop cannot be resolved (ELOOP), unlike a missing path, which resolves by walking up.
+    let unrelatedFolder = home.appendingPathComponent("unrelated-service")
+    try fm.createDirectory(at: unrelatedFolder, withIntermediateDirectories: true)
+    let elsewhere = unrelatedFolder.appendingPathComponent("store").path
+    try fm.createSymbolicLink(atPath: elsewhere, withDestinationPath: elsewhere)
+    try test(ArtifactPaths.canonicalProtectionLocation(elsewhere) == nil, "trash safety fixture: the unrelated open file is genuinely unresolvable")
+    let namesake = unrelatedFolder.appendingPathComponent("user.sqlite3-wal").path
+    try fm.createSymbolicLink(atPath: namesake, withDestinationPath: namesake)
+    try test(CleanupTrashPolicy.openFileMatchesDatabase(namesake, [db]) == nil, "trash safety: an unresolvable file named like the database's companion fails closed in any folder")
+    var unrelatedUnresolved = env; unrelatedUnresolved.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [elsewhere], inspected: 100, unreadable: 0) }
+    try test(!(try blocked(db, environment: unrelatedUnresolved)), "trash safety: an unresolvable open file in an unrelated folder does not block a database")
+    try test(CleanupTrashPolicy.openFileMatchesDatabase(elsewhere, [db]) == false, "trash safety: unrelated unresolvable open file is not a database companion")
+    try test(CleanupTrashPolicy.openFileMatchesDatabase(db + "-wal", [db]) == true, "trash safety: resolvable companion still matches its database")
+    let loopDatabase = try file("loop-databases/user.sqlite3"), loop = ((loopDatabase as NSString).deletingLastPathComponent as NSString).appendingPathComponent("loop")
+    try fm.createSymbolicLink(atPath: loop, withDestinationPath: loop)
+    var besideUnresolved = env; besideUnresolved.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [loop], inspected: 100, unreadable: 0) }
+    try test(try blocked(loopDatabase, environment: besideUnresolved), "trash safety: an unresolvable open file beside the database fails closed")
+    // Scoped descendant checks: a nested open file observed through the /tmp alias still blocks its ancestor.
+    let nestedBusy = try file("nested-busy/a/b/held.txt")
+    let aliasNested = nestedBusy.hasPrefix("/private/tmp/") ? "/tmp/" + String(nestedBusy.dropFirst("/private/tmp/".count)) : nestedBusy
+    var nestedObservation = env; nestedObservation.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [aliasNested], inspected: 100, unreadable: 0) }
+    try test(try blocked(home.appendingPathComponent("nested-busy").path, environment: nestedObservation), "trash safety: a nested open file (observed through an alias) blocks its ancestor")
+    var nestedCwd = env; nestedCwd.processes = { ProcessObservation(executables: [], workingDirectories: [(nestedBusy as NSString).deletingLastPathComponent], inspected: 100, unreadable: 0) }
+    try test(try blocked(home.appendingPathComponent("nested-busy").path, environment: nestedCwd), "trash safety: a working directory nested in the target blocks it")
+    // A symbolic link whose target is outside the item: a process working in that target blocks the item.
+    let outsideProject = home.appendingPathComponent("outside-project"); try fm.createDirectory(at: outsideProject, withIntermediateDirectories: true)
+    let linkHolder = home.appendingPathComponent("link-holder"); try fm.createDirectory(at: linkHolder, withIntermediateDirectories: true)
+    try fm.createSymbolicLink(atPath: linkHolder.appendingPathComponent("project").path, withDestinationPath: outsideProject.path)
+    var linkedCwd = env; linkedCwd.processes = { ProcessObservation(executables: [], workingDirectories: [outsideProject.path], inspected: 100, unreadable: 0) }
+    try test(try blocked(linkHolder.path, environment: linkedCwd), "trash safety: a working directory inside a contained link's target blocks the item")
+    // The user-initiated preflight walks every descendant of an ordinary large folder (the Inspector's quick budget could not).
+    let large = home.appendingPathComponent("large-cache")
+    for folderIndex in 0..<50 {
+        let folder = large.appendingPathComponent("d\(folderIndex)"); try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        for fileIndex in 0..<100 { try Data("x".utf8).write(to: folder.appendingPathComponent("f\(fileIndex)")) }
+    }
+    try test(try blocked(large.path, budget: .standard), "trash safety: a 5,050-entry folder exceeds the Inspector's quick budget")
+    final class Progress: @unchecked Sendable { var highest = 0 }
+    let reported = Progress()
+    let largePreparation = CleanupTrashPolicy.prepare(node: try trashSafetyNode(large.path), environment: env, progress: { reported.highest = max(reported.highest, $0) })
+    let largeReason: String = { if case .blocked(let why) = largePreparation { return why }; return "" }()
+    if case .ready(let prepared) = largePreparation { CleanupTrashPolicy.cancel(prepared) }
+    try test(largeReason.isEmpty, "trash safety: the Trash preflight budget assesses an ordinary 5,050-entry folder" + (largeReason.isEmpty ? "" : " (refused: \(largeReason))"))
+    try test(reported.highest >= 5_000, "trash safety: preflight reports items checked while it walks a large folder (\(reported.highest))")
+    let guidance: [(String, CleanupTrashGuidance.Kind)] = [
+        ("A running process uses the target or a descendant: /x", .inUse),
+        ("The directory cannot be assessed within the safety budget. Nothing will be moved.", .tooLarge),
+        ("This folder is too broad to move to the Trash as one item.", .neverMoved),
+        ("Protected: credential store.", .neverMoved),
+        ("A descendant is not owned by the current user.", .notYours),
+        ("A Git worktree contains uncommitted, untracked, or potentially unmerged work: /x", .unsavedWork),
+        ("The confirmation expired. Review the item again.", .needsReview),
+        ("Active-use observations are stale; review the item again.", .needsReview),
+        ("Not available in QA builds: the catalog is a copy, but its paths are real files.", .qaCopy),
+        (CleanupTrashPolicy.unavailableReason, .needsReview),
+        ("Protected: credential store. (/Users/x/Projects/stale-builds/changed/key.pem)", .neverMoved),
+        ("A running process uses the target or a descendant: /Users/x/restricted (old)/tool", .inUse),
+        ("A Git worktree contains uncommitted, untracked, or potentially unmerged work: /Users/x/expired-cache", .unsavedWork),
+        ("A command on the current PATH resolves to this executable, including through a link.", .neverMoved),
+        ("This executable is directly available through a current PATH directory.", .neverMoved),
+        ("The path now refers to a different item; nothing was moved.", .needsReview),
+        ("Git state could not be reliably assessed.", .needsReview),
+        ("An open file beside this database could not be resolved for database safety.", .needsReview),
+        ("Required descendant evidence could not be completed within the safety budget. (macOS did not allow reading uncommitted; /Users/x/a)", .notYours),
+        ("The directory cannot be assessed within the safety budget. Nothing will be moved.", .tooLarge),
+        ("The confirmation expired during the final check. Review the item again.", .needsReview),
+    ]
+    for (reason, kind) in guidance {
+        let explained = CleanupTrashGuidance.explain(reason)
+        try test(explained.kind == kind && !explained.title.isEmpty, "trash guidance: \(kind) for “\(reason.prefix(48))”")
+    }
+    try test(CleanupTrashGuidance.explain("This folder is too broad to move to the Trash as one item.").nextStep == nil, "trash guidance: a permanent restriction offers no misleading next step")
+    let raw = ["Storage Monitor has not established whether this item is safe to remove.", "Marked Preserve: database.", CleanupTrashPolicy.programUseWarning,
+               "Storage Monitor has not established whether this item is safe to remove.", "This moves the entire directory, including all of its contents, to Trash."]
+    let shown = CleanupTrashGuidance.presentedWarnings(raw)
+    try test(shown == ["Marked Preserve: database.", CleanupTrashPolicy.programUseWarning, "This moves the entire directory, including all of its contents, to Trash."],
+             "trash sheet: the generic not-established sentence is stated once by the sheet and every specific risk is kept in order")
     let staleDate = Date().addingTimeInterval(-60)
     var stale = env; stale.processes = { ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 0, takenAt: staleDate) }
     try test(try blocked(ordinary, environment: stale), "trash safety: stale active-use evidence cannot authorize Trash")

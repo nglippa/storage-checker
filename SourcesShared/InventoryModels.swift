@@ -628,7 +628,10 @@ public actor InventoryReader: CleanupReviewInventoryReading {
         if sqlite3_step(root) == SQLITE_ROW {
             result.indexedAllocated = sqlite3_column_int64(root, 0); result.indexedLogical = sqlite3_column_int64(root, 1); result.rootStatus = text(root, 2) ?? "unknown"
         }
-        let limits = try connection.statement("SELECT kind,status,COALESCE(reason,''),COUNT(*) FROM inventory_nodes WHERE generation_id=? AND status IN ('unknown','excluded') GROUP BY kind,status,reason", [generation])
+        // The kinds present are found by a loose index scan, so each (kind, status) pair is an index seek on
+        // inventory_nodes_status(generation_id,kind,status). Filtering on status alone walked every node of the
+        // generation (about 140 ms for 3 million entries, close to the 0.25 s read deadline).
+        let limits = try connection.statement("WITH RECURSIVE kinds(kind) AS (SELECT (SELECT MIN(kind) FROM inventory_nodes WHERE generation_id=?1) UNION ALL SELECT (SELECT MIN(kind) FROM inventory_nodes WHERE generation_id=?1 AND kind>kinds.kind) FROM kinds WHERE kinds.kind IS NOT NULL) SELECT kind,status,COALESCE(reason,''),COUNT(*) FROM inventory_nodes WHERE generation_id=?1 AND kind IN (SELECT kind FROM kinds WHERE kind IS NOT NULL) AND status IN ('unknown','excluded') GROUP BY kind,status,reason", [generation])
         defer { sqlite3_finalize(limits) }
         while sqlite3_step(limits) == SQLITE_ROW {
             let kind = text(limits, 0) ?? "", status = text(limits, 1) ?? "", reason = text(limits, 2) ?? "", count = sqlite3_column_int64(limits, 3)

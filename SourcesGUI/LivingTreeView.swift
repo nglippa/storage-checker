@@ -176,15 +176,15 @@ import AppKit
             defer { building = false; if buildPending { buildPending = false; rebuild() } }
             do {
                 let started = Date()
-                let built = try await reader.livingTree(rootID: trunk, budget: budget, memory: memory, reveal: reveal)
+                let built = try await PerformanceTrace.measure("livingTree.read", "\(trunk)") { try await reader.livingTree(rootID: trunk, budget: budget, memory: memory, reveal: reveal) }
                 guard trunk == self.trunk else { return }
                 // Arrangement, layout-space geometry and hit index, off the main thread.
-                let (arrangement, remembered, geometry, hits, dome, coloring) = await Task.detached(priority: .userInitiated) { () -> (LivingTreeArrangement, LivingTreeMemory, LivingTreeGeometry, LivingTreeHitIndex, LivingTreeLayout3D, LivingTreeColoring) in
+                let (arrangement, remembered, geometry, hits, dome, coloring) = await PerformanceTrace.measure("livingTree.layout") { await Task.detached(priority: .userInitiated) { () -> (LivingTreeArrangement, LivingTreeMemory, LivingTreeGeometry, LivingTreeHitIndex, LivingTreeLayout3D, LivingTreeColoring) in
                     var memory = memory
                     let arrangement = LivingTreeArranger.arrange(built, memory: &memory)
                     let geometry = LivingTreeGeometer.layout(built, arrangement, in: LivingTreeCamera.layoutSize)
                     return (arrangement, memory, geometry, LivingTreeHitIndex(geometry), LivingTreeGeometer3D.layout(built, arrangement), LivingTreeColoring.compute(built))
-                }.value
+                }.value }
                 guard trunk == self.trunk else { return }
                 memories[trunk] = remembered
                 for dropped in memoryOrder.use(trunk) { memories[dropped] = nil }
@@ -629,6 +629,7 @@ struct LivingTreeView: View {
     @ObservedObject var browser: InventoryBrowserModel
     @ObservedObject var explorer: InventoryExplorerController
     @ObservedObject var tree: LivingTreeController
+    var showsSelectionContext = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.livingTreeInteractive) private var interactive
     @State private var hover: (key: LivingTreeKey, location: CGPoint)?
@@ -639,6 +640,7 @@ struct LivingTreeView: View {
     @State private var highlight: LivingTreeCategory?
     @State private var zoom = AtlasZoom.identity
     @State private var zoomProgress = 1.0
+    @State private var showingHelp = false
     @State private var fade = 1.0
     @State private var shownRoot: Int64?
     @FocusState private var focused: Bool
@@ -648,16 +650,11 @@ struct LivingTreeView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if tree.model != nil { controls }
             GeometryReader { proxy in
-                ZStack(alignment: .bottomTrailing) {
-                    content(size: proxy.size)
-                        .modifier(LivingTreeZoomEffect(zoom: zoom, progress: zoomProgress))
-                        .opacity(fade)
-                    if tree.model != nil {
-                        controls
-                        colorKey.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                    }
-                }
+                content(size: proxy.size)
+                    .modifier(LivingTreeZoomEffect(zoom: zoom, progress: zoomProgress))
+                    .opacity(fade)
                 .clipped()
                 .onAppear { tree.viewportChanged(proxy.size) }
                 .onChange(of: proxy.size) { _, size in tree.viewportChanged(size) }
@@ -728,6 +725,7 @@ struct LivingTreeView: View {
         let illumination = tree.illumination
         let animating = illumination.isActive(at: Date()) { model[.node($0)] != nil }
         let labels = tree.labels(for: size, focus: focus, measure: LivingTreeLabelMetrics.measure)
+        let tips = labels.map { geometry[$0.key]?.end ?? transform.apply($0.tip) }
         return ZStack(alignment: .topLeading) {
             LivingTreeBaseCanvas(revision: tree.revision, size: size, transform: transform, zoom: tree.camera.zoom, orbit: tree.dimension == .depth ? tree.orbit : nil,
                                  geometry: geometry, model: model, coloring: tree.coloring, highlight: highlight,
@@ -740,9 +738,9 @@ struct LivingTreeView: View {
             }
             .allowsHitTesting(false)
             // Labels stay attached to their tips as drawn now (in 3D, also between placements while turning).
-            LivingTreeLabelCanvas(labels: labels, tips: labels.map { geometry[$0.key]?.end ?? transform.apply($0.tip) }, size: size).equatable().allowsHitTesting(false)
+            LivingTreeLabelCanvas(labels: labels, tips: tips, size: size).equatable().allowsHitTesting(false)
             if interactive {
-                LivingTreeInputLayer { event in handle(event, model: model, transform: transform) }
+                LivingTreeInputLayer { event in handle(event, model: model, transform: transform, labels: labels, tips: tips) }
             }
             lens(model: model, size: size)
         }
@@ -791,7 +789,7 @@ struct LivingTreeView: View {
             return .handled
         }
         .onKeyPress(.return) { if let focus { open(focus, model: model) }; return .handled }
-        .onKeyPress(.escape) { goUp(); return .handled }
+        .onKeyPress(.escape) { if showingHelp { showingHelp = false } else { goUp() }; return .handled }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Living Tree of \(model.root.parentID == nil ? "Startup Data" : model.root.name)")
         .accessibilityValue("\(tree.dimension.title), zoom \(Self.percent(tree.camera.zoom))")
@@ -820,8 +818,9 @@ struct LivingTreeView: View {
 
     // MARK: Input
 
-    private func handle(_ event: LivingTreeInputView.Event, model: LivingTreeModel, transform: LivingTreeTransform) {
-        let hit = { (point: CGPoint) in tree.hitIndex()?.hit(point, transform: transform) }
+    /// - Parameters: `labels`, `tips`: the labels as drawn; a label is a target for its element like the branch itself.
+    private func handle(_ event: LivingTreeInputView.Event, model: LivingTreeModel, transform: LivingTreeTransform, labels: [LivingTreeLabel], tips: [CGPoint]) {
+        let hit = { (point: CGPoint) in LivingTreeLabel.hit(point, labels: labels, tips: tips) ?? tree.hitIndex()?.hit(point, transform: transform) }
         let opens = { (key: LivingTreeKey) -> Bool in
             guard key != model.rootKey, let element = model[key] else { return false }
             return element.role == .rest || element.node?.kind == .directory
@@ -984,78 +983,135 @@ struct LivingTreeView: View {
     @ViewBuilder private var colorKey: some View {
         let present = Array(tree.coloring.present.prefix(8))
         if !present.isEmpty {
-            VStack(alignment: .leading, spacing: 1) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 8) {
                 ForEach(present, id: \.self) { category in
                     Button {
                         highlight = highlight == category ? nil : category
                     } label: {
                         HStack(spacing: 6) {
                             Circle().fill(LivingTreePainter.color(category.tone, opacity: highlight == nil || highlight == category ? 1 : 0.35)).frame(width: 7, height: 7)
-                            Text(category.title).font(.caption2.weight(highlight == category ? .semibold : .regular))
+                            Text(category.title).font(.caption.weight(highlight == category ? .semibold : .regular))
                                 .foregroundStyle(highlight == nil || highlight == category ? .secondary : .tertiary)
                         }
-                        .padding(.vertical, 2).padding(.horizontal, 4).contentShape(Rectangle())
+                        .padding(.vertical, 3).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .help(highlight == category ? "Show every type" : "Highlight \(category.title.lowercased())")
                     .accessibilityLabel("\(category.title)\(highlight == category ? ", highlighted" : "")")
                 }
+                }
             }
-            .padding(6)
-            .background(Color(white: 0.085).opacity(0.72), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .padding(10)
+            .scrollIndicators(.hidden)
             .accessibilityElement(children: .contain).accessibilityLabel("Color by type")
         }
     }
 
     static func percent(_ zoom: Double) -> String { "\(Int((zoom * 100).rounded()))%" }
 
-    /// Zoom out, the zoom (relative to the fit; clicking it fits), zoom in, fit and focus.
+    /// Persistent controls sit outside the drawing so they never cover or intercept a branch.
     private var controls: some View {
+        return VStack(spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    dimensionControl
+                    Divider().frame(height: 18)
+                    zoomControls
+                    Divider().frame(height: 18)
+                    framingControls
+                    selectionControls
+                }
+                .padding(.horizontal, StorageDesign.gutter)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        dimensionControl
+                        Divider().frame(height: 18)
+                        zoomControls
+                        Divider().frame(height: 18)
+                        framingControls
+                    }
+                    HStack(spacing: 8) {
+                        selectionControls
+                    }
+                }
+                .padding(.horizontal, StorageDesign.gutter)
+            }
+            colorKey.padding(.horizontal, StorageDesign.gutter)
+        }
+        .padding(.vertical, 6)
+        .background(Color(white: 0.085).opacity(0.94))
+        .overlay(alignment: .bottom) { Divider().overlay(Color.white.opacity(0.08)) }
+        .accessibilityElement(children: .contain).accessibilityLabel("Living Tree view controls")
+    }
+
+    private var dimensionControl: some View {
+        Picker("Dimension", selection: $dimensionSetting) {
+            Text("2D").tag(LivingTreeDimension.flat.rawValue)
+            Text("3D").tag(LivingTreeDimension.depth.rawValue)
+        }
+        .pickerStyle(.segmented).labelsHidden().frame(width: 84).controlSize(.small)
+        .help("Show a flat tree or a tree that can be turned in depth")
+        .accessibilityLabel("Tree dimension")
+    }
+
+    private var zoomControls: some View {
         let target = tree.cameraTarget
-        return HStack(spacing: 0) {
-            Button {
-                dimensionSetting = (tree.dimension == .flat ? LivingTreeDimension.depth : .flat).rawValue
-            } label: {
-                Text(tree.dimension == .flat ? "3D" : "2D").font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(minWidth: 30, minHeight: 22).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help(tree.dimension == .flat ? "Show the tree in 3D: drag to turn it" : "Show the tree flat")
-            .accessibilityLabel(tree.dimension == .flat ? "Show in 3D" : "Show flat")
-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 14).padding(.horizontal, 3)
+        return HStack(spacing: 2) {
+            Text("Zoom").font(.caption).foregroundStyle(.secondary)
             controlButton("minus", "Zoom Out (−)", disabled: target.zoom <= LivingTreeCamera.minimumZoom + 1e-6) { tree.zoom(by: 1 / 1.5, at: nil, animated: true) }
-            Button { tree.fitTree() } label: {
-                Text(Self.percent(tree.camera.zoom)).font(.caption.monospacedDigit()).foregroundStyle(.secondary).frame(minWidth: 42, minHeight: 22)
-            }
-            .buttonStyle(.plain).help("Zoom relative to the whole tree; click to fit the tree (0)").accessibilityLabel("Zoom \(Self.percent(tree.camera.zoom)), fit tree")
+            Text(Self.percent(tree.camera.zoom)).font(.caption.monospacedDigit()).foregroundStyle(.secondary).frame(minWidth: 40)
+                .accessibilityLabel("Zoom \(Self.percent(tree.camera.zoom))")
             controlButton("plus", "Zoom In (+)", disabled: target.zoom >= LivingTreeCamera.maximumZoom - 1e-6) { tree.zoom(by: 1.5, at: nil, animated: true) }
-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 14).padding(.horizontal, 3)
-            controlButton("arrow.up.left.and.arrow.down.right", "Fit Tree (0)", disabled: target.isFit) { tree.fitTree() }
-            controlButton("scope", "Focus Selection (F)", disabled: explorer.selection == nil) {
+        }
+    }
+
+    private var framingControls: some View {
+        let target = tree.cameraTarget
+        return HStack(spacing: 8) {
+            namedControl("Fit", symbol: "arrow.up.left.and.arrow.down.right", help: "Fit the whole tree", disabled: target.isFit) { tree.fitTree() }
+            namedControl("Reset", symbol: "arrow.counterclockwise", help: "Reset view and turning (0)", disabled: target.isFit && (tree.dimension == .flat || tree.orbit == .standard)) { tree.resetView() }
+            namedControl("Help", symbol: "questionmark.circle", help: "Living Tree navigation help", disabled: false) { showingHelp.toggle() }
+                .popover(isPresented: $showingHelp, arrowEdge: .top) { navigationHelp }
+        }
+    }
+
+    private var selectionControls: some View {
+        HStack(spacing: 8) {
+            namedControl("View Selection", symbol: "scope", help: "Frame the selected branch (F)", disabled: explorer.selection == nil) {
                 if let model = tree.model, let key = focusKey(model) { tree.focus(on: key) }
             }
-            controlButton(tree.isolating ? "circle.inset.filled" : "circle.dashed", tree.isolating ? "Show Everything (I)" : "Isolate Selection (I)", disabled: explorer.selection == nil && !tree.isolating) {
+            namedControl(tree.isolating ? "Show All" : "Isolate", symbol: tree.isolating ? "circle.inset.filled" : "circle.dashed",
+                         help: tree.isolating ? "Show every branch (I)" : "Show only the selected branch and its path (I)", disabled: explorer.selection == nil && !tree.isolating) {
                 tree.isolating.toggle()
             }
         }
-        .padding(.horizontal, 3).padding(.vertical, 2)
-        .background(Color(white: 0.085).opacity(0.9), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(Color.white.opacity(0.09)))
-        .padding(10)
-        .accessibilityElement(children: .contain).accessibilityLabel("Living Tree view controls")
     }
 
     private func controlButton(_ symbol: String, _ help: String, disabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 11, weight: .medium)).frame(width: 24, height: 22).contentShape(Rectangle())
+            Image(systemName: symbol).font(.system(size: 13, weight: .medium)).frame(width: 30, height: 26).contentShape(Rectangle())
         }
         .buttonStyle(.plain).foregroundStyle(disabled ? .tertiary : .secondary).disabled(disabled)
         .help(help).accessibilityLabel(String(help.prefix { $0 != "(" }).trimmingCharacters(in: .whitespaces))
     }
 
+    private func namedControl(_ title: String, symbol: String, help: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol).font(.caption.weight(.medium)).frame(minHeight: 26).contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless).foregroundStyle(disabled ? .tertiary : .secondary).disabled(disabled)
+        .help(help).accessibilityLabel(title).accessibilityHint(help)
+    }
+
     private var header: some View {
-        HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
             let trail = browser.breadcrumbs.isEmpty ? (browser.directory.map { [$0] } ?? []) : browser.breadcrumbs
+            let parent = trail.count > 1 ? trail[trail.count - 2] : nil
+            Button { goUp() } label: { Label("Up", systemImage: "chevron.up").font(.caption.weight(.medium)).frame(minHeight: 22).contentShape(Rectangle()) }
+                .buttonStyle(.plain).foregroundStyle(parent == nil ? .tertiary : .secondary).disabled(parent == nil)
+                .help(parent.map { "Up to \(browser.displayName($0)) (Esc)" } ?? "Already at the top folder")
+                .accessibilityLabel("Up one level").accessibilityIdentifier("tree.up")
             if trail.count > 4 { Text("…").foregroundStyle(.tertiary) }
             ForEach(Array(trail.suffix(4).enumerated()), id: \.element.id) { index, node in
                 if index > 0 || trail.count > 4 { Image(systemName: "chevron.compact.right").font(.caption2).foregroundStyle(.tertiary) }
@@ -1065,26 +1121,90 @@ struct LivingTreeView: View {
                     .foregroundStyle(current ? .primary : .secondary).lineLimit(1)
                     .help(current ? node.path : "Go to \(browser.displayName(node))")
             }
-            Spacer(minLength: 12)
+            Spacer(minLength: 8)
             LivingTreeLegend()
+            }
+            if showsSelectionContext, let model = tree.model, let key = focusKey(model), let element = model[key] {
+                selectionContext(element, key: key, model: model)
+            }
         }
-        .padding(.horizontal, 16).padding(.top, 9).padding(.bottom, 4)
+        .padding(.horizontal, StorageDesign.gutter).padding(.top, 9).padding(.bottom, 7)
         .accessibilityElement(children: .contain).accessibilityLabel("Living Tree path")
+    }
+
+    private func selectionContext(_ element: LivingTreeElement, key: LivingTreeKey, model: LivingTreeModel) -> some View {
+        HStack(spacing: StorageDesign.rowGap) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(element.role == .rest ? "Selected group" : "Selected \(element.isFolder ? "folder" : "item")")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(element.role == .rest ? "Other items in \(element.parent.flatMap { model[$0]?.name } ?? "this folder")" : element.name)
+                    .font(.callout.weight(.semibold)).lineLimit(1).truncationMode(.middle)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(selectionSize(element)).font(.callout.monospacedDigit()).lineLimit(1)
+                if let share = parentShare(element, model: model) { Text(share).font(.caption).foregroundStyle(.secondary) }
+            }
+            Spacer(minLength: 8)
+            if element.isFolder, key != model.rootKey {
+                Button("Explore Folder") { open(key, model: model) }
+                    .buttonStyle(.bordered).controlSize(.small)
+                    .help("Make this folder the root of the Living Tree")
+            }
+        }
+        .help(element.node?.path ?? element.name)
+        .accessibilityIdentifier("tree.selection")
+    }
+
+    private func selectionSize(_ element: LivingTreeElement) -> String {
+        if let node = element.node {
+            return InventoryNodePresentation.size(element.bytes, node: node, formatter: AtlasText.bytes)
+        }
+        return element.bytes.map(AtlasText.bytes) ?? "Size not measured"
+    }
+
+    private func parentShare(_ element: LivingTreeElement, model: LivingTreeModel) -> String? {
+        guard let node = element.node, let parent = element.parent.flatMap({ model[$0]?.node }) else { return nil }
+        return InventoryInspectorPresentation(node: node, parent: parent, formatter: AtlasText.bytes).shareText
     }
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Text(footerText).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-            Spacer()
-            Text(tree.dimension == .depth
-                 ? "Drag or two-finger scroll to turn · ⇧-scroll or ⇧-drag to pan · pinch to zoom · F focuses · I isolates · 0 resets"
-                 : "Drag or scroll to pan · pinch or ⌘-scroll to zoom · double-click opens · F focuses · I isolates · 0 fits").font(.caption).foregroundStyle(.tertiary).lineLimit(1)
-        }.padding(.horizontal, 16).frame(height: 24).accessibilityIdentifier("inventory.livingTree.status")
+            Text(footerText).font(.caption).foregroundStyle(.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true).help(footerText)
+            Spacer(minLength: 12)
+            Text("Click a branch to select it · double-click to open · Esc goes up").font(.caption).foregroundStyle(.tertiary).lineLimit(2).multilineTextAlignment(.trailing).frame(maxWidth: 260, alignment: .trailing)
+        }.padding(.horizontal, 16).padding(.vertical, 4).frame(minHeight: 24).accessibilityIdentifier("inventory.livingTree.status")
+    }
+
+    /// Every way to move around, in plain words. Each has a visible button as well; none is gesture-only.
+    private var navigationHelp: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Getting around the Living Tree").font(.headline).fixedSize(horizontal: false, vertical: true)
+            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
+                helpRow("Select a folder or file", "Click its branch. Its details appear in the Inspector.")
+                helpRow("Open a folder", "Double-click it, or select it and press Return.")
+                helpRow("Go back up", "The Up button, a folder name in the path, or Esc.")
+                helpRow("Zoom", "The − and + buttons, pinch, or ⌘-scroll.")
+                helpRow(tree.dimension == .depth ? "Turn and move" : "Move around", tree.dimension == .depth ? "Drag or two-finger scroll to turn. Hold ⇧ while dragging or scrolling to move." : "Drag or scroll.")
+                helpRow("See everything", "Fit frames the whole tree. Reset (0) also undoes turning.")
+                helpRow("Find the selection", "View Selection (F) frames it; Isolate (I) hides the rest.")
+            }
+            Text("Prefer a list? Choose Atlas, or use the Navigator below. They show the same folders.").font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16).frame(width: 420)
+        .onExitCommand { showingHelp = false }
+    }
+
+    private func helpRow(_ action: String, _ how: String) -> some View {
+        GridRow {
+            Text(action).font(.callout.weight(.medium)).fixedSize(horizontal: false, vertical: true)
+            Text(how).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private var footerText: String {
         guard let model = tree.model else { return " " }
-        var parts = ["Thickness shows indexed allocation", "\(model.count.formatted()) elements"]
+        var parts = ["Width ≈ indexed allocation; length and position show hierarchy, not bytes", "not reclaimable storage", "\(model.count.formatted()) elements"]
         let unmeasured = model.order.reduce(Int64(0)) { total, key in
             let element = model[key]!
             return total + (element.role == .unmeasured ? 1 : (element.role == .rest ? element.unmeasured : 0))
@@ -1187,8 +1307,8 @@ final class LivingTreeInputView: NSView {
 
 /// Text sizes for label placement, matching the fonts the labels are drawn with (bounded cache).
 @MainActor enum LivingTreeLabelMetrics {
-    static let titleFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
-    static let detailFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .regular)
+    static let titleFont = NSFont.systemFont(ofSize: 12, weight: .semibold)
+    static let detailFont = NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .medium)
     private static var cache = [String: CGSize]()
     static func measure(_ text: String, title: Bool) -> CGSize {
         let key = (title ? "t" : "d") + text
@@ -1379,9 +1499,9 @@ struct LivingTreePainter {
             } else {
                 // A soft body whose color flows from the parent into this branch, with a finer, brighter core.
                 let from = tone(element.parent)
-                context.fill(Self.ribbon(branch), with: .linearGradient(Gradient(colors: [Self.solid(from, opacity * 0.62), Self.solid(own, opacity * 0.62)]),
+                context.fill(Self.ribbon(branch), with: .linearGradient(Gradient(colors: [Self.solid(from, opacity * 0.72), Self.solid(own, opacity * 0.72)]),
                                                                         startPoint: branch.start, endPoint: branch.end))
-                cores[batch(max(0.6, min(2.2, branch.startWidth * 0.22)), min(1, opacity * 0.75), index), default: Path()].addPath(Self.curve(branch))
+                cores[batch(max(0.6, min(2.2, branch.startWidth * 0.22)), min(1, opacity * 0.9), index), default: Path()].addPath(Self.curve(branch))
             }
             if branch.glow > 0 {
                 if branch.glow >= 2.6 && tips.count < 400 { tips.append((branch.end, branch.glow, opacity, own)) }
@@ -1424,10 +1544,10 @@ struct LivingTreePainter {
             let rect = label.frame.offsetBy(dx: tip.x, dy: tip.y)
             guard visible.intersects(rect) else { continue }
             let plate = Path(roundedRect: rect, cornerRadius: 4, style: .continuous)
-            context.fill(plate, with: .color(Color(red: 0.04, green: 0.045, blue: 0.05).opacity(label.emphasized ? 0.88 : 0.74)))
-            context.stroke(plate, with: .color(label.emphasized ? Color.accentColor.opacity(0.75) : Color.white.opacity(0.07)), lineWidth: label.emphasized ? 1 : 0.5)
-            let title = context.resolve(Text(label.title).font(.system(size: 11, weight: .semibold)).foregroundColor(.white.opacity(label.emphasized ? 1 : 0.9)))
-            let detail = context.resolve(Text(label.detail).font(.system(size: 10).monospacedDigit()).foregroundColor(.white.opacity(0.62)))
+            context.fill(plate, with: .color(Color(red: 0.035, green: 0.04, blue: 0.045).opacity(label.emphasized ? 0.94 : 0.86)))
+            context.stroke(plate, with: .color(label.emphasized ? Color.accentColor.opacity(0.82) : Color.white.opacity(0.13)), lineWidth: label.emphasized ? 1 : 0.5)
+            let title = context.resolve(Text(label.title).font(.system(size: 12, weight: .semibold)).foregroundColor(.white.opacity(label.emphasized ? 1 : 0.96)))
+            let detail = context.resolve(Text(label.detail).font(.system(size: 10.5, weight: .medium).monospacedDigit()).foregroundColor(.white.opacity(0.76)))
             let origin = CGPoint(x: rect.minX + LivingTreeLabeler.paddingX, y: rect.minY + LivingTreeLabeler.paddingY)
             context.draw(title, at: origin, anchor: .topLeading)
             context.draw(detail, at: CGPoint(x: origin.x, y: origin.y + title.measure(in: CGSize(width: 1_000, height: 100)).height), anchor: .topLeading)

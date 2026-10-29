@@ -28,6 +28,38 @@ fileprivate struct CleanupTrashSnapshot: Equatable {
     var ancestors: [String: String]
     var assessment: String
     var activeUseLimited: Bool
+    /// The target contains programs or databases and active use could only be partly observed (other users'
+    /// processes, or processes with very many open files, are not visible to an ordinary app).
+    var programUseLimited: Bool
+}
+
+public extension ArtifactProbe.Budget {
+    /// The full descendant walk behind a user-initiated Move to Trash. Every check still runs on every descendant;
+    /// the Inspector's quick evidence budget is far too small for ordinary caches, environments and dependency folders.
+    static let trashPreflight = ArtifactProbe.Budget(entries: 150_000, reads: 4_000, seconds: 20)
+}
+
+extension CleanupTrashPolicy {
+    public static let programUseWarning = "This item contains programs or databases. Storage Monitor can only see your own running apps and tools, and not all of them, so it cannot rule out that something is using them. No use was observed."
+
+    /// An observed open file that cannot be resolved fails closed when it is beside the database or has the database's
+    /// name (or a companion's). Other unresolvable paths, such as a system service's restricted store, are not relevant.
+    static func openFileMatchesDatabase(_ active: String, _ locations: Set<String>) -> Bool? {
+        let suffixes = ["", "-wal", "-shm", "-journal"]
+        if let observed = ArtifactPaths.canonicalProtectionLocation(active) {
+            return locations.contains { location in suffixes.contains { observed == location + $0 } }
+        }
+        let folder = ((active as NSString).standardizingPath as NSString).deletingLastPathComponent
+        let name = (active as NSString).lastPathComponent.precomposedStringWithCanonicalMapping.lowercased()
+        let related = locations.contains { location in
+            let databaseFolder = (location as NSString).deletingLastPathComponent
+            let databaseName = (location as NSString).lastPathComponent.precomposedStringWithCanonicalMapping.lowercased()
+            return folder == databaseFolder || ArtifactPaths.logical(folder) == ArtifactPaths.logical(databaseFolder)
+                || ArtifactPaths.canonicalProtectionLocation(folder) == databaseFolder
+                || suffixes.contains { name == databaseName + $0 }
+        }
+        return related ? nil : false
+    }
 }
 
 fileprivate struct CleanupTrashSafetyFailure: Error { let reason: String }
@@ -36,14 +68,17 @@ public extension CleanupTrashPolicy {
     // Serializes distinct confirmed requests across Inspector instances without waiting or automatic retry.
     private static let executionLock = NSLock()
 
-    static func prepare(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget = .standard) -> CleanupTrashPreparation {
+    static func prepare(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget = .trashPreflight,
+                        progress: (@Sendable (Int) -> Void)? = nil) -> CleanupTrashPreparation {
         do {
             var environment = environment
             environment.qaRuntime = try NativeQARuntime.effectiveScope(environment.qaRuntime)
-            let (inspection, snapshot) = try validate(node: node, environment: environment, budget: budget)
+            let (inspection, snapshot) = try validate(node: node, environment: environment, budget: budget, progress: progress)
             var decision = decide(node: node, inspection: inspection, examined: true, home: environment.home)
             if case .blocked(let reason) = decision { return .blocked(reason) }
-            if snapshot.activeUseLimited, case .allowed(_, let warnings) = decision {
+            if snapshot.programUseLimited, case .allowed(_, let warnings) = decision {
+                decision = .allowed(override: true, warnings: [programUseWarning] + warnings)
+            } else if snapshot.activeUseLimited, case .allowed(_, let warnings) = decision {
                 decision = .allowed(override: true, warnings: warnings + ["Current-user active-use observations were partial. No active reference was observed in that scope; this is not proof of non-use. Required protection, descendant, Git and executable/database checks must still pass."])
             }
             return .ready(CleanupTrashConfirmationToken(node: node, inspection: inspection, decision: decision, snapshot: snapshot, preparedAt: environment.now(), qaRuntime: environment.qaRuntime))
@@ -69,10 +104,13 @@ public extension CleanupTrashPolicy {
             environment.qaRuntime = effective ?? confirmation.qaRuntime
             if environment.qaRuntime != nil && confirmation.qaRuntime == nil { return .refused("A QA session requires a QA-bound confirmation.") }
             try confirmation.qaRuntime?.validateTrash(confirmation.node.path)
-            let (_, current) = try validate(node: confirmation.node, environment: environment, budget: .standard)
+            let revalidationStarted = Date()
+            let (_, current) = try validate(node: confirmation.node, environment: environment, budget: .trashPreflight)
             guard current == confirmation.snapshot else { return .refused("The target or relevant evidence changed after confirmation was prepared. Review it again.") }
             guard !Task.isCancelled else { return .refused("Move to Trash was cancelled before the system operation.") }
-            guard Date().timeIntervalSince(confirmation.preparedAt) <= 60 else { return .refused("The confirmation expired during preflight. Review the item again.") }
+            guard Date().timeIntervalSince(revalidationStarted) <= ArtifactProbe.Budget.trashPreflight.seconds + 5 else { return .refused("The final check took too long. Review the item again.") }
+            // The confirmation's 60 s lifetime holds at the moment of the move, not only when the final check starts.
+            guard Date().timeIntervalSince(confirmation.preparedAt) <= 60 else { return .refused("The confirmation expired during the final check. Review the item again.") }
             try confirmation.qaRuntime?.validateTrash(current.canonical)
             let source = URL(fileURLWithPath: current.canonical)
             // No rename/staging/permanent-delete fallback. Only this validated token path reaches FileManager.
@@ -111,7 +149,8 @@ public extension CleanupTrashPolicy {
 
     static func cancel(_ confirmation: CleanupTrashConfirmationToken) { _ = confirmation.consume() }
 
-    private static func validate(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget) throws -> (ArtifactInspection, CleanupTrashSnapshot) {
+    private static func validate(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget,
+                                 progress: (@Sendable (Int) -> Void)? = nil) throws -> (ArtifactInspection, CleanupTrashSnapshot) {
         func reject(_ reason: String) throws -> Never { throw CleanupTrashSafetyFailure(reason: reason) }
         try environment.qaRuntime?.validateTrash(node.path)
         let probe = ArtifactProbe(budget: budget)
@@ -171,6 +210,9 @@ public extension CleanupTrashPolicy {
             if let info = probe.info(path) { activeObjects.insert("\(info.device):\(info.inode)") }
         }
         var pathReferences: Set<String>?
+        // Non-link descendants resolve inside `canonical`, so only observations related to it can relate to them.
+        // A symbolic link's target can lie outside; links are checked against the full observation below.
+        let withinTarget = processes.scoped(within: canonical)
         var entries = [String: String](), pending = [canonical], checked = 0
         var visitedObjects = Set<String>(), databasePaths = Set<String>()
         var requiresCompleteProcesses = inspection.classification?.facts.isDatabase == true
@@ -179,6 +221,7 @@ public extension CleanupTrashPolicy {
             if Task.isCancelled { try reject("Trash validation was cancelled.") }
             guard !probe.timedOut, checked < max(1, budget.entries) else { try reject("The directory cannot be assessed within the safety budget. Nothing will be moved.") }
             checked += 1
+            if checked % 500 == 0 { progress?(checked) }
             guard let info = probe.info(path) else { try reject("A descendant could not be examined; protection is incomplete.") }
             guard info.device == rootInfo.device else { try reject("The item contains a mount point on another filesystem.") }
             guard info.ownerIsCurrentUser else { try reject("A descendant is not owned by the current user.") }
@@ -195,16 +238,17 @@ public extension CleanupTrashPolicy {
                 let beforeIncomplete = probe.incomplete.count
                 let classification = detector.classify(context)
                 if probe.timedOut || probe.incomplete.count > beforeIncomplete {
-                    try reject("Required descendant evidence could not be completed within the safety budget.")
+                    let detail = probe.incomplete.dropFirst(beforeIncomplete).first.map { " (\($0); \(path))" } ?? ""
+                    try reject("Required descendant evidence could not be completed within the safety budget." + detail)
                 }
                 if let classification, let why = hardBlock(classification.facts) {
                     try reject("The target or a descendant has a verified dependency: \(why) (\(path))")
                 }
             }
-            if processes.runs(within: path) || processes.holdsOpen(within: path) || processes.works(within: path) { try reject("A running process uses the target or a descendant: \(path)") }
+            if withinTarget.runs(within: path) || withinTarget.holdsOpen(within: path) || withinTarget.works(within: path) { try reject("A running process uses the target or a descendant: \(path)") }
             // Also compare objects: a hard-link alias of an executing file is still an active executable.
             if activeObjects.contains("\(info.device):\(info.inode)") { try reject("This object is an active executable or open file, including through another hard link.") }
-            if info.isExecutable && !processes.complete { try reject("Active executable use could not be completely assessed.") }
+            // Observed use always blocks. Partial observation of programs requires the explicit warning instead.
             if info.isExecutable { requiresCompleteProcesses = true }
             if info.isExecutable {
                 if pathReferences == nil {
@@ -236,12 +280,9 @@ public extension CleanupTrashPolicy {
                 guard let location = ArtifactPaths.canonicalProtectionLocation(databaseBase) else { try reject("The database path could not be resolved for active-use checks.") }
                 databasePaths.insert(location)
                 for active in processes.openFiles {
-                    guard let observed = ArtifactPaths.canonicalProtectionLocation(active) else { try reject("An open-file path could not be resolved for database safety.") }
-                    if observed == location || ["-wal", "-shm", "-journal"].contains(where: { observed == location + $0 }) {
-                        try reject("The database or one of its companions is open by a running process.")
-                    }
+                    guard let matches = openFileMatchesDatabase(active, [location]) else { try reject("An open file beside this database could not be resolved for database safety.") }
+                    if matches { try reject("The database or one of its companions is open by a running process.") }
                 }
-                if !processes.complete { try reject("Active database use could not be completely assessed.") }
             }
             if info.kind == .other { try reject("Special filesystem objects cannot be assessed for Trash.") }
             if info.kind == .symlink {
@@ -256,7 +297,7 @@ public extension CleanupTrashPolicy {
                 let linkContext = ArtifactContext(subject: .init(nodeID: node.id, path: resolved, kind: .file, identity: nil), probe: probe, environment: refreshedEnvironment)
                 if let why = ArtifactProtection.reason(linkContext) ?? normalizedProtection(resolved, environment: refreshedEnvironment, probe: probe) { try reject("Protected symbolic-link target: \(why)") }
                 if let referent = probe.info(resolved) { visitedObjects.insert("\(referent.device):\(referent.inode)") }
-                if processes.runs(within: resolved) || processes.holdsOpen(within: resolved) { try reject("The symbolic link refers to an item in active use.") }
+                if processes.runs(within: resolved) || processes.holdsOpen(within: resolved) || processes.works(within: resolved) { try reject("The symbolic link refers to an item in active use.") }
                 continue // Trash the link itself, never enumerate or move its referent.
             }
             if info.kind == .directory {
@@ -313,15 +354,12 @@ public extension CleanupTrashPolicy {
         let latestProcesses = (environment.safetyProcesses ?? environment.processes)()
         guard latestProcesses.inspected > 0 else { try reject("The final active-use observation is unavailable; nothing was moved.") }
         guard Date().timeIntervalSince(latestProcesses.takenAt) < 5 else { try reject("The final active-use observation is stale.") }
-        if requiresCompleteProcesses && !latestProcesses.complete { try reject("The final required active-use check is incomplete.") }
         if latestProcesses.runs(within: canonical) || latestProcesses.holdsOpen(within: canonical) || latestProcesses.works(within: canonical) { try reject("A process started using the target during validation.") }
         for active in latestProcesses.executables + latestProcesses.openFiles {
             if let info = probe.info(active), visitedObjects.contains("\(info.device):\(info.inode)") { try reject("A target object became active during validation, including through an alias.") }
             if !databasePaths.isEmpty {
-                guard let observed = ArtifactPaths.canonicalProtectionLocation(active) else { try reject("An active path could not be resolved for database safety.") }
-                if databasePaths.contains(where: { location in observed == location || ["-wal", "-shm", "-journal"].contains(where: { observed == location + $0 }) }) {
-                    try reject("A database companion became active during validation.")
-                }
+                guard let matches = openFileMatchesDatabase(active, databasePaths) else { try reject("An active path beside a database could not be resolved for database safety.") }
+                if matches { try reject("A database companion became active during validation.") }
             }
         }
         var finalEnvironment = environment
@@ -338,7 +376,9 @@ public extension CleanupTrashPolicy {
         let f = inspection.classification?.facts
         let signature = "\(inspection.classification?.kind.rawValue ?? "ordinary")|\(inspection.assessment?.status.rawValue ?? "unknown")|\(String(describing: f))"
         return (inspection, CleanupTrashSnapshot(canonical: canonical, entries: entries, ancestors: ancestors, assessment: signature,
-                                                   activeUseLimited: !processes.complete || !latestProcesses.complete))
+                                                   activeUseLimited: !processes.complete || !latestProcesses.complete,
+                                                   // Even a complete observation covers only the current user's processes.
+                                                   programUseLimited: requiresCompleteProcesses))
     }
 
     private static func stamp(_ path: String, identityOnly: Bool = false) throws -> String {

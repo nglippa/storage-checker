@@ -68,6 +68,70 @@ import SQLite3
         try test(EvidenceParser.swapBytes("unreadable") == nil,"missing swap remains unknown")
         try test(signedChange(-53_248) == "−53.25 KB" && signedChange(1) == "+1 B" && signedChange(0) == "0 B","nonzero small changes never render as zero GB")
 
+        // Chart selection never guesses: the reading identity, container and full timestamp must identify one event.
+        let chartReading = critical.measurement!
+        try test(StorageChartSelection.eventID(for: chartReading, events: snapshot.events) == critical.id, "chart selection maps an exact reading to its unique event")
+        try test(StorageChartSelection.eventID(for: chartReading, events: snapshot.events.filter { $0.id != critical.id }) == nil, "chart selection does not select an event hidden by filters")
+        let orphanReading = Measurement(id: 99_999, timestamp: chartReading.timestamp, container: chartReading.container, free: chartReading.free, used: chartReading.used, volumes: chartReading.volumes)
+        try test(StorageChartSelection.eventID(for: orphanReading, events: snapshot.events) == nil, "chart selection leaves an orphan reading unmatched")
+        let sameTimeWrongIdentity = Measurement(id: chartReading.id + 1, timestamp: chartReading.timestamp, container: chartReading.container, free: chartReading.free, used: chartReading.used, volumes: chartReading.volumes)
+        let sameIdentityWrongContainer = Measurement(id: chartReading.id, timestamp: chartReading.timestamp, container: "another-container", free: chartReading.free, used: chartReading.used, volumes: chartReading.volumes)
+        try test(StorageChartSelection.eventID(for: sameTimeWrongIdentity, events: snapshot.events) == nil && StorageChartSelection.eventID(for: sameIdentityWrongContainer, events: snapshot.events) == nil, "chart selection rejects same-time events with a different reading ID or container")
+        let duplicateChartEvent = StorageEvent(id: "duplicate-chart-event", timestamp: critical.timestamp, category: critical.category, delta: critical.delta, previousFree: critical.previousFree, currentFree: critical.currentFree, previousTime: critical.previousTime, severity: critical.severity, measurement: chartReading, previousMeasurement: critical.previousMeasurement, alerts: [], diagnostics: [], comparisons: [], source: "test", searchText: "")
+        try test(StorageChartSelection.eventID(for: chartReading, events: snapshot.events + [duplicateChartEvent]) == nil, "chart selection rejects duplicate ambiguous event matches")
+        try test(snapshot.measurements.contains { $0.id == chartReading.id && $0.timestamp == chartReading.timestamp && $0.container == chartReading.container }, "chart selection leaves measurement data unchanged")
+
+        // Event list focus: ownership, not a time window, decides whether a lost focus returns to the list.
+        var ownership = EventListFocusOwnership()
+        try test(!ownership.restoresAfterLoss, "event list focus: nothing is restored before the list has had focus")
+        ownership.listFocused()
+        try test(ownership.restoresAfterLoss, "event list focus: a loss without a deliberate move (inspector rebuild, however slow) returns focus to the list")
+        ownership.deliberateMove()
+        try test(!ownership.restoresAfterLoss, "event list focus: a click elsewhere, Tab or Find keeps the person's new focus")
+        ownership.listFocused()
+        try test(ownership.restoresAfterLoss, "event list focus: focusing the list again restores ownership")
+        try test(EventListFocusOwnership.isDeliberateKey(keyCode: 48, command: false, characters: "\t") && EventListFocusOwnership.isDeliberateKey(keyCode: 3, command: true, characters: "f"),
+                 "event list focus: Tab and Command-F are deliberate moves")
+        try test(!EventListFocusOwnership.isDeliberateKey(keyCode: 125, command: false, characters: nil) && !EventListFocusOwnership.isDeliberateKey(keyCode: 34, command: true, characters: "i") && !EventListFocusOwnership.isDeliberateKey(keyCode: 53, command: false, characters: "\u{1b}"),
+                 "event list focus: arrows, Option-Command-I and Escape are not focus moves")
+
+        // Empty event list guidance never offers a step that cannot reveal events.
+        let emptyNow = Date(timeIntervalSince1970: 2_000_000_000)
+        func emptyEvent(_ id: String, daysAgo: Double, severity: EventSeverity = .normal) -> StorageEvent {
+            StorageEvent(id: id, timestamp: emptyNow.addingTimeInterval(-daysAgo * 86_400), category: "Storage loss", delta: -2_000_000_000, previousFree: nil, currentFree: nil, previousTime: nil, severity: severity, measurement: nil, previousMeasurement: nil, alerts: [], diagnostics: [], comparisons: [], source: "test", searchText: "storage loss")
+        }
+        let recentWeek = [emptyEvent("a", daysAgo: 3), emptyEvent("b", daysAgo: 5)]
+        let defaultEmpty = EventListEmptyState.make(filters: EventFilters(), events: recentWeek, now: emptyNow)
+        try test(EventFilters().activeCount == 0 && defaultEmpty?.actions == [.widen(.week)] && defaultEmpty?.message.contains("the last 24 hours") == true,
+                 "empty list: the default 24-hour range offers the last 7 days, not Clear Filters")
+        try test(EventListEmptyState.make(filters: EventFilters(), events: [emptyEvent("old", daysAgo: 20)], now: emptyNow)?.actions == [.widen(.month)], "empty list: the narrowest preset range holding the latest event is offered")
+        if case .range(let start, let end)? = EventListEmptyState.make(filters: EventFilters(), events: [emptyEvent("older", daysAgo: 45)], now: emptyNow)?.actions.first {
+            try test(start <= emptyNow.addingTimeInterval(-45 * 86_400) && end >= emptyNow, "empty list: events older than every preset offer a range from the first event through now")
+        } else { try test(false, "empty list: events older than every preset offer a range from the first event through now") }
+        var severityFilter = EventFilters(); severityFilter.time = .week; severityFilter.severity = EventSeverity.critical.rawValue
+        try test(EventListEmptyState.make(filters: severityFilter, events: recentWeek, now: emptyNow)?.actions == [.clearFilters], "empty list: events in range hidden by other filters offer Clear Filters")
+        var searchFilter = EventFilters(); searchFilter.search = "nothing"
+        try test(EventListEmptyState.make(filters: searchFilter, events: recentWeek, now: emptyNow)?.actions == [.clearFilters, .widen(.week)], "empty list: other filters and an empty range offer both steps")
+        var weekFilter = EventFilters(); weekFilter.time = .week
+        try test(EventListEmptyState.make(filters: weekFilter, events: recentWeek, now: emptyNow) == nil && EventListEmptyState.make(filters: EventFilters(), events: [], now: emptyNow) == nil,
+                 "empty list: no guidance when events are shown or none are recorded")
+        // Each offered time step reveals events once the offered Clear Filters (if any) is also taken.
+        for filters in [EventFilters(), severityFilter, searchFilter] {
+            for case .widen(let time) in EventListEmptyState.make(filters: filters, events: recentWeek, now: emptyNow)?.actions ?? [] {
+                var widened = EventFilters(); widened.time = time
+                try test(!widened.apply(recentWeek, now: emptyNow).isEmpty, "empty list: the offered range \(time.rawValue) reveals events")
+            }
+        }
+
+        // Living Tree labels are click targets for their elements, topmost label first.
+        let labelA = LivingTreeLabel(key: .node(1), title: "Users", detail: "324 GB", tip: .zero, frame: CGRect(x: 4, y: -10, width: 80, height: 30), emphasized: false)
+        let labelB = LivingTreeLabel(key: .node(2), title: "Library", detail: "29 GB", tip: .zero, frame: CGRect(x: 4, y: -10, width: 80, height: 30), emphasized: false)
+        try test(LivingTreeLabel.hit(CGPoint(x: 110, y: 205), labels: [labelA], tips: [CGPoint(x: 100, y: 200)]) == .node(1), "living tree: a click on a drawn label selects its element")
+        try test(LivingTreeLabel.hit(CGPoint(x: 99, y: 205), labels: [labelA], tips: [CGPoint(x: 100, y: 200)]) == nil, "living tree: a click beside a label falls through to the branches")
+        try test(LivingTreeLabel.hit(CGPoint(x: 310, y: 305), labels: [labelA, labelB], tips: [CGPoint(x: 300, y: 300), CGPoint(x: 300, y: 300)]) == .node(2), "living tree: overlapping labels resolve to the one drawn on top")
+        try test(LivingTreeLabeler.percent(0.6994) == "70%" && LivingTreeLabeler.percent(0.004) == "<1%" && LivingTreeLabeler.percent(0) == "<1%" && LivingTreeLabeler.percent(1.2) == "100%",
+                 "living tree: a label's share of the folder is a rounded whole percent, never finer")
+
         // Inventory presentation is derived from durable reader state only.
         func inventoryStatus(state: String = "building", queued: Int64 = 2, reconcile: Bool = false, discovery: Bool = true, completeness: InventoryValueStatus = .lowerBound, unknown: Int64 = 0, initial: InventoryInitialCompletion = .inProgress, gap: Bool = false) -> InventoryStatus {
             InventoryStatus(generation: 1, state: state, rootPath: "/System/Volumes/Data", totalNodes: 12, completedDirectories: 3, pendingDirectories: queued > 0 ? 2 : 0, staleDirectories: discovery ? 0 : (queued > 0 ? 1 : 0), unknownDirectories: unknown, queuedDirectoryJobs: queued, hasReconciliationWork: reconcile, hasInitialDiscoveryWork: discovery, progress: completeness == .complete ? 1 : nil, completeness: completeness, reason: nil, updatedAt: anchor, createdAt: anchor.addingTimeInterval(-10), initialCompletion: initial, initialCompletedAt: initial == .complete ? anchor : nil, hasEventGapRecheck: gap)
@@ -758,6 +822,47 @@ import SQLite3
         try test(noVolumes.causes.isEmpty && noVolumes.causesUnavailable == "Insufficient diagnostic evidence." && !noVolumes.breakdown.reconciliation.accounted, "no recorded volumes: insufficient evidence, no reconciliation")
         let orphan = snapshot.events.first { $0.id == "alert:3" }!
         try test(CauseAnalyzer.analyze(orphan).causes.isEmpty, "alert-only record without readings gets no fabricated causes")
+        // The plain summary never says more than the measurements.
+        let vmEvent = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 47 * decimalGB, [volume("d", "Data", 100 * decimalGB), volume("v", "VM", 5 * decimalGB), volume("u", "Update", decimalGB)]))
+        let vmPlain = EventPlainSummary.make(vmEvent, CauseAnalyzer.analyze(vmEvent))
+        try test(vmPlain.whatHappened.hasPrefix("Your Mac lost 3.00 GB of available storage between"), "plain summary: states the measured loss with its interval")
+        try test(vmPlain.explanation?.contains("virtual memory (swap:") == true, "plain summary: explains virtual memory where the term first appears")
+        try test(vmPlain.certainty == .measured && vmPlain.certaintyText.contains("Which app caused it was not recorded"), "plain summary: an exactly reconciled volume change is measured, and the app stays unknown")
+        try test(vmPlain.actions.contains { $0.contains("Quitting apps") }, "plain summary: virtual memory growth offers the memory action")
+        let gapPlain = EventPlainSummary.make(storageEvent(mixedBefore, gapAfter), gap)
+        try test(gapPlain.certainty == .partlyMeasured && gapPlain.certaintyText.contains("2.00 GB of the difference is not explained"), "plain summary: an unaccounted remainder is stated as partly measured")
+        let unknownPlain = EventPlainSummary.make(storageEvent(reading(1, -30, free: 50 * decimalGB, []), reading(2, 0, free: 48 * decimalGB, [])), noVolumes)
+        try test(unknownPlain.certainty == .unknown && unknownPlain.explanation == nil && unknownPlain.certaintyText.hasPrefix("Storage Monitor doesn't know why."), "plain summary: no evidence says the cause is unknown and offers no explanation")
+        let firstPlain = EventPlainSummary.make(storageEvent(nil, mixedAfter), first)
+        try test(firstPlain.certainty == .unknown && firstPlain.whatHappened == first.headline, "plain summary: a first reading claims no change and no cause")
+        let dataPlain = EventPlainSummary.make(storageEvent(mixedBefore, mixedAfter), mixed)
+        try test(dataPlain.explanation?.contains("Which folders grew was not recorded") == true && dataPlain.actions.contains { $0.contains("Use Storage") }, "plain summary: unattributed Data growth says folders were not recorded and points to Storage")
+        // Offsetting volume changes: the explanation names them and the measured net, not only the larger figure.
+        let offsetEvent = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 48 * decimalGB, [volume("d", "Data", 99 * decimalGB), volume("v", "VM", 5 * decimalGB), volume("u", "Update", decimalGB)]))
+        let offsetAnalysis = CauseAnalyzer.analyze(offsetEvent), offsetPlain = EventPlainSummary.make(offsetEvent, offsetAnalysis)
+        try test(offsetAnalysis.breakdown.reconciliation == .exact && offsetPlain.whatHappened.hasPrefix("Your Mac lost 2.00 GB")
+                 && offsetPlain.explanation?.contains("macOS used 3.00 GB more disk space for virtual memory") == true
+                 && offsetPlain.explanation?.hasSuffix("At the same time, files and apps freed 1.00 GB, so the net loss was 2.00 GB.") == true,
+                 "plain summary: a larger growth offset by a reduction names the offset and the measured net loss")
+        try test(offsetPlain.certainty == .measured, "plain summary: offsetting volume changes that reconcile remain measured, not more certain about the cause")
+        try test(dataPlain.explanation?.contains("At the same time, virtual memory freed 1.00 GB, so the net loss was 2.00 GB.") == true,
+                 "plain summary: Data growth offset by virtual memory shrinking states both and the net")
+        let offsetGain = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 52 * decimalGB, [volume("d", "Data", 97 * decimalGB), volume("v", "VM", 3 * decimalGB), volume("u", "Update", decimalGB)]))
+        let gainPlain = EventPlainSummary.make(offsetGain, CauseAnalyzer.analyze(offsetGain))
+        try test(gainPlain.explanation?.hasSuffix("At the same time, virtual memory used 1.00 GB, so the net gain was 2.00 GB.") == true,
+                 "plain summary: a recovery offset by growth names the growth and the net gain")
+        try test(vmPlain.explanation?.contains("At the same time") == false, "plain summary: no offset sentence when nothing moved the other way")
+        let tinyOffset = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 47 * decimalGB - 999_000, [volume("d", "Data", 100 * decimalGB - 1_000), volume("v", "VM", 5 * decimalGB + 1_000_000 - 1_000), volume("u", "Update", decimalGB)]))
+        let tinyPlain = EventPlainSummary.make(tinyOffset, CauseAnalyzer.analyze(tinyOffset))
+        try test(CauseAnalyzer.analyze(tinyOffset).breakdown.offsettingVolumes.count == 1 && tinyPlain.explanation?.contains("At the same time") == false,
+                 "plain summary: a negligible offset (1 KB beside a 3 GB loss) stays in the breakdown, not the explanation")
+        func at(_ id: String, _ minutes: Double, _ delta: Int64) -> StorageEvent {
+            StorageEvent(id: id, timestamp: anchor.addingTimeInterval(minutes * 60), category: "Storage loss", delta: delta, previousFree: nil, currentFree: nil, previousTime: nil, severity: .normal, measurement: nil, previousMeasurement: nil, alerts: [], diagnostics: [], comparisons: [], source: "test", searchText: "")
+        }
+        let timeline = [at("small-new", 0, -2_000_000), at("big-recent", -60, -3 * decimalGB), at("big-old", -3_000, -9 * decimalGB)]
+        try test(EventPlainSummary.latestNotable(timeline)?.id == "big-recent", "latest change: the most recent change of 1 GB or more within a day")
+        try test(EventPlainSummary.latestNotable([at("small-new", 0, -2_000_000), at("big-old", -3_000, -9 * decimalGB)])?.id == "small-new", "latest change: falls back to the newest change when nothing large is recent")
+        try test(EventPlainSummary.latestNotable([]) == nil, "latest change: none without recorded changes")
         // Same-interval swap evidence supports VM growth as its likely mechanism.
         func metric(_ id: String, _ bytes: Int64, _ minute: Double, complete: Bool = true, kind: String = "Swap allocated", source: EvidenceSource = .swap, label: String = "Swap allocated") -> DiagnosticMetric {
             DiagnosticMetric(id: id, label: label, path: id, bytes: bytes, kind: kind, complete: complete, qualifier: "", source: source, observedAt: anchor.addingTimeInterval(minute * 60))
@@ -1067,7 +1172,11 @@ import SQLite3
         try livingTreeColorTests { ok, message in try test(ok, message) }
         try cleanupInspectorTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-fixtures")) { ok, message in try test(ok, message) }
         try cleanupTrashTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-trash-fixtures")) { ok, message in try test(ok, message) }
-        try cleanupTrashSafetyTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-trash-safety-fixtures")) { ok, message in try test(ok, message) }
+        // Trash safety includes the macOS /tmp ↔ /private/tmp alias cases, so its disposable fixtures always live under
+        // /private/tmp, wherever the rest of the suite's fixtures are (the default is build/qa-fixtures).
+        let trashSafetyRoot = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("storage-monitor-trash-safety-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: trashSafetyRoot, withIntermediateDirectories: true)
+        try cleanupTrashSafetyTests(trashSafetyRoot) { ok, message in try test(ok, message) }
         try await cleanupReviewQueueTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-queue-fixtures")) { ok, message in try test(ok, message) }
         print("\(tests) GUI model/read-only tests passed; isolated fixtures: \(folder.path)")
     }

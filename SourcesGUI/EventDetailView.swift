@@ -18,11 +18,17 @@ private struct EventInspector: View {
     let event: StorageEvent
     let analysis: EventAnalysis
     @ViewState private var expanded = TechnicalSection.expandedByDefault
+    @ViewState private var showFullExplanation = false
+    /// The measurements behind the summary. Remembered while the viewer is open.
+    @AppStorage("event.showEvidence") private var showEvidence = false
 
     // QA-only capture aids; ignored unless the viewer was opened on a QA database.
     private static let qaArgs = ViewerConfiguration.current.isQA ? CommandLine.arguments : []
     private static let qaScrollBottom = qaArgs.contains("--inspector-scroll-bottom")
+    private static let qaShowEvidence = qaArgs.contains("--show-evidence")
     private static let qaExpanded: Set<TechnicalSection> = qaArgs.firstIndex(of: "--expand-technical").flatMap { i in qaArgs.count > i+1 ? Set(qaArgs[i+1].split(separator: ",").compactMap { TechnicalSection(rawValue: String($0)) }) : nil } ?? []
+
+    private var summary: EventPlainSummary { EventPlainSummary.make(event, analysis) }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -30,10 +36,19 @@ private struct EventInspector: View {
             VStack(alignment: .leading, spacing: 0) {
                 Color.clear.frame(height: 0).id("inspector.top")
                 header
-                InspectorSection(title: "Likely causes", prominent: true, id: "event.causes") { causes }
-                InspectorSection(title: "Storage breakdown", id: "event.breakdown") { breakdown }
-                InspectorSection(title: "Supporting evidence", id: "event.evidence") { evidence }
-                InspectorSection(title: "Technical details", id: "event.technical", divider: false) { technical }
+                plainSummary
+                Divider()
+                InspectorDisclosure("Details and evidence", isExpanded: $showEvidence) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        InspectorSection(title: "Measured changes", id: "event.causes") { causes }
+                        InspectorSection(title: "Storage breakdown", id: "event.breakdown") { breakdown }
+                        InspectorSection(title: "Supporting evidence", id: "event.evidence") { evidence }
+                        InspectorSection(title: "Technical details", id: "event.technical", divider: false) { technical }
+                    }
+                }
+                .padding(.top, 10)
+                .accessibilityHint("Exact measurements, volume allocation, timestamps and diagnostic output")
+                .accessibilityIdentifier("event.evidenceDisclosure")
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 18)
@@ -41,13 +56,58 @@ private struct EventInspector: View {
             Color.clear.frame(height: 1).id("inspector.bottom")
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        // A newly selected event starts with every disclosure collapsed, at the top.
+        // A newly selected event starts with every technical disclosure collapsed, at the top.
         .onChange(of: event.id) { _, _ in expanded = TechnicalSection.expandedByDefault; proxy.scrollTo("inspector.top", anchor: .top) }
         .onAppear {
+            if Self.qaShowEvidence || !Self.qaExpanded.isEmpty { showEvidence = true }
             if !Self.qaExpanded.isEmpty { expanded = Self.qaExpanded }
             if Self.qaScrollBottom { DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { proxy.scrollTo("inspector.bottom", anchor: .bottom) } }
         }
         }
+    }
+
+    // MARK: Plain summary
+
+    private var plainSummary: some View {
+        let s = summary
+        return VStack(alignment: .leading, spacing: 14) {
+            PlainBlock(title: "What happened", id: "event.whatHappened") {
+                Text(s.whatHappened).font(.body)
+            }
+            PlainBlock(title: "Possible explanation", id: "event.explanation") {
+                VStack(alignment:.leading,spacing:8) {
+                    if analysis.causes.isEmpty {
+                        Text(s.explanation ?? analysis.causesUnavailable ?? "No measured contributor was recorded.").font(.body)
+                    } else {
+                        ForEach(analysis.causes.prefix(3)) { cause in CompactCauseRow(cause:cause) }
+                        Text("These are observed measurements or correlations, not proof that an application caused the change.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    if !analysis.breakdown.offsettingVolumes.isEmpty {
+                        Text("Offsetting allocation: " + analysis.breakdown.offsettingVolumes.map { "\($0.friendlyName) \(signedChange($0.delta))" }.joined(separator:", ") + ".")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            PlainBlock(title: "How certain is this?", id: "event.certainty") {
+                Label { Text(s.certaintyText) } icon: {
+                    Image(systemName: s.certainty == .measured ? "checkmark.circle" : (s.certainty == .unknown ? "questionmark.circle" : "circle.lefthalf.filled"))
+                        .foregroundStyle(s.certainty == .measured ? Color.green : Color.secondary)
+                }.font(.callout).foregroundStyle(.secondary)
+            }
+            if !s.actions.isEmpty {
+                PlainBlock(title: "What can I do?", id: "event.actions") {
+                    VStack(alignment: .leading, spacing: 7) { ForEach(s.actions, id: \.self) { Text($0).font(.callout) } }
+                }
+            }
+            // The full sentence is only hidden when measured contributors replaced it above; never shown twice.
+            if !analysis.causes.isEmpty, let explanation = s.explanation {
+                InspectorDisclosure("Full explanation", isExpanded:$showFullExplanation) {
+                    Text(explanation).font(.callout).fixedSize(horizontal:false,vertical:true)
+                }
+            }
+        }
+        .padding(.bottom, 14)
     }
 
     // MARK: Header
@@ -68,9 +128,8 @@ private struct EventInspector: View {
                     .accessibilityIdentifier("event.copyMenu")
             }
             Text(event.timestamp.formatted(date: .abbreviated, time: .shortened)).font(.subheadline).foregroundStyle(.secondary)
-            Text(analysis.headline).font(.callout).fixedSize(horizontal: false, vertical: true).padding(.top, 4)
         }
-        .padding(.top, 16).padding(.bottom, 12)
+        .padding(.top, 16).padding(.bottom, 14)
     }
 
     // MARK: A — Likely causes
@@ -292,6 +351,22 @@ func volumeColor(_ volume: VolumeChange) -> Color {
     switch volume.role { case "Data": return .accentColor; case "VM": return .purple; default: return .gray }
 }
 
+/// One question in the plain summary: a quiet label above a full-width answer that wraps.
+private struct PlainBlock<Content: View>: View {
+    let title: String
+    let id: String
+    @ViewBuilder let content: Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
+            content.fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(id)
+    }
+}
+
 private struct InspectorSection<Content: View>: View {
     let title: String
     var prominent = false
@@ -335,6 +410,23 @@ private struct CauseRow: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(cause.rank). \(cause.title), \(signedChange(cause.delta)). \(cause.evidenceClass.label), \(cause.allocationNote). Responsible application: \(cause.application). \(cause.support.joined(separator: " "))")
         .help(cause.explanation)
+    }
+}
+
+private struct CompactCauseRow: View {
+    let cause: LikelyCause
+    var body: some View {
+        HStack(alignment:.firstTextBaseline,spacing:8) {
+            VStack(alignment:.leading,spacing:2) {
+                Text(cause.title).font(.callout.weight(.semibold))
+                Text("\(cause.evidenceClass.label) · \(cause.allocationNote) · app not established")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength:8)
+            Text(signedChange(cause.delta)).font(.callout.monospacedDigit().weight(.semibold))
+        }
+        .accessibilityElement(children:.ignore)
+        .accessibilityLabel("\(cause.title), \(signedChange(cause.delta)). \(cause.evidenceClass.label); application not established.")
     }
 }
 

@@ -160,6 +160,7 @@ struct CleanupReviewQueueView: View {
     @ObservedObject var queue: CleanupReviewQueueController
     @State private var showingPlan = false
     @State private var showingInspector = false
+    @ViewState private var showingFilters = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -170,7 +171,7 @@ struct CleanupReviewQueueView: View {
                     table
                     if geometry.size.width >= 1_000, let node = queue.inspectorNode {
                         Divider()
-                        InventoryInspectorView(browser: browser, explorer: browser.explorer, reviewSubject: node, showsTrash: false, usesQueueEvidence: true).frame(width: 300)
+                        InventoryInspectorView(browser: browser, explorer: browser.explorer, reviewSubject: node, showsTrash: false, usesQueueEvidence: true).frame(width: StorageDesign.inspectorWidth)
                     }
                 }
                 Divider()
@@ -204,26 +205,35 @@ struct CleanupReviewQueueView: View {
     }
 
     private var filters: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Review Candidates").font(.headline)
-                Text("Read-only review across the indexed filesystem").font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Review cleanup").font(.title2.weight(.semibold))
+                    Text("Understand an item before deciding what to keep.").font(.callout).foregroundStyle(.secondary)
+                }
                 Spacer()
-                Button("Restart indexed review") { queue.restart() }.controlSize(.small).disabled(queue.loading)
-                    .help("Discards this bounded review page and its plan selection, then reviews the existing index from the beginning. It does not scan or change the filesystem.")
+                Button("Refresh review") { queue.restart() }.disabled(queue.loading)
+                    .help("Restart the bounded read-only review of the existing index. This does not scan or change files.")
             }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) { assessmentFilter; kindFilter; toolFilter; Spacer(minLength: 4); sortPicker }
+                HStack(spacing: 12) { assessmentFilter; filterButton; Spacer(minLength: 4); sortPicker }
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 12) { assessmentFilter; kindFilter; toolFilter }
+                    HStack(spacing: 12) { assessmentFilter; filterButton }
                     sortPicker
                 }
             }
-            if queue.status == nil {
-                Toggle("Include potential matches awaiting evidence", isOn: $queue.includesPotentialMatches).font(.caption)
-                    .help("A path or name match does not establish that an artifact exists or is a cleanup opportunity.")
+        }.padding(.horizontal, StorageDesign.gutter).padding(.vertical, 14)
+    }
+    private var filterButton: some View {
+        Button { showingFilters.toggle() } label: { Label("Filters", systemImage: "line.3.horizontal.decrease") }
+            .popover(isPresented: $showingFilters) {
+                Form {
+                    kindFilter; toolFilter
+                    Toggle("Include potential matches awaiting evidence", isOn: $queue.includesPotentialMatches)
+                    Text("Names and paths alone do not establish an item exists or is removable. Filters apply to this bounded review page.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }.formStyle(.grouped).frame(width: 400).padding(8)
             }
-        }.padding(.horizontal, 18).padding(.vertical, 10)
     }
 
     private var assessmentFilter: some View {
@@ -252,31 +262,29 @@ struct CleanupReviewQueueView: View {
 
     private var table: some View {
         Table(queue.rows, selection: $queue.selection) {
-            TableColumn("Artifact") { entry in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.inspection?.classification?.title ?? entry.node.name).lineLimit(1)
-                    Text([entry.inspection?.classification?.tool.rawValue, entry.inspection?.classification?.kind.title].compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                }.help(entry.node.path)
-            }.width(min: 160, ideal: 260, max: .infinity)
-            TableColumn("Assessment") { entry in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.stage == .potentialMatch ? "Potential match" : (entry.status(at: queue.freshnessNow)?.title ?? "Insufficient evidence")).font(.caption)
-                    Text(entry.confidence.title).font(.caption2).foregroundStyle(.secondary)
-                }
-            }.width(min: 105, ideal: 135)
-            TableColumn("Indexed") { entry in Text(entry.indexedAllocatedBytes.map(AtlasText.bytes) ?? "Unknown").font(.caption.monospacedDigit()) }.width(min: 75, ideal: 90)
-            TableColumn("Recoverable") { entry in
-                Text(entry.recoverableBytes(at: queue.freshnessNow).map { "≈ " + AtlasText.bytes($0) } ?? "Unknown").font(.caption.monospacedDigit())
-                    .help("Indexed allocation is not physical recovery. APFS sharing and snapshots may retain data; moving to Trash may not increase available space.")
-            }.width(min: 85, ideal: 100)
-            TableColumn("Evidence") { entry in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.freshness.isFresh(now: queue.freshnessNow) ? "Recently verified" : "Needs revalidation").font(.caption)
-                    if let date = entry.freshness.assessmentTimestamp { Text(date, format: .dateTime.month(.abbreviated).day().hour().minute()).font(.caption2).foregroundStyle(.secondary) }
-                    if let warning = entry.freshness.reasons(now: queue.freshnessNow).first ?? entry.inspection?.assessment?.risks.first { Text(warning).font(.caption2).foregroundStyle(.secondary).lineLimit(1).help(warning) }
-                }
-            }.width(min: 115, ideal: 170)
+            TableColumn("Item") { entry in
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(entry.inspection?.classification?.title ?? entry.node.name).font(.callout.weight(.medium)).lineLimit(1)
+                    Text(entry.inspection?.classification?.kind.title ?? "Awaiting identification")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }.padding(.vertical, 5).help(entry.node.path)
+            }.width(min: 180, ideal: 290, max: .infinity)
+            TableColumn("Review status") { entry in
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(entry.stage == .potentialMatch ? "Potential match" : (entry.status(at: queue.freshnessNow)?.title ?? "Insufficient evidence"))
+                        .font(.callout.weight(.medium))
+                    Text(entry.freshness.reasons(now: queue.freshnessNow).first ?? entry.inspection?.assessment?.reasons.first ?? "Select to read the evidence.")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }.padding(.vertical, 5)
+            }.width(min: 175, ideal: 250, max: .infinity)
+            TableColumn("Storage") { entry in
+                VStack(alignment: .trailing, spacing: 5) {
+                    Text(entry.indexedAllocatedBytes.map(AtlasText.bytes) ?? "Not measured").font(.callout.weight(.semibold).monospacedDigit())
+                    Text(entry.recoverableBytes(at: queue.freshnessNow).map { "≈ " + AtlasText.bytes($0) + " may be recoverable" } ?? "Recovery unknown")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }.padding(.vertical, 5)
+                    .help("Indexed size is not physical recovery. APFS sharing and snapshots may retain data; moving to Trash may not increase available space.")
+            }.width(min: 130, ideal: 175)
         }
         .tableStyle(.inset(alternatesRowBackgrounds: false))
         .overlay { if queue.rows.isEmpty { emptyState } }
@@ -293,15 +301,23 @@ struct CleanupReviewQueueView: View {
 
     private var emptyState: some View {
         let expiredEvidence = queue.snapshot?.entries.contains { $0.stage == .verifiedArtifact && !$0.freshness.isFresh(now: queue.freshnessNow) } == true
-        return VStack(alignment: .center, spacing: 8) {
+        return VStack(alignment: .center, spacing: 12) {
             if queue.loading { ProgressView().controlSize(.small) }
-            Text(queue.loading ? "Reviewing indexed entries…" : (expiredEvidence ? "Review evidence needs refreshing" : "No artifacts match the current filters"))
-                .font(.callout.weight(.medium))
+            else { Image(systemName: expiredEvidence ? "arrow.clockwise.circle" : "checklist").font(.system(size: 28)).foregroundStyle(.secondary) }
+            Text(queue.loading ? "Reviewing your indexed items…" : expiredEvidence ? "These items need a fresh review" : "No suggestions on this page")
+                .font(.title3.weight(.semibold))
             Text(expiredEvidence
-                 ? "Some discovered artifacts have expired active-use evidence. Restart indexed review to reassess them; filters cover only the current page."
-                 : "Other artifacts may be preserved, awaiting evidence, or outside the portion reviewed so far. Adjust the filters or continue indexed discovery.")
-                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 360)
-        }.padding(20).allowsHitTesting(false)
+                 ? "The saved evidence is out of date. See all assessments to understand what was found, or refresh the review."
+                 : "Some items may be protected or need more evidence. You can inspect all assessments or continue through the index.")
+                .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 390)
+            if !queue.loading {
+                HStack(spacing: 12) {
+                    Button("See all assessments") { queue.status = nil; queue.kind = nil; queue.tool = nil; queue.includesPotentialMatches = true }
+                        .buttonStyle(.bordered)
+                    if expiredEvidence { Button("Refresh review") { queue.restart() } }
+                }
+            }
+        }.padding(24)
     }
 
     private func footer(compact: Bool) -> some View {
@@ -325,7 +341,7 @@ struct CleanupReviewQueueView: View {
                 Text("\(pagedOut.formatted()) earlier artifacts were released from memory. Filters, sorting and selection apply to the current page.").font(.caption2).foregroundStyle(.secondary)
             }
             HStack(spacing: 10) {
-                Text("\(queue.selection.count) selected").font(.caption).foregroundStyle(.secondary)
+                Text("\(queue.selection.count) selected · Review only; nothing is moved here").font(.caption).foregroundStyle(.secondary)
                 if queue.reviewing { ProgressView().controlSize(.mini); Text("Refreshing selected evidence…").font(.caption).foregroundStyle(.secondary) }
                 if let node = queue.inspectorNode {
                     if compact { Button("Review evidence") { showingInspector = true } }

@@ -419,7 +419,8 @@ public struct StorageAccountingPresentation: Sendable, Equatable {
             } else {
                 rows.append(Row(label: "Indexed sizes exceed the Data volume by", value: size(-difference), detail: "APFS clones share blocks but are counted once per file"))
             }
-            summary = "\(size(used)) used · \(size(inventory.indexedAllocated)) in indexed files · " + (difference >= 0 ? "\(size(difference)) of the Data volume not attributed" : "indexed sizes exceed the Data volume by \(size(-difference))")
+            // Used and free space are shown beside this line; it says what the index has found, plainly. Exact rows are in Details.
+            summary = "Files found: \(size(inventory.indexedAllocated))" + (difference >= 0 ? " · \(size(difference)) of your files' space not matched to a file yet" : " · more than the disk reports, because copies that share storage count once per file")
             if !firstPassComplete { notes.append("The first pass is still running, so more files will be attributed.") }
             if inventory.protectedFolders > 0 {
                 notes.append("\(inventory.protectedFolders.formatted()) folder\(inventory.protectedFolders == 1 ? " is" : "s are") protected by macOS privacy controls and \(inventory.protectedFolders == 1 ? "was" : "were") not opened" + (needsAccess ? "; Full Disk Access is not granted to the background monitor." : "."))

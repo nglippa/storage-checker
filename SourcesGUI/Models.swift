@@ -456,6 +456,18 @@ struct HistorySnapshot: Sendable {
     }
 }
 
+/// Presentation-only bridge from a plotted reading to its recorded event. A chart point is actionable only when
+/// exactly one supplied event carries the same reading identity, container and full-precision timestamp.
+enum StorageChartSelection {
+    static func eventID(for reading: Measurement, events: [StorageEvent]) -> String? {
+        let matches = events.filter { event in
+            guard let measurement = event.measurement else { return false }
+            return measurement.id == reading.id && measurement.container == reading.container && measurement.timestamp == reading.timestamp
+        }
+        return matches.count == 1 ? matches[0].id : nil
+    }
+}
+
 enum EventTypeFilter: String, CaseIterable, Codable, Sendable {
     case all = "All Events", loss = "Storage Loss", recovery = "Storage Recovery", warning = "Warnings", critical = "Critical Events", scans = "Recorded Scans", swap = "Swap Changes", diagnostic = "Diagnostic Events"
 }
@@ -684,4 +696,54 @@ enum HistoryError: Error, LocalizedError {
     static let noHistoryGuidance = "No monitoring history yet. Storage Monitor records free space only after you turn on background monitoring in Settings → Background Monitoring."
     var isMissingHistory: Bool { if case .missing = self { return true }; return false }
     var errorDescription: String? { switch self { case .missing: return Self.noHistoryGuidance; case .sqlite(let message): return "Could not read local history: \(message)"; case .invalid(let message): return "History contains an unreadable record: \(message)" } }
+}
+
+/// Keyboard focus ownership of the event list. The list owns focus from the moment it takes it until the person moves
+/// focus deliberately: a click outside the list, Tab or Shift-Tab, or Find (⌘F). Losing focus without such a move (the
+/// inspector opening rebuilds the split view and removes the list's responder, however long that takes) is undone.
+struct EventListFocusOwnership: Equatable {
+    private(set) var ownsFocus = false
+    mutating func listFocused() { ownsFocus = true }
+    mutating func deliberateMove() { ownsFocus = false }
+    var restoresAfterLoss: Bool { ownsFocus }
+    static func isDeliberateKey(keyCode: UInt16, command: Bool, characters: String?) -> Bool {
+        keyCode == 48 || (command && characters?.lowercased() == "f")
+    }
+}
+
+/// What the empty event list says and offers when recorded events exist but none are shown. Clearing filters is offered
+/// only when filters other than the time range are set; a time range that holds no events offers the narrowest wider
+/// range that holds the most recent one, so the guidance always names a step that reveals something.
+struct EventListEmptyState: Equatable {
+    enum Action: Equatable {
+        case clearFilters
+        case widen(EventTimeFilter)
+        /// A custom range from the first recorded event through now (older than every preset range).
+        case range(start: Date, end: Date)
+    }
+    let title: String
+    let message: String
+    let actions: [Action]
+
+    static func make(filters: EventFilters, events: [StorageEvent], now: Date = Date()) -> EventListEmptyState? {
+        guard !events.isEmpty, filters.apply(events, now: now).isEmpty else { return nil }
+        guard filters.validation == nil else { return EventListEmptyState(title: "No matching events", message: "Correct the highlighted filter to see events.", actions: []) }
+        var timeOnly = EventFilters()
+        timeOnly.time = filters.time; timeOnly.start = filters.start; timeOnly.end = filters.end
+        let otherFilters = filters.type != .all || filters.size != .all || filters.severity != -1 || !filters.search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let inRange = timeOnly.apply(events, now: now)
+        if !inRange.isEmpty {
+            return EventListEmptyState(title: "No matching events", message: "\(inRange.count == 1 ? "1 event" : "\(inRange.count) events") in this time range \(inRange.count == 1 ? "doesn't" : "don't") match the other filters.", actions: [.clearFilters])
+        }
+        let range = filters.time == .custom ? "the selected dates" : filters.time.rawValue.lowercased().replacingOccurrences(of: "last", with: "the last")
+        guard let latest = events.map(\.timestamp).max(), let earliest = events.map(\.timestamp).min() else { return nil }
+        let wider: Action
+        if let preset = [EventTimeFilter.day, .week, .month].first(where: { ($0.seconds ?? 0) > (filters.time.seconds ?? 0) && latest >= now.addingTimeInterval(-($0.seconds ?? 0)) }) {
+            wider = .widen(preset)
+        } else {
+            wider = .range(start: minuteBoundary(earliest), end: minuteBoundary(now.addingTimeInterval(60)))
+        }
+        let message = "Nothing was recorded in \(range). The most recent change was \(latest.formatted(date: .abbreviated, time: .shortened))."
+        return EventListEmptyState(title: "No events in this time range", message: message, actions: (otherFilters ? [.clearFilters] : []) + [wider])
+    }
 }

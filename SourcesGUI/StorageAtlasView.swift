@@ -33,6 +33,10 @@ struct StorageAtlasView: View {
             footer
         }
         .background(ground)
+        // The canvas's own hover can miss its end when the canvas is rebuilt under a still pointer or the window
+        // stops being key; leaving the whole map, or the window resigning, always clears the lens.
+        .onHover { inside in if !inside { hover = nil } }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in hover = nil }
         .accessibilityIdentifier("inventory.atlas")
         .onChange(of: folder?.id) { old, new in
             hover = nil
@@ -158,6 +162,7 @@ struct StorageAtlasView: View {
     /// Single click: select (the Navigator and Inspector follow); Other items opens its next window.
     private func choose(_ hit: AtlasHit, plan: InventoryMapPlan, inner: [Int64: (plan: InventoryMapPlan, origin: CGPoint, content: InventoryNestedContent)], folder: InventoryNode) {
         guard let found = node(for: hit, plan: plan, inner: inner) else { return }
+        hover = nil   // a click ends the hover, as a native tooltip does; the Inspector now shows the item
         switch found.tile.content {
         case .node(let node): explorer.select(node)
         case .other(let other):
@@ -243,7 +248,7 @@ struct StorageAtlasView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Text(footerText).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            Text(footerText).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail).help(footerText)
             Spacer()
             Text("Click to select · double-click to open").font(.caption).foregroundStyle(.tertiary)
         }.padding(.horizontal, 16).frame(height: 24).accessibilityIdentifier("inventory.map.status")

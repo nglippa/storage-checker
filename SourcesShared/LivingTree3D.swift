@@ -68,7 +68,7 @@ public enum LivingTreeGeometer3D {
     public static func layout(_ model: LivingTreeModel, _ arrangement: LivingTreeArrangement) -> LivingTreeLayout3D {
         let R = radius
         let base = LivingTreeVector(0, 0, 0), crown = LivingTreeVector(0, trunkHeight * R, 0)
-        let trunkWidth: CGFloat = 18
+        let trunkWidth = LivingTreeGeometer.maximumTrunkWidth
         let trunkBytes = model.trunkBytes
         let fan = LivingTreeArranger.fan
         let up = LivingTreeVector(0, 1, 0)

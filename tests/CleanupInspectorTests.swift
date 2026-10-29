@@ -491,9 +491,12 @@ func cleanupTrashTests(_ folder: URL, _ test: (Bool, String) throws -> Void) thr
              && { if case .refused(let why) = forced { return why.hasPrefix("Protected") }; return false }(),
              "cleanup trash: nothing moves when the override was not accepted, when the path now holds a different item, or when it is protected (re-checked at the moment of the move)")
     let moved = CleanupTrashPolicy.perform(node: oldNode, decision: decide(oldNode, oldInspection), overrideAccepted: false, environment: environment, trash: fake)
-    try test(moved == .refused(CleanupTrashPolicy.unavailableReason) && calls.urls.isEmpty && fm.fileExists(atPath: historical), "cleanup trash: legacy advisory review cannot replace a displayed explicit confirmation")
+    // The release contains a program, so the program-use warning refuses first; either refusal must move nothing.
+    try test((moved == .refused(CleanupTrashPolicy.unavailableReason) || moved == .refused("The warning was not accepted.")) && calls.urls.isEmpty && fm.fileExists(atPath: historical),
+             "cleanup trash: legacy advisory review cannot replace a displayed explicit confirmation")
     guard case .ready(let confirmation) = CleanupTrashPolicy.prepare(node: oldNode, environment: environment) else { throw CocoaError(.fileReadUnknown) }
-    let failing = CleanupTrashPolicy.perform(confirmation: confirmation, overrideAccepted: false, environment: environment, trash: { _ in throw CocoaError(.fileWriteNoPermission) })
+    // Confirmed with its warnings accepted (the release contains a program), so the simulated macOS failure is reached.
+    let failing = CleanupTrashPolicy.perform(confirmation: confirmation, overrideAccepted: true, environment: environment, trash: { _ in throw CocoaError(.fileWriteNoPermission) })
     let failed: Bool = { if case .failed(let reason) = failing { return reason.contains("not confirmed") }; return false }()
     try test(failed && fm.fileExists(atPath: historical), "cleanup trash: explicitly confirmed native failure is reported with outcome uncertainty")
 }

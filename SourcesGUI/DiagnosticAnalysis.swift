@@ -454,3 +454,121 @@ enum CauseAnalyzer {
         return lines
     }
 }
+
+// MARK: Plain-language summary
+
+/// The event explained for someone who is not a storage engineer. Built only from `EventAnalysis`, so it never
+/// says more than the measurements do: a measured volume change is "measured", a same-interval change is
+/// "related, not established", and no evidence is "unknown". Exact figures stay in the details below it.
+struct EventPlainSummary: Equatable, Sendable {
+    enum Certainty: Equatable, Sendable { case measured, partlyMeasured, related, unknown }
+    let whatHappened: String
+    let explanation: String?
+    let certainty: Certainty
+    let certaintyText: String
+    let actions: [String]
+
+    static func make(_ event: StorageEvent, _ analysis: EventAnalysis) -> EventPlainSummary {
+        let b = analysis.breakdown
+        let whatHappened: String
+        if let net = b.net, net != 0 {
+            let amount = changeMagnitude(net)
+            let when = b.start.map { " between \($0.formatted(date: .omitted, time: .shortened)) and \(b.end.formatted(date: .omitted, time: .shortened))" } ?? ""
+            whatHappened = net < 0 ? "Your Mac lost \(amount) of available storage\(when)." : "Your Mac gained \(amount) of available storage\(when)."
+        } else { whatHappened = analysis.headline }
+
+        guard let top = analysis.causes.first else {
+            return EventPlainSummary(whatHappened: whatHappened, explanation: nil, certainty: .unknown,
+                                     certaintyText: "Storage Monitor doesn't know why. " + (analysis.causesUnavailable ?? "No measurement explains this change."),
+                                     actions: (b.net ?? 0) < 0 ? ["Use Storage to see which folders are largest right now."] : [])
+        }
+        let others = analysis.causes.dropFirst().map { "\(plainName($0)) (\(signedChange($0.delta)))" }
+        var explanation = describe(top, event: event)
+        if !others.isEmpty { explanation += " It also measured: " + others.joined(separator: ", ") + "." }
+        // Volumes that moved the other way are measured too; without them the larger figure reads as the whole change.
+        // Offsets too small to change the reading (under 10 MB or 1% of the net) stay in the detailed breakdown only.
+        let material = b.net.map { net in b.offsettingVolumes.filter { abs($0.delta) >= max(10 * CauseAnalyzer.negligibleChange, abs(net) / 100) } } ?? []
+        if let net = b.net, !material.isEmpty {
+            let offsets = material.sorted { abs($0.delta) > abs($1.delta) }.map { volume in
+                "\(offsetName(volume)) \(net < 0 ? "freed" : "used") \(changeMagnitude(volume.delta))"
+            }
+            explanation += " At the same time, " + offsets.joined(separator: " and ") + ", so the net \(net < 0 ? "loss" : "gain") was \(changeMagnitude(net))."
+        }
+
+        let certainty: Certainty, certaintyText: String
+        if top.evidenceClass == .confirmed {
+            switch b.reconciliation {
+            case .exact, .withinTolerance:
+                certainty = .measured
+                certaintyText = "Measured. Storage Monitor recorded how much space each part of the disk used before and after, and these changes account for the whole difference. Which app caused it was not recorded."
+            case .unaccounted(let rest):
+                certainty = .partlyMeasured
+                certaintyText = "Partly measured. These changes were recorded, but \(changeMagnitude(rest)) of the difference is not explained by them. Which app caused it was not recorded."
+            case .unavailable:
+                certainty = .partlyMeasured
+                certaintyText = "Partly measured. These changes were recorded, but they could not be matched exactly to the change in free space. Which app caused it was not recorded."
+            }
+        } else {
+            certainty = .related
+            certaintyText = "Not established. This was measured over the same period, so it may be related, but it is not confirmed as the cause."
+        }
+
+        var actions = [String]()
+        let loss = (b.net ?? 0) < 0
+        if loss, top.title.hasPrefix("Virtual memory") {
+            actions.append("Quitting apps you aren't using lowers memory pressure. macOS removes swap it no longer needs, and a restart clears it.")
+        }
+        if loss, top.title.hasPrefix("Data volume") || analysis.causes.contains(where: { $0.title.hasPrefix("Data volume") }) {
+            actions.append("Use Storage to see which folders are largest right now.")
+        }
+        return EventPlainSummary(whatHappened: whatHappened, explanation: explanation, certainty: certainty, certaintyText: certaintyText, actions: actions)
+    }
+
+    /// "What changed?": the most recent change of at least 1 GB within a day of the newest change; otherwise the newest.
+    static func latestNotable(_ events: [StorageEvent]) -> StorageEvent? {
+        let changes = events.filter { ($0.delta ?? 0) != 0 }.sorted { $0.timestamp > $1.timestamp }
+        guard let newest = changes.first else { return nil }
+        return changes.first { abs($0.delta ?? 0) >= decimalGB && newest.timestamp.timeIntervalSince($0.timestamp) <= 86_400 } ?? newest
+    }
+
+    static func offsetName(_ volume: VolumeChange) -> String {
+        switch volume.role {
+        case "VM": return "virtual memory"
+        case "Data": return "files and apps"
+        default: return "macOS system areas"
+        }
+    }
+
+    static func plainName(_ cause: LikelyCause) -> String {
+        switch cause.title {
+        case "Virtual memory growth": return "virtual memory grew"
+        case "Virtual memory reduction": return "virtual memory shrank"
+        case "Data volume growth": return "files and apps grew"
+        case "Data volume reduction": return "files and apps shrank"
+        case "Other system allocation": return "macOS system areas grew"
+        case "Other system allocation released": return "macOS system areas shrank"
+        default: return cause.title.lowercased()
+        }
+    }
+
+    private static func describe(_ cause: LikelyCause, event: StorageEvent) -> String {
+        let amount = changeMagnitude(cause.delta)
+        switch cause.title {
+        case "Virtual memory growth":
+            return "macOS used \(amount) more disk space for virtual memory (swap: memory moved onto the disk when apps need more than the Mac's RAM)."
+        case "Virtual memory reduction":
+            return "macOS released \(amount) of disk space it had been using for virtual memory (swap)."
+        case "Data volume growth":
+            let folder = CauseAnalyzer.drivingFolders(event).first
+            return "Files and apps on your Mac took up \(amount) more space." + (folder.map { " The largest measured growth was in \(($0.path as NSString).abbreviatingWithTildeInPath) (\(signedChange($0.allocatedDelta)))." } ?? " Which folders grew was not recorded.")
+        case "Data volume reduction":
+            return "Files and apps on your Mac took up \(amount) less space."
+        case "Other system allocation":
+            return "macOS system areas (such as software updates) used \(amount) more space."
+        case "Other system allocation released":
+            return "macOS system areas (such as software updates) released \(amount)."
+        default:
+            return "Over the same period, \(cause.title.lowercased()) changed by \(signedChange(cause.delta))."
+        }
+    }
+}

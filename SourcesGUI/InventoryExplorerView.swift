@@ -49,7 +49,9 @@ struct InventoryNestedContent {
                 if let row = rows.first(where: { $0.id == newValue }), case .more = row.content { loadMore(row.parent) }
                 return
             }
-            state.selection = newValue; publish()
+            state.selection = newValue
+            PerformanceTrace.mark("selection.change", "\(newValue.map(String.init) ?? "none")", frame: true)
+            publish()
         }
     }
 
@@ -150,6 +152,7 @@ struct InventoryNestedContent {
         }
         state.selection = node.id
         scrollRequest = node.id
+        PerformanceTrace.mark("selection.change", "\(node.id)", frame: true)
         publish()
     }
 
@@ -175,6 +178,7 @@ struct InventoryNestedContent {
         }
         state.selection = node.id
         scrollRequest = node.id
+        PerformanceTrace.mark("selection.change", "\(node.id) nested", frame: true)
         publish()
     }
 
@@ -198,7 +202,7 @@ struct InventoryNestedContent {
         spanReads.insert(folder)
         Task {
             defer { spanReads.remove(folder) }
-            guard let span = try? await reader.explorerSpan(parentID: folder, count: loaded),
+            guard let span = try? await PerformanceTrace.measure("explorer.span", "\(folder)", { try await reader.explorerSpan(parentID: folder, count: loaded) }),
                   state.children[folder]?.items.count == loaded else { return }
             state.receive(parent: folder, page: span.page, replacing: true)
             remainders[folder] = span.remainder.map { (span.page.items.count, $0) }
@@ -211,7 +215,7 @@ struct InventoryNestedContent {
         let reader = reader
         Task {
             do {
-                let page = try await reader.explorerChildren(parentID: parent, after: cursor, limit: 200)
+                let page = try await PerformanceTrace.measure("explorer.children", "\(parent)") { try await reader.explorerChildren(parentID: parent, after: cursor, limit: 200) }
                 // A reply for a folder that was collapsed and evicted meanwhile is still harmless to keep.
                 state.receive(parent: parent, page: page)
                 if parent == state.rootID { refreshRemainder(parent) }
@@ -306,13 +310,14 @@ struct InventoryExplorerView: View {
     @ObservedObject private var explorer: InventoryExplorerController
     @AppStorage("inventory.explorer.showMap") private var showMap = true
     /// Height of the map above the outline; kept between launches.
-    @AppStorage("inventory.explorer.mapHeight") private var mapHeight = 400.0
+    @AppStorage("inventory.explorer.mapHeight") private var mapHeight = 440.0
     @State private var dragStartHeight: Double?
     /// The Navigator (default) or the detailed table, the technical view.
     @AppStorage("inventory.explorer.technical") private var technicalView = false
     @AppStorage("inventory.explorer.inspector") private var showInspector = true
     /// The visualization above the Navigator: the Storage Atlas or the Living Tree (remembered).
     @AppStorage("inventory.explorer.visualization") private var visualization = InventoryVisualization.atlas
+    @AppStorage("inventory.explorer.treeNavigatorExpanded") private var treeNavigatorExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Space not attributed to indexed files is stated once, in the Disk Inventory header above the explorer.
@@ -332,16 +337,21 @@ struct InventoryExplorerView: View {
                 }
                 if showMap {
                     GeometryReader { geometry in
-                        let height = min(max(160, mapHeight), max(160, geometry.size.height - 200))
+                        let navigatorVisible = visualization != .tree || treeNavigatorExpanded
+                        let maximumHeight = max(160, geometry.size.height - (navigatorVisible ? 198 : 40))
+                        let minimumHeight = min(visualization == .tree ? 280 : 160, maximumHeight)
+                        let height = navigatorVisible ? min(max(minimumHeight, mapHeight), maximumHeight) : maximumHeight
                         VStack(spacing: 0) {
                             Group {
                                 switch visualization {
                                 case .atlas: StorageAtlasView(browser: browser, explorer: explorer)
-                                case .tree: LivingTreeView(browser: browser, explorer: explorer, tree: browser.livingTree)
+                                case .tree: LivingTreeView(browser: browser, explorer: explorer, tree: browser.livingTree, showsSelectionContext: !showInspector)
                                 }
                             }.frame(height: height)
-                            splitHandle(current: height, limit: geometry.size.height - 200)
-                            lowerPane
+                            if navigatorVisible {
+                                splitHandle(current: height, minimum: minimumHeight, limit: maximumHeight)
+                                lowerPane
+                            } else { paneToolbar }
                         }
                     }
                 } else { lowerPane }
@@ -350,18 +360,19 @@ struct InventoryExplorerView: View {
             if showInspector {
                 Divider()
                 InventoryInspectorView(browser: browser, explorer: explorer)
-                    .frame(width: 290)
+                    .frame(width: StorageDesign.inspectorWidth)
                     .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
             }
         }
         .onAppear(perform: syncRoot)
+        .onChange(of: visualization) { _, value in PerformanceTrace.mark("visualization.change", value.rawValue, frame: true) }
         .onChange(of: browser.directory?.id) { _, _ in syncRoot() }
         .onChange(of: browser.status?.updatedAt) { _, _ in explorer.inventoryChanged() }
         .onChange(of: browser.revision) { _, _ in explorer.inventoryChanged() }
     }
 
     /// A thin divider the map can be resized with; the height is remembered.
-    private func splitHandle(current: Double, limit: Double) -> some View {
+    private func splitHandle(current: Double, minimum: Double, limit: Double) -> some View {
         Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 1)
             .padding(.vertical, 3).contentShape(Rectangle())
             .onHover { inside in if inside { NSCursor.resizeUpDown.push() } else { NSCursor.pop() } }
@@ -369,7 +380,7 @@ struct InventoryExplorerView: View {
                 .onChanged { value in
                     let start = dragStartHeight ?? current
                     dragStartHeight = start
-                    mapHeight = min(max(160, start + value.translation.height), max(160, limit))
+                    mapHeight = min(max(minimum, start + value.translation.height), limit)
                 }
                 .onEnded { _ in dragStartHeight = nil })
             .accessibilityLabel("Resize storage map")
@@ -388,12 +399,30 @@ struct InventoryExplorerView: View {
     /// The Navigator or the technical table, with a slim bar to switch views and show the Inspector or Atlas.
     private var lowerPane: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
+            paneToolbar
+            Divider()
+            if technicalView { outline } else { InventoryNavigatorView(browser: browser, explorer: explorer) }
+        }
+    }
+
+    private var paneToolbar: some View {
+        HStack(spacing: 10) {
+            if visualization == .tree && showMap {
+                Button { treeNavigatorExpanded.toggle() } label: {
+                    Label(treeNavigatorExpanded ? "Hide Navigator" : "Show Navigator", systemImage: "list.bullet.indent")
+                }.controlSize(.small).accessibilityIdentifier("inventory.navigatorToggle")
+                if treeNavigatorExpanded {
+                    Menu("List style") {
+                        Picker("List style", selection: $technicalView) { Text("Navigator").tag(false); Text("Detailed table").tag(true) }
+                    }.controlSize(.small).fixedSize()
+                }
+            } else {
                 Picker("View", selection: $technicalView) {
                     Text("Navigator").tag(false)
                     Text("Table").tag(true)
                 }.pickerStyle(.segmented).labelsHidden().fixedSize().controlSize(.small)
                 .help("Navigator, or the detailed table with every column")
+            }
                 Spacer()
                 if showMap {
                     Picker("Visualization", selection: $visualization) {
@@ -409,9 +438,6 @@ struct InventoryExplorerView: View {
                 }.toggleStyle(.button).controlSize(.small)
                 .help(showInspector ? "Hide the Inspector" : "Show the Inspector").accessibilityLabel("Inspector")
             }.padding(.horizontal, 16).padding(.vertical, 6)
-            Divider()
-            if technicalView { outline } else { InventoryNavigatorView(browser: browser, explorer: explorer) }
-        }
     }
 
     private var outline: some View {

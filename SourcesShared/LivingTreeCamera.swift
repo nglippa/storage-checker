@@ -345,6 +345,13 @@ public struct LivingTreeLabel: Equatable, Sendable {
         let tip = transform.apply(self.tip)
         return frame.offsetBy(dx: tip.x, dy: tip.y)
     }
+
+    /// The element whose drawn label contains `point`; `tips` are the screen positions the labels are drawn at (one
+    /// per label). Labels are painted in order over the branches, so the last one containing the point wins.
+    public static func hit(_ point: CGPoint, labels: [LivingTreeLabel], tips: [CGPoint]) -> LivingTreeKey? {
+        for (label, tip) in zip(labels, tips).reversed() where label.frame.offsetBy(dx: tip.x, dy: tip.y).contains(point) { return label.key }
+        return nil
+    }
 }
 
 /// Places branch names without collisions: important branches first, each beside its own branch where neither
@@ -361,11 +368,19 @@ public enum LivingTreeLabeler {
     /// Most characters of a name shown in a label.
     public static let nameLength = 26
 
-    public static func text(_ element: LivingTreeElement, zoom: Double) -> (title: String, detail: String) {
+    /// - Parameter share: the element's share of the folder the tree shows, the same ratio its width encodes. Shown
+    ///   rounded to a whole percent ("<1%" below one), so the label states proportion without implying precision.
+    public static func text(_ element: LivingTreeElement, zoom: Double, share: Double? = nil) -> (title: String, detail: String) {
         // The same formatting as the Atlas and the lens.
-        let size = element.bytes.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "Size unknown"
+        var size = element.bytes.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "Size unknown"
+        if element.bytes != nil, let share { size += " · " + percent(share) }
         if element.role == .rest { return ("\(element.count.formatted()) grouped items", size) }
         return (atlasMiddleTruncated(element.name, keeping: nameLength), size)
+    }
+
+    public static func percent(_ share: Double) -> String {
+        let value = min(1, max(0, share)) * 100
+        return value < 1 ? "<1%" : "\(Int(value.rounded()))%"
     }
 
     /// - Parameters:
@@ -411,7 +426,7 @@ public enum LivingTreeLabeler {
             let branch = candidate.branch, element = candidate.element, isFocus = branch.key == focus
             // A folder that is nearly all of its labelled parent (Users › your home) is named once, by the parent.
             if !isFocus, let parent = element.parent, let parentBytes = labelled[parent], Double(element.bytes ?? 0) >= 0.9 * Double(parentBytes) { continue }
-            let words = text(element, zoom: zoom)
+            let words = text(element, zoom: zoom, share: candidate.share)
             let a = measure(words.title, true), b = measure(words.detail, false)
             let size = CGSize(width: max(a.width, b.width) + 2 * paddingX, height: a.height + b.height + 2 * paddingY)
             var best: (rect: CGRect, cost: Int)?

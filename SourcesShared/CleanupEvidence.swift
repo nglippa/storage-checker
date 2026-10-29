@@ -160,6 +160,15 @@ public final class ArtifactProbe: @unchecked Sendable {
 
     public func exists(_ path: String) -> Bool { info(path) != nil }
 
+    /// Whether a folder can be listed, noting when macOS refuses, without reading (or truncating) its entries.
+    @discardableResult public func readable(_ path: String) -> Bool {
+        guard let dir = opendir(path) else {
+            if errno == EACCES || errno == EPERM { note("macOS did not allow reading \((path as NSString).lastPathComponent)") }
+            return false
+        }
+        closedir(dir); return true
+    }
+
     /// Entry names of a directory (no metadata), at most `limit` and within the probe's entry budget.
     public func list(_ path: String, limit: Int = 512) -> (names: [String], complete: Bool)? {
         guard !timedOut else { note("Inspection time limit reached"); return nil }
@@ -253,22 +262,61 @@ public struct ProcessObservation: Equatable, Sendable {
     public let inspected: Int
     public let unreadable: Int
     public let takenAt: Date
+    /// Each observed path resolved once per observation (it is a point-in-time snapshot), instead of once per query.
+    private let resolved = ResolvedPaths()
 
     public init(executables: [String], workingDirectories: [String], openFiles: [String] = [], inspected: Int, unreadable: Int, takenAt: Date = Date()) {
         self.executables = executables.map(ArtifactPaths.logical); self.workingDirectories = workingDirectories.map(ArtifactPaths.logical)
         self.openFiles = openFiles.map(ArtifactPaths.logical); self.inspected = inspected; self.unreadable = unreadable; self.takenAt = takenAt
     }
 
+    public static func == (a: Self, b: Self) -> Bool {
+        a.executables == b.executables && a.workingDirectories == b.workingDirectories && a.openFiles == b.openFiles
+            && a.inspected == b.inspected && a.unreadable == b.unreadable && a.takenAt == b.takenAt
+    }
+
+    /// realpath components, memoized; nil when the path cannot be resolved (as `canonicalRelativeComponents` treats it).
+    private final class ResolvedPaths: @unchecked Sendable {
+        private let lock = NSLock()
+        private var components = [String: [String]?]()
+        func callAsFunction(_ path: String) -> [String]? {
+            lock.lock(); if let known = components[path] { lock.unlock(); return known }; lock.unlock()
+            let value = ProcessObservation.realComponents(path)
+            lock.lock(); components[path] = value; lock.unlock()
+            return value
+        }
+    }
+    static func realComponents(_ path: String) -> [String]? {
+        guard let real = realpath(path, nil) else { return nil }
+        defer { free(real) }
+        return ArtifactPaths.components(String(cString: real))
+    }
+
     public static let empty = ProcessObservation(executables: [], workingDirectories: [], inspected: 0, unreadable: 0)
 
     public var complete: Bool { unreadable == 0 && inspected > 0 }
 
-    private func relates(_ observed: String, to path: String) -> Bool {
-        ArtifactPaths.canonicalRelativeComponents(observed, within: path) != nil || ArtifactPaths.isWithin(observed, path)
+    /// Same answer as `canonicalRelativeComponents(observed, within: path) != nil || isWithin(observed, path)`,
+    /// resolving `path` once per query and each observed path once per observation.
+    private func relates(_ list: [String], to path: String) -> [String] {
+        guard !list.isEmpty else { return [] }
+        let root = Self.realComponents(path)
+        return list.filter { observed in
+            if let root, let parts = resolved(observed), parts.count >= root.count, Array(parts.prefix(root.count)) == root { return true }
+            return ArtifactPaths.isWithin(observed, path)
+        }
     }
-    public func runs(within path: String) -> Bool { executables.contains { relates($0, to: path) } }
-    public func works(within path: String) -> Bool { workingDirectories.contains { relates($0, to: path) } }
-    public func holdsOpen(within path: String) -> Bool { openFiles.contains { relates($0, to: path) } }
+    public func runs(within path: String) -> Bool { !relates(executables, to: path).isEmpty }
+    public func works(within path: String) -> Bool { !relates(workingDirectories, to: path).isEmpty }
+    public func holdsOpen(within path: String) -> Bool { !relates(openFiles, to: path).isEmpty }
+
+    /// Only the observations that relate to `root`. For a descendant that is not a symbolic link, anything related to it
+    /// is related to `root` (canonically and lexically), so checks against this subset give the same answers. A link's
+    /// target can lie outside `root`: check links against the full observation.
+    public func scoped(within root: String) -> ProcessObservation {
+        ProcessObservation(executables: relates(executables, to: root), workingDirectories: relates(workingDirectories, to: root),
+                           openFiles: relates(openFiles, to: root), inspected: inspected, unreadable: unreadable, takenAt: takenAt)
+    }
 
     /// The current process table. `openFilesOf` selects processes (by executable path) whose open files are listed.
     public static func current(maximumProcesses: Int = 8_192, openFilesOf: (String) -> Bool = { _ in false }) -> ProcessObservation {

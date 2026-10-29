@@ -502,6 +502,8 @@ public struct LivingTreeGeometry: Sendable {
 
 public enum LivingTreeGeometer {
     public static let minimumWidth: CGFloat = 0.6
+    /// The trunk's width in the fixed layout space (2D and 3D alike), so equal sizes are equally thick in both.
+    public static let maximumTrunkWidth: CGFloat = 26
     /// Each depth band is this fraction of the previous one: deeper levels are progressively shorter.
     public static let bandRatio = 0.7
 
@@ -526,7 +528,9 @@ public enum LivingTreeGeometer {
         let radius = max(10, min((w / 2 - side) / CGFloat(sin(LivingTreeArranger.fan)), (ground - top) / (1 + trunkRatio)))
         let crown = CGPoint(x: w / 2, y: ground - max(trunkRatio * radius, reachLow * radius + 10))
         let base = CGPoint(x: w / 2, y: ground)
-        let trunkWidth = min(18, max(7, min(w, h) * 0.022))
+        // Wide enough that the √share widths of large and small branches differ visibly (Users at 70% of the disk
+        // against Applications at 6% read 0.83 and 0.25 of this), small enough that the trunk never dominates.
+        let trunkWidth = min(maximumTrunkWidth, max(7, min(w, h) * 0.03))
         let trunkBytes = model.trunkBytes
 
         var branches = [LivingTreeGeometry.Branch](), index = [LivingTreeKey: Int]()

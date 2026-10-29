@@ -168,10 +168,18 @@ struct InventoryActions {
 struct InventoryInspectorView: View {
     @ObservedObject var browser: InventoryBrowserModel
     @ObservedObject var explorer: InventoryExplorerController
-    /// Review Queue uses the same Inspector for an indexed item outside the expanded Navigator pages.
+    @ObservedObject private var cleanup: CleanupInspectorController
     var reviewSubject: InventoryNode? = nil
     var showsTrash = true
     var usesQueueEvidence = false
+    @ViewState private var showingAccounting = false
+    @ViewState private var showingCleanup = false
+
+    init(browser: InventoryBrowserModel, explorer: InventoryExplorerController, reviewSubject: InventoryNode? = nil, showsTrash: Bool = true, usesQueueEvidence: Bool = false) {
+        self.browser = browser; self.explorer = explorer
+        self.reviewSubject = reviewSubject; self.showsTrash = showsTrash; self.usesQueueEvidence = usesQueueEvidence
+        _cleanup = ObservedObject(wrappedValue: browser.cleanup)
+    }
 
     private var subject: (node: InventoryNode, isSelection: Bool)? {
         if let reviewSubject { return (reviewSubject, true) }
@@ -187,94 +195,144 @@ struct InventoryInspectorView: View {
                 let parent = node.parentID.flatMap { explorer.state.node($0) }
                 let type = node.kind == .file ? UTType(filenameExtension: (node.name as NSString).pathExtension)?.localizedDescription : nil
                 let info = InventoryInspectorPresentation(node: node, parent: parent, typeDescription: type, formatter: AtlasText.bytes)
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: StorageDesign.sectionGap) {
                     identity(node, info: info, isSelection: subject.isSelection)
-                    sizes(info)
-                    if let share = info.shareOfParent, let text = info.shareText { shareView(share, text: text) }
-                    measurement(info, node: node)
-                    CleanupInspectorSection(cleanup: browser.cleanup, node: node, showsTrash: showsTrash)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Indexed size").font(.caption).foregroundStyle(.secondary)
+                        // The "Previously measured" caption below states an earlier size once; partial values keep their prefix.
+                        Text(InventoryNodePresentation.compactSize(InventoryMapPlan.weight(node), node: node, formatter: AtlasText.bytes)).font(.title2.weight(.semibold)).monospacedDigit().fixedSize(horizontal: false, vertical: true)
+                        if let share = info.shareOfParent, let text = info.shareText { shareView(share, text: text) }
+                        Text(info.measurement).font(.caption).foregroundStyle(.secondary)
+                    }
                     actions(node)
+                    largestContents(node)
+                    Divider()
+                    if subject.isSelection || node.parentID != nil {
+                        cleanupSummary(node)
+                        InspectorDisclosure("Cleanup & safety", isExpanded: $showingCleanup) {
+                            CleanupInspectorSection(cleanup: cleanup, node: node, showsTrash: showsTrash)
+                        }
+                    } else {
+                        Text("Choose a folder or file to see its cleanup review options.").font(.callout).foregroundStyle(.secondary)
+                    }
+                    Divider()
+                    InspectorDisclosure("Storage details", isExpanded: $showingAccounting) {
+                        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
+                            row("Indexed allocation", info.allocated)
+                            row("Logical size", info.logical)
+                            if let contents = info.contents { row("Contains", contents) }
+                            if let date = info.measured { row("Measured", date.formatted(date: .abbreviated, time: .shortened)) }
+                        }
+                        if let explanation = info.explanation { Text(explanation).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                        Text("Indexed sizes may include shared APFS storage. They are not guaranteed recoverable space.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
-                .padding(.horizontal, 16).padding(.vertical, 14)
+                .padding(StorageDesign.gutter)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // A new subject replaces the content outright and starts at the top (a cross-fade overlapped the two
-                // layouts); the same subject keeps its content and scroll position through refreshes.
                 .id(node.id)
             } else {
-                Text("Select an item to see its details.").font(.callout).foregroundStyle(.secondary).padding(16)
+                ContentUnavailableView("Choose a folder or file", systemImage: "cursorarrow.click", description: Text("Select it in the map or Navigator to see its size and review options."))
+                    .padding(16)
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .windowBackgroundColor))
         .accessibilityIdentifier("inventory.inspector")
-        // Evidence follows the subject and its inventory row (identity, size, measurement state).
-        .onAppear { if !usesQueueEvidence { browser.cleanup.update(subject?.node) { explorer.state.node($0) != nil } } }
-        .onChange(of: subject.map { CleanupInspectorController.fingerprint($0.node) }) { _, _ in if !usesQueueEvidence { browser.cleanup.update(subject?.node) { explorer.state.node($0) != nil } } }
-        // The inventory reported changes: a recognized item's evidence is collected again (processes, Git state).
-        .onChange(of: browser.revision) { _, _ in if !usesQueueEvidence { browser.cleanup.inventoryChanged(subject?.node) } }
+        .onAppear { if !usesQueueEvidence { cleanup.update(subject?.node) { explorer.state.node($0) != nil } } }
+        .onChange(of: subject.map { CleanupInspectorController.fingerprint($0.node) }) { _, _ in
+            if !usesQueueEvidence { cleanup.update(subject?.node) { explorer.state.node($0) != nil } }
+        }
+        .onChange(of: subject?.node.id) { _, _ in showingAccounting = false; showingCleanup = false }
+        .onChange(of: showingCleanup) { _, shown in
+            if !shown { cleanup.cancelTrashConfirmation(); cleanup.closePreview() }
+        }
+        .onChange(of: browser.revision) { _, _ in if !usesQueueEvidence { cleanup.inventoryChanged(subject?.node) } }
     }
 
     private func identity(_ node: InventoryNode, info: InventoryInspectorPresentation, isSelection: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !isSelection { Text("CURRENT FOLDER").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary).tracking(0.6) }
+        VStack(alignment: .leading, spacing: 10) {
+            Text(isSelection ? "Selection" : "Current folder").font(.caption).foregroundStyle(.secondary)
             HStack(alignment: .top, spacing: 10) {
-                Image(nsImage: ExplorerIcons.icon(for: node)).resizable().interpolation(.high).frame(width: 34, height: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(info.name).font(.headline).lineLimit(2).truncationMode(.middle).textSelection(.enabled)
-                    Text(info.kind).font(.caption).foregroundStyle(.secondary)
+                Image(nsImage: ExplorerIcons.icon(for: node)).resizable().interpolation(.high).frame(width: 32, height: 32)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(info.name).font(.title3.weight(.semibold)).lineLimit(3).truncationMode(.middle).textSelection(.enabled)
+                    Text(info.kind).font(.callout).foregroundStyle(.secondary)
                 }
             }
-            Text(info.path).font(.caption).foregroundStyle(.secondary).lineLimit(4).truncationMode(.middle).textSelection(.enabled)
+            Text(info.path).font(.caption).foregroundStyle(.secondary).lineLimit(2).truncationMode(.middle).textSelection(.enabled).help(info.path)
         }
     }
 
-    private func sizes(_ info: InventoryInspectorPresentation) -> some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
-            row("Allocated", info.allocated, strong: true)
-            row("Logical", info.logical)
-            if let contents = info.contents { row("Contains", contents) }
-            if let date = info.measured { row("Measured", date.formatted(date: .abbreviated, time: .shortened)) }
-        }
-    }
-
-    private func row(_ label: String, _ value: String, strong: Bool = false) -> some View {
+    private func row(_ label: String, _ value: String) -> some View {
         GridRow {
             Text(label).font(.caption).foregroundStyle(.secondary).gridColumnAlignment(.leading)
-            Text(value).font(strong ? .callout.weight(.semibold).monospacedDigit() : .callout.monospacedDigit()).textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(value).font(.callout.monospacedDigit()).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private func shareView(_ share: Double, text: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.primary.opacity(0.08))
-                    Capsule().fill(Color.accentColor.opacity(0.75)).frame(width: max(3, proxy.size.width * share))
+        VStack(alignment: .leading, spacing: 6) {
+            ProgressView(value: share).progressViewStyle(.linear).tint(.accentColor)
+                .accessibilityLabel("Share of parent").accessibilityValue(text)
+            Text(text).font(.callout).foregroundStyle(.secondary)
+        }.padding(.top, 7)
+    }
+
+    @ViewBuilder private func largestContents(_ node: InventoryNode) -> some View {
+        if node.kind == .directory, let children = explorer.state.children[node.id]?.items, !children.isEmpty {
+            let largest = Array(children.sorted { (InventoryMapPlan.weight($0) ?? -1) > (InventoryMapPlan.weight($1) ?? -1) }.prefix(3))
+            VStack(alignment: .leading, spacing: 9) {
+                Text("Largest loaded items").font(.subheadline.weight(.semibold))
+                ForEach(largest) { child in
+                    Button {
+                        if reviewSubject != nil { browser.revealReviewCandidate(child) }
+                        else { explorer.selection = child.id }
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(child.name).lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 3)
+                            Text(InventoryNodePresentation.compactSize(InventoryMapPlan.weight(child), node: child, formatter: AtlasText.bytes)).monospacedDigit().lineLimit(1)
+                        }.font(.caption).contentShape(Rectangle())
+                    }.buttonStyle(.plain).help(child.path)
                 }
-            }.frame(height: 6)
-            Text(text).font(.caption).foregroundStyle(.secondary)
+                Text(largest.contains { $0.status == .stale } ? "From the currently loaded folder page. Some sizes are from the last completed measurement." : "From the currently loaded folder page.").font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 
-    private func measurement(_ info: InventoryInspectorPresentation, node: InventoryNode) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Image(systemName: InventoryNavigatorGlyph.glyph(node)?.rawValue ?? "checkmark.circle").font(.caption).foregroundStyle(.secondary)
-                Text(info.measurement).font(.callout)
+    private func cleanupSummary(_ node: InventoryNode) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Cleanup review").font(.subheadline.weight(.semibold))
+            if cleanup.inspecting == node.id && cleanup.inspection?.nodeID != node.id {
+                HStack(spacing: 8) { ProgressView().controlSize(.mini); Text("Checking this item…").font(.callout).foregroundStyle(.secondary) }
+            } else if let inspection = cleanup.inspection, inspection.nodeID == node.id,
+                      let shown = CleanupInspectorPresentation(inspection, formatter: AtlasText.bytes) {
+                Label(shown.statusTitle, systemImage: shown.status == .protected ? "lock" : shown.status == .reviewCandidate ? "checklist" : "info.circle")
+                    .font(.callout.weight(.medium))
+                Text(shown.summary).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if let reason = shown.reasons.first { Text(reason).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            } else {
+                Text("No automatic cleanup suggestion for this item.").font(.callout).foregroundStyle(.secondary)
             }
-            if let explanation = info.explanation { Text(explanation).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
         }
     }
 
     private func actions(_ node: InventoryNode) -> some View {
         let actions = InventoryActions(browser: browser, node: node)
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 10) {
             if node.kind == .directory && node.id != explorer.state.rootID {
-                Button { browser.navigate(node) } label: { Label("Open", systemImage: "arrow.down.right.circle") }
+                Button {
+                    browser.mode = .explorer; browser.navigate(node)
+                } label: { Label("Explore Folder", systemImage: "arrow.right") }
+                    .buttonStyle(.borderedProminent).controlSize(.regular)
             }
-            Button { actions.reveal() } label: { Label("Reveal in Finder", systemImage: "folder") }
-            Button { actions.copy() } label: { Label("Copy Path", systemImage: "doc.on.doc") }
-        }.buttonStyle(.borderless).font(.callout)
+            HStack(spacing: 12) {
+                Button { actions.reveal() } label: { Label("Finder", systemImage: "folder") }
+                    .help("Reveal in Finder")
+                Button { actions.copy() } label: { Image(systemName: "doc.on.doc") }
+                    .accessibilityLabel("Copy path").help("Copy full path")
+            }.buttonStyle(.borderless).font(.callout)
+        }
     }
 }

@@ -1,5 +1,11 @@
 # Single-item Trash safety audit
 
+<!-- ux-milestone:start -->
+## UX milestone follow-up — 2026-10-27
+
+User-directed: partial process observation no longer hard-blocks folders containing programs or databases; it requires explicit acknowledgment of `programUseWarning`. Observed use still blocks. The Trash preflight now has its own budget (`trashPreflight`), a target-scoped process index, and a database open-file check that fails closed only beside the database. Diagnosis, fixtures and results: [UX-REFINEMENT-MILESTONE.md](UX-REFINEMENT-MILESTONE.md). 2026-10-28: the program/database warning now always applies to items containing programs or databases (observation covers only the current user); native sheet component behaviour and Finder Put Back of a disposable folder **VERIFIED** (same inode restored). Full-app native sheet remains unreachable by design in QA builds.
+<!-- ux-milestone:end -->
+
 <!-- final-rc-followup:start -->
 ## Final RC follow-up — 2026-10-27
 

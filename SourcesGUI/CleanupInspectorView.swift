@@ -20,6 +20,8 @@ import AppKit
     @Published private(set) var trashResult: (name: String, outcome: CleanupTrashOutcome)?
     @Published private(set) var trashing = false
     @Published private(set) var preparingTrash = false
+    /// Items checked so far by the running preparation (reported every few hundred items; 0 before the first report).
+    @Published private(set) var preparationChecked = 0
     @Published private(set) var trashConfirmation: CleanupTrashConfirmationToken?
 
     private let reader: InventoryReader
@@ -166,9 +168,12 @@ import AppKit
         guard allowsTrash, !preparingTrash, !trashing,
               subject?.id == node.id, fingerprint == Self.fingerprint(node) else { return nil }
         cancelTrashConfirmation()
-        trashResult = nil; reconciliationError = nil; preparingTrash = true
+        trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
-        let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment) }
+        let report: @Sendable (Int) -> Void = { checked in
+            Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+        }
+        let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
         let preparation = Task { [weak self] in
             let result = await withTaskCancellationHandler(operation: { await work.value }, onCancel: { work.cancel() })
             guard let self else {
@@ -389,7 +394,7 @@ struct CleanupInspectorSection: View {
         switch cleanup.trashDecision(node) {
         case .blocked(let why):
             if cleanup.inspection?.nodeID == node.id || cleanup.ordinary == node.id {
-                Text("Cannot be moved to the Trash from here. \(why)").font(.caption2).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+                refusal(why, prefix: "Can't be moved to the Trash")
             }
         case .allowed:
             HStack(spacing: 6) {
@@ -397,6 +402,12 @@ struct CleanupInspectorSection: View {
                     .buttonStyle(.link).font(.caption).disabled(cleanup.trashing || cleanup.preparingTrash)
                     .help("Validates this exact item, then asks for confirmation before moving it to the macOS Trash.")
                 if cleanup.trashing || cleanup.preparingTrash { ProgressView().controlSize(.mini) }
+                if cleanup.preparingTrash {
+                    Text(Self.checkingText(cleanup.preparationChecked, node: node)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        .accessibilityIdentifier("cleanup.trashProgress")
+                    Button("Stop") { cleanup.cancelTrashConfirmation() }.buttonStyle(.link).font(.caption)
+                        .help("Stops checking. Nothing is moved.").accessibilityIdentifier("cleanup.trashStop")
+                }
             }
             .sheet(isPresented: Binding(get: { cleanup.trashConfirmation != nil }, set: { if !$0 { cleanup.cancelTrashConfirmation() } })) {
                 if let confirmation = cleanup.trashConfirmation {
@@ -410,7 +421,33 @@ struct CleanupInspectorSection: View {
         }
     }
 
-    private func trashResultLine(_ result: (name: String, outcome: CleanupTrashOutcome)) -> some View {
+    /// Items checked so far, against the inventory's indexed count when there is one (labelled "about": it can be stale).
+    static func checkingText(_ checked: Int, node: InventoryNode) -> String {
+        let indexed = node.kind == .directory ? Int(node.descendantFiles + node.descendantDirectories + 1) : 1
+        guard checked > 0 else { return "Checking every item inside before moving…" }
+        return indexed > checked ? "Checked \(checked.formatted()) of about \(indexed.formatted()) items…" : "Checked \(checked.formatted()) items…"
+    }
+
+    /// A refusal: what kind of restriction it is, the exact reason, and the next step where there is one.
+    private func refusal(_ why: String, prefix: String) -> some View {
+        let guidance = CleanupTrashGuidance.explain(why)
+        return VStack(alignment: .leading, spacing: 3) {
+            Text("\(prefix) · \(guidance.title)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text(why).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
+            if let next = guidance.nextStep { Text(next).font(.caption2).foregroundStyle(.primary) }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("cleanup.trashRefusal")
+    }
+
+    @ViewBuilder private func trashResultLine(_ result: (name: String, outcome: CleanupTrashOutcome)) -> some View {
+        if case .refused(let why) = result.outcome {
+            refusal(why, prefix: "“\(result.name)” was not moved")
+        } else { trashOutcomeLine(result) }
+    }
+
+    private func trashOutcomeLine(_ result: (name: String, outcome: CleanupTrashOutcome)) -> some View {
         let text: String, symbol: String
         switch result.outcome {
         case .moved(let path): text = "Moved “\(result.name)” to the macOS Trash. " + (path.map { "Destination: \(CleanupTrashConfirmation.displayPath($0)). " } ?? "") + "Finder Put Back has not been verified. Available disk space may not increase. " + (cleanup.reconciliationError.map { "The inventory refresh request failed: \($0). Refresh this folder to reconcile it." } ?? "The inventory will update after it rechecks the folder."); symbol = "trash"
@@ -509,56 +546,55 @@ struct CleanupTrashConfirmation: View {
     @State private var accepted = false
 
     var body: some View {
-        let (override, warnings): (Bool, [String]) = { if case .allowed(let o, let w) = decision { return (o, w) }; return (true, []) }()
+        let (override, rawWarnings): (Bool, [String]) = { if case .allowed(let o, let w) = decision { return (o, w) }; return (true, []) }()
+        let warnings = CleanupTrashGuidance.presentedWarnings(rawWarnings)
         VStack(alignment: .leading, spacing: 12) {
             ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: override ? "exclamationmark.triangle.fill" : "trash").font(.title2).foregroundStyle(override ? .orange : .secondary)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Review “\(Self.displayPath(node.name))” before removal").font(.headline)
+                    Text("Move “\(Self.displayPath(node.name))” to the Trash?").font(.headline)
                     Text(verbatim: Self.displayPath(node.path)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    Text("Filesystem identity: \(node.identity.stableKey)").font(.caption2.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
-                    Text("Type: \(node.kind.rawValue) · Indexed size \(InventoryMapPlan.weight(node).map(AtlasText.bytes) ?? "unknown") · \(status.map { "Review: \($0.title)" } ?? "Not reviewed")").font(.caption).foregroundStyle(.secondary)
+                    Text("\(node.kind == .directory ? "Folder" : (node.kind == .file ? "File" : node.kind.rawValue.capitalized)) · \(InventoryMapPlan.weight(node).map(AtlasText.bytes) ?? "size unknown")" + (status.map { " · \($0.title)" } ?? "")).font(.caption).foregroundStyle(.secondary)
                 }
             }
             if let classification = inspection?.classification {
-                Text("\(classification.kind.title) · \(classification.tool.rawValue) · \(classification.confidence.title)").font(.caption.weight(.medium))
-                ForEach(Array(classification.supporting.prefix(4)), id: \.self) { observation in
-                    Text("· " + observation.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("\(classification.kind.title) · \(classification.tool.rawValue) · \(classification.confidence.title)").font(.caption.weight(.medium))
+                    ForEach(Array(classification.supporting.prefix(4)), id: \.self) { observation in
+                        Text("· " + observation.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-            } else {
-                Text("Unrecognized artifact. Storage Monitor has not established whether this item is safe to remove.").font(.caption).foregroundStyle(.secondary)
             }
-            if let preparedAt { Text("Validated \(preparedAt.formatted(date: .omitted, time: .standard)); this confirmation expires after 60 seconds.").font(.caption2).foregroundStyle(.secondary) }
-            if let recovery = inspection?.storage.recovery {
-                switch recovery {
-                case .estimated(let bytes, let basis): Text("Estimated recoverable: ≈ \(AtlasText.bytes(bytes)). \(basis)").font(.caption).foregroundStyle(.secondary)
-                case .unknown(let why): Text("Recoverable storage: Unknown. \(why)").font(.caption).foregroundStyle(.secondary)
-                }
-            } else { Text("Recoverable storage: Unknown.").font(.caption).foregroundStyle(.secondary) }
-            if !warnings.isEmpty {
+            if !warnings.isEmpty || override {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(override ? "Removal has not been established as safe" : "What could be affected").font(.caption.weight(.semibold))
-                    VStack(alignment: .leading, spacing: 3) { ForEach(warnings, id: \.self) { Text("· \($0)").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) } }
+                    Text(override ? CleanupTrashGuidance.notConfirmedSafe : "What could be affected").font(.callout.weight(.semibold))
+                    VStack(alignment: .leading, spacing: 3) { ForEach(warnings, id: \.self) { Text("· \($0)").font(.caption).fixedSize(horizontal: false, vertical: true) } }
                 }
+                .accessibilityElement(children: .combine).accessibilityIdentifier("inventory.cleanup.trashWarnings")
             }
-            Text("Move to Trash asks macOS to place this item in Trash. It is not permanent deletion. Available disk space may not increase until Trash is emptied; APFS sharing and snapshots can retain data. Finder Put Back has not been verified; keep the exact original path and confirm restoration options before relying on it.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Text(CleanupTrashPolicy.residualRisk)
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Text("Moving content in a cloud-synced folder may propagate its removal to other devices.").font(.caption).foregroundStyle(.secondary)
+            Group {
+                if let recovery = inspection?.storage.recovery, case .estimated(let bytes, let basis) = recovery { Text("Space you may get back: about \(AtlasText.bytes(bytes)). \(basis)") }
+                else { Text("Space you may get back: unknown until the Trash is emptied.") }
+            }.font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("About Move to Trash").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text("macOS moves the item to the Trash; nothing is deleted. Space is freed only when you empty the Trash, and APFS snapshots or shared storage can keep some of it. In a cloud-synced folder the removal may reach your other devices. \(CleanupTrashPolicy.residualRisk)")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if let preparedAt { Text("Checked at \(preparedAt.formatted(date: .omitted, time: .standard)). Confirm within 60 seconds, or review it again.").font(.caption).foregroundStyle(.secondary) }
+                Text("Filesystem identity \(node.identity.stableKey)").font(.caption2.monospaced()).foregroundStyle(.tertiary).textSelection(.enabled)
+            }
             if override {
-                Text("Storage Monitor has not established whether this item is safe to remove.").font(.caption).foregroundStyle(.secondary)
-                Toggle(isOn: $accepted) { Text("I understand these removal warnings.").font(.callout) }
-                    .toggleStyle(.checkbox)
+                Toggle(isOn: $accepted) { Text("I understand Storage Monitor hasn't confirmed this is safe to remove.").font(.callout) }
+                    .toggleStyle(.checkbox).accessibilityIdentifier("inventory.cleanup.acceptWarnings")
             }
             }.frame(maxWidth: .infinity, alignment: .leading)
             }
             Divider()
             HStack {
                 Spacer()
-                Button("Cancel", role: .cancel) { done(nil) }.keyboardShortcut(.cancelAction)
+                Button("Cancel", role: .cancel) { done(nil) }.keyboardShortcut(.cancelAction).accessibilityIdentifier("inventory.cleanup.cancelTrash")
                 Button("Move to Trash", role: .destructive) { done(accepted) }
                     .disabled(override && !accepted)
                     .accessibilityIdentifier("inventory.cleanup.confirmTrash")

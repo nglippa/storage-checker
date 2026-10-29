@@ -117,9 +117,11 @@ struct ViewerConfiguration {
         if inventoryVisible { inventoryRefreshTick &+= 1; lastInventoryRefresh = Date() }
     }
     func setInventoryBusy(_ busy: Bool) { inventoryBusy = busy }
+    /// Becoming visible needs no extra refresh: the inventory view reads the catalog as it appears. A tick here
+    /// queued a second and third full read behind that one on every return to Storage.
     func setInventoryVisible(_ visible: Bool) {
         inventoryVisible = visible
-        if visible { inventoryRefreshTick &+= 1 }
+        if visible { lastInventoryRefresh = Date() }
     }
     private func persist() { if let data = try? JSONEncoder().encode(filters) { preferences.set(data,forKey:"filters") } }
     private func applyFilters() {
@@ -133,7 +135,7 @@ struct ViewerConfiguration {
         isLoading = true
         refreshTask = Task {
             do {
-                let value = try await reader.load()
+                let value = try await PerformanceTrace.measure("history.load") { try await reader.load() }
                 guard !Task.isCancelled else { return }
                 snapshot = value; error = nil; historyMissing = false; applyFilters(); readiness.mark("history_ready")
                 // QA-only: preselect an event so captures show the inspector.
@@ -147,6 +149,7 @@ struct ViewerConfiguration {
     func start() {
         if let runtime = NativeQARuntime.active { NativeQAWorker.shared.start(runtime) }
         guard loop == nil else { return }
+        PerformanceTrace.startStallMonitor()
         applyAppearance()
         refreshAll()
         loop = Task {
@@ -208,7 +211,7 @@ struct StorageMonitorApplication: App {
             // Top-aligned and bounded by the window: content taller than the window must never be centred
             // under the title bar and toolbar (D6). The minimum content height holds the whole layout.
             MonitorRootView(store:store)
-                .frame(minWidth:780,maxWidth:.infinity,minHeight:640,maxHeight:.infinity,alignment:.top)
+                .frame(minWidth:1000,maxWidth:.infinity,minHeight:640,maxHeight:.infinity,alignment:.top)
                 .background(WindowSetup())
                 .onAppear { delegate.reopen = { openWindow(id:"main") }; store.start() }
                 .onDisappear { store.stop() }
@@ -232,12 +235,54 @@ private struct WindowSetup: NSViewRepresentable {
     func updateNSView(_ nsView: NSView,context: Context) {}
     final class WindowView: NSView {
         static var signalSource: DispatchSourceSignal?
+        private var interactionMonitor: Any?
+        private var responderObservation: NSKeyValueObservation?
+        private var keyObserver: NSObjectProtocol?
+        private var releasingAutomaticFocus = false
+        private weak var armedWindow: NSWindow?
+        /// AppKit makes the first text field (a search field) first responder when the window opens, so typing meant
+        /// for another app lands in it as the window comes forward. Until the person's first deliberate interaction in
+        /// this window (a click, a ⌘ shortcut or Tab), any automatic move of focus into a text field is undone as it
+        /// happens. The event monitor is local to this app and returns every event unchanged; all observers stop after
+        /// that first interaction, so a click into Search works at once and nothing changes later.
+        func releaseInitialTextFocus(_ window: NSWindow) {
+            // Armed once per window: moving into the same window again must not re-arm it after the person's first
+            // interaction, nor leave an earlier monitor installed.
+            guard window !== armedWindow else { return }
+            stopReleasingAutomaticFocus()
+            armedWindow = window
+            releasingAutomaticFocus = true
+            interactionMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown, .keyDown]) { [weak self, weak window] event in
+                let deliberate = event.type != .keyDown || event.modifierFlags.contains(.command) || event.keyCode == 48 // Tab
+                if let window, event.window === window, deliberate { self?.stopReleasingAutomaticFocus() }
+                return event
+            }
+            responderObservation = window.observe(\.firstResponder, options: [.new]) { [weak self] window, _ in
+                DispatchQueue.main.async { self?.releaseAutomaticFocus(window) }
+            }
+            keyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) { [weak self, weak window] _ in
+                guard let window else { return }
+                DispatchQueue.main.async { self?.releaseAutomaticFocus(window) }
+            }
+            releaseAutomaticFocus(window)
+        }
+        private func releaseAutomaticFocus(_ window: NSWindow) {
+            guard releasingAutomaticFocus, let editor = window.firstResponder as? NSTextView, editor.isFieldEditor else { return }
+            window.makeFirstResponder(nil)
+        }
+        private func stopReleasingAutomaticFocus() {
+            releasingAutomaticFocus = false
+            if let monitor = interactionMonitor { NSEvent.removeMonitor(monitor) }
+            if let observer = keyObserver { NotificationCenter.default.removeObserver(observer) }
+            interactionMonitor = nil; keyObserver = nil; responderObservation = nil
+        }
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             guard let window else { return }
             if NativeQARuntime.active != nil { window.isRestorable = false; window.disableSnapshotRestoration() }
             else { window.setFrameAutosaveName(ViewerConfiguration.current.isQA ? "StorageMonitorQA" : "StorageMonitorMain") }
-            window.minSize = NSSize(width:780,height:700)   // frame size: about 640 pt of content below the toolbar
+            window.minSize = NSSize(width:1000,height:700)   // frame size: about 640 pt of content below the toolbar
+            releaseInitialTextFocus(window)
             if let size = ViewerConfiguration.current.windowSize { window.setContentSize(size) }
             if NativeQARuntime.active != nil { window.title = "Storage Monitor — Native QA — Disposable Fixtures" }
             else if ViewerConfiguration.current.isQA { window.title = "Storage Monitor — QA: \(URL(fileURLWithPath:ViewerConfiguration.current.database).lastPathComponent)" }
@@ -267,20 +312,23 @@ private struct WindowSetup: NSViewRepresentable {
 private struct AppearanceSettings: View {
     @ObservedObject var store: ViewerStore
     @Environment(\.openWindow) private var openWindow
-    private static func monitoringState() -> MonitoringSetupStatus {
+    nonisolated private static func monitoringState() -> MonitoringSetupStatus {
         if let runtime = NativeQARuntime.active { return MonitoringSetupStatus(state: .off, summary: "QA fixture worker only. Production background monitoring is unavailable in this session.", installedVersion: nil, bundledVersion: nil, helperExecutable: nil, installedApp: URL(fileURLWithPath: runtime.root + "/no-installed-app")) }
         return MonitoringSetupStatus.evaluate(home: FileManager.default.homeDirectoryForCurrentUser, bundledHelper: MonitoringSetupStatus.bundledHelper(in: Bundle.main.bundleURL), launchd: LaunchdState.current())
     }
-    @State private var monitoring = Self.monitoringState()
+    /// Read off the main thread when Settings appears (nil until then). The read launches `launchctl`; as a State
+    /// initial value it ran synchronously on every evaluation of the app's scenes, i.e. on every store update.
+    @State private var monitoring: MonitoringSetupStatus?
     @State private var pending: MonitoringSetupAction?
     @State private var working = false
     @State private var result: String?
+    @ViewState private var showPrivacyDetails = false
     private func refreshMonitoring() {
-        monitoring = Self.monitoringState()
+        Task { monitoring = await Task.detached(priority: .userInitiated) { Self.monitoringState() }.value }
     }
     private func perform(_ action: MonitoringSetupAction) {
         guard NativeQARuntime.active == nil else { return }
-        guard let helper = monitoring.helperExecutable else { return }
+        guard let helper = monitoring?.helperExecutable else { return }
         working = true; result = nil
         Task {
             let outcome = await action.run(helper: helper)
@@ -289,7 +337,31 @@ private struct AppearanceSettings: View {
         }
     }
     // QA/development configurations never change the person's real LaunchAgents.
-    private var actionsAllowed: Bool { !store.configuration.isQA && monitoring.helperExecutable != nil && !working }
+    private var actionsAllowed: Bool { !store.configuration.isQA && monitoring?.helperExecutable != nil && !working }
+    @ViewBuilder private func monitoringControls(_ monitoring: MonitoringSetupStatus) -> some View {
+        Text(monitoring.summary).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.status")
+        HStack {
+            switch monitoring.state {
+            case .off: Button("Enable Background Monitoring…") { pending = .enable }
+            case .needsUpdate: Button("Update Background Monitor…") { pending = .enable }; Button("Disable…") { pending = .disable }
+            case .incomplete: Button("Repair…") { pending = .enable }; Button("Disable…") { pending = .disable }
+            case .on:
+                Button("Disable…") { pending = .disable }
+                // macOS prompts only while the choice is undecided; otherwise its settings decide.
+                if monitoring.notifications.canPrompt { Button("Allow Low-Space Notifications…") { perform(.notifications) } }
+                else { Button("Notification Settings…") { if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") { NSWorkspace.shared.open(url) } } }
+            }
+            if working { ProgressView().controlSize(.small) }
+        }.disabled(!actionsAllowed).accessibilityIdentifier("settings.monitoring.actions")
+        if store.configuration.isQA {
+            Text("Disabled in QA builds, which never change your real background tasks.").font(.caption).foregroundStyle(.secondary)
+        } else if monitoring.helperExecutable == nil {
+            Text("This build does not include the background monitor. Install Storage Monitor from its disk image to manage monitoring here.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+        }
+        if monitoring.state == .on {
+            Text(monitoring.notifications.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.notifications")
+        }
+    }
     var body: some View {
         Form {
             Section {
@@ -300,32 +372,16 @@ private struct AppearanceSettings: View {
                     .fixedSize(horizontal:false,vertical:true)
             }
             Section("Background Monitoring") {
-                Text(monitoring.summary).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.status")
-                HStack {
-                    switch monitoring.state {
-                    case .off: Button("Enable Background Monitoring…") { pending = .enable }
-                    case .needsUpdate: Button("Update Background Monitor…") { pending = .enable }; Button("Disable…") { pending = .disable }
-                    case .incomplete: Button("Repair…") { pending = .enable }; Button("Disable…") { pending = .disable }
-                    case .on:
-                        Button("Disable…") { pending = .disable }
-                        // macOS prompts only while the choice is undecided; otherwise its settings decide.
-                        if monitoring.notifications.canPrompt { Button("Allow Low-Space Notifications…") { perform(.notifications) } }
-                        else { Button("Notification Settings…") { if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") { NSWorkspace.shared.open(url) } } }
-                    }
-                    if working { ProgressView().controlSize(.small) }
-                }.disabled(!actionsAllowed).accessibilityIdentifier("settings.monitoring.actions")
-                if store.configuration.isQA {
-                    Text("Disabled in QA builds, which never change your real background tasks.").font(.caption).foregroundStyle(.secondary)
-                } else if monitoring.helperExecutable == nil {
-                    Text("This build does not include the background monitor. Install Storage Monitor from its disk image to manage monitoring here.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
-                }
-                if monitoring.state == .on {
-                    Text(monitoring.notifications.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.notifications")
-                }
+                if let monitoring { monitoringControls(monitoring) }
+                else { Text("Checking background monitoring…").foregroundStyle(.secondary).accessibilityIdentifier("settings.monitoring.status") }
                 if let result { Text(result).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.result") }
             }
             Section("Privacy") {
-                Text(MonitoringSetupStatus.permissions).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+                Text("Storage Monitor reads local capacity and optional folder measurements. It does not upload your storage history.")
+                    .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+                InspectorDisclosure("Permission details",isExpanded:$showPrivacyDetails) {
+                    Text(MonitoringSetupStatus.permissions).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+                }
                 Button("Open Full Disk Access Settings…") {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") { NSWorkspace.shared.open(url) }
                 }.disabled(NativeQARuntime.active != nil).accessibilityIdentifier("settings.privacy.fullDiskAccess")
@@ -337,9 +393,9 @@ private struct AppearanceSettings: View {
             refreshMonitoring()
             if NativeQARuntime.active != nil { for window in NSApp.windows { window.isRestorable = false; window.disableSnapshotRestoration() } }
         }
-        .alert(pending == .disable ? "Disable background monitoring?" : (monitoring.state == .off ? "Enable background monitoring?" : "Update background monitoring?"),
+        .alert(pending == .disable ? "Disable background monitoring?" : (monitoring?.state == .off ? "Enable background monitoring?" : "Update background monitoring?"),
                isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
-            Button(pending == .disable ? "Disable" : (monitoring.state == .off ? "Enable" : "Update")) { if let action = pending { perform(action) }; pending = nil }
+            Button(pending == .disable ? "Disable" : (monitoring?.state == .off ? "Enable" : "Update")) { if let action = pending { perform(action) }; pending = nil }
             Button("Cancel", role: .cancel) { pending = nil }
         } message: {
             Text(pending == .disable ? MonitoringSetupStatus.disableConfirmation : MonitoringSetupStatus.consent)
