@@ -33,15 +33,16 @@ The GUI opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`, takes short c
 
 For a distributable, drag-to-Applications disk image with the background monitor bundled inside the app, see [PACKAGING.md](PACKAGING.md) (`scripts/build-dmg.sh`).
 
-Build and install the desktop app independently (development):
+`scripts/build-gui.sh` builds a development viewer, `build/Storage Monitor.app`, with its own identity (`local.macbook.storage-monitor.viewer.dev`, "Storage Monitor Dev"), so its preferences and window state never change the installed app's. Run it in place; it is never installed.
+
+Install the desktop app on its own, without the disk image, from a release build (production identity `local.macbook.storage-monitor.viewer`):
 
 ```sh
-scripts/build-gui.sh
+STORAGE_MONITOR_APP_ONLY=1 scripts/build-dmg.sh
 scripts/install-gui.sh
-open '/Applications/Storage Monitor.app'
 ```
 
-The installer prefers `/Applications/Storage Monitor.app` when the current user can write there and otherwise uses `~/Applications/Storage Monitor.app`; this Mac uses `/Applications`. Quit the GUI normally before updating it. The background app and LaunchAgent are untouched. A writable explicit destination can be selected with `scripts/install-gui.sh --destination /Applications/Storage\ Monitor.app`; no sudo is used. The supplied icon resource is reused exactly.
+The installer refuses a bundle without the production identifier. It prefers `/Applications/Storage Monitor.app` when the current user can write there and otherwise uses `~/Applications/Storage Monitor.app`; this Mac uses `/Applications`. Quit the GUI normally before updating it. The background app and LaunchAgent are untouched. A writable explicit destination can be selected with `scripts/install-gui.sh --destination /Applications/Storage\ Monitor.app`; no sudo is used. The supplied icon resource is reused exactly.
 
 GUI test commands:
 

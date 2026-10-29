@@ -1177,6 +1177,9 @@ import SQLite3
         let trashSafetyRoot = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("storage-monitor-trash-safety-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: trashSafetyRoot, withIntermediateDirectories: true)
         try cleanupTrashSafetyTests(trashSafetyRoot) { ok, message in try test(ok, message) }
+        let repository = URL(fileURLWithPath: CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "tests/fixtures").standardizedFileURL
+            .deletingLastPathComponent().deletingLastPathComponent()
+        try viewerIdentityTests(root: repository) { ok, message in try test(ok, message) }
         try await cleanupReviewQueueTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-queue-fixtures")) { ok, message in try test(ok, message) }
         print("\(tests) GUI model/read-only tests passed; isolated fixtures: \(folder.path)")
     }

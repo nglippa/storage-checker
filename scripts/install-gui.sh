@@ -1,8 +1,13 @@
 #!/bin/sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SOURCE="$ROOT/build/Storage Monitor.app"
-if [ ! -x "$SOURCE/Contents/MacOS/StorageMonitorViewer" ]; then /usr/bin/printf '%s\n' 'Run scripts/build-gui.sh first.' >&2; exit 1; fi
+# Only a release build carries the production identity; scripts/build-gui.sh makes a development build
+# (local.macbook.storage-monitor.viewer.dev) that must not replace the installed app.
+SOURCE="$ROOT/build/dist/work/Storage Monitor.app"
+if [ ! -x "$SOURCE/Contents/MacOS/StorageMonitorViewer" ]; then /usr/bin/printf '%s\n' 'Run STORAGE_MONITOR_APP_ONLY=1 scripts/build-dmg.sh first.' >&2; exit 1; fi
+if [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$SOURCE/Contents/Info.plist")" != local.macbook.storage-monitor.viewer ]; then
+  /usr/bin/printf '%s\n' 'Refusing to install: the app does not have the production identifier.' >&2; exit 1
+fi
 if [ "${1:-}" = --destination ]; then
   DESTINATION=${2:?Supply an absolute .app destination}
 else

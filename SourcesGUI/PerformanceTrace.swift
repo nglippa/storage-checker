@@ -4,16 +4,20 @@ import os
 /// Navigation timing. Signposts are always emitted (visible in Instruments under Points of Interest, free when no
 /// tool records them). QA viewers launched with `--perf-log <absolute path>` also append one line per mark to that
 /// file, and record every main-thread run-loop pass longer than 50 ms, so a native session can be measured from
-/// inside the process instead of from screenshots.
+/// inside the process instead of from screenshots. Distribution builds compile the log, the stall monitor and the
+/// file output out; only the signposts remain.
 @MainActor enum PerformanceTrace {
     private static let signposter = OSSignposter(subsystem: "local.macbook.storage-monitor.viewer", category: .pointsOfInterest)
     private static let started = ProcessInfo.processInfo.systemUptime
     private static var output: FileHandle? = {
-        let args = CommandLine.arguments
-        guard ViewerConfiguration.current.isQA, let i = args.firstIndex(of: "--perf-log"), args.count > i + 1, args[i + 1].hasPrefix("/") else { return nil }
-        let path = args[i + 1]
+        #if STORAGE_MONITOR_DISTRIBUTION
+        return nil
+        #else
+        guard let path = ViewerIdentity.performanceLogPath(compiledIn: ViewerIdentity.performanceToolingCompiledIn, isQA: ViewerConfiguration.current.isQA,
+                                                            arguments: CommandLine.arguments) else { return nil }
         FileManager.default.createFile(atPath: path, contents: nil)
         return FileHandle(forWritingAtPath: path)
+        #endif
     }()
     static var isLogging: Bool { output != nil }
     /// The latest navigation mark, so the run-loop observer can report when its first frame was committed.
@@ -44,6 +48,7 @@ import os
     }
 
     static func startStallMonitor() {
+        #if !STORAGE_MONITOR_DISTRIBUTION
         guard output != nil, observer == nil else { return }
         observer = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.afterWaiting.rawValue | CFRunLoopActivity.beforeWaiting.rawValue, true, 0) { _, activity in
             MainActor.assumeIsolated {
@@ -55,10 +60,13 @@ import os
             }
         }
         CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes)
+        #endif
     }
 
     private static func write(_ line: String) {
+        #if !STORAGE_MONITOR_DISTRIBUTION
         guard let output else { return }
         output.write(Data(String(format: "%.4f %@\n", now() - started, line).utf8))
+        #endif
     }
 }

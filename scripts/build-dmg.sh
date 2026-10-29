@@ -3,8 +3,9 @@
 # as a helper) and packages it in a drag-to-Applications disk image. See PACKAGING.md.
 #
 # Environment (all optional):
-#   STORAGE_MONITOR_VERSION        marketing version            (default 1.0.0)
-#   STORAGE_MONITOR_BUILD          build number                 (default 1)
+#   STORAGE_MONITOR_VERSION        marketing version            (default: scripts/version.env)
+#   STORAGE_MONITOR_BUILD          build number                 (default: scripts/version.env)
+#   STORAGE_MONITOR_APP_ONLY=1     stop after building and verifying build/dist/work/Storage Monitor.app (no image)
 #   STORAGE_MONITOR_SIGN_IDENTITY  codesign identity; "-" = ad-hoc (default). A Developer ID
 #                                  identity adds the hardened runtime and a secure timestamp.
 #   STORAGE_MONITOR_SDK_PATH       macOS SDK for the SwiftUI app (default: 26.5 Command Line
@@ -15,8 +16,9 @@
 #   STORAGE_MONITOR_DMG_NAME       image file name              (default Storage-Monitor-<version>.dmg)
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-VERSION=${STORAGE_MONITOR_VERSION:-1.0.0}
-BUILD=${STORAGE_MONITOR_BUILD:-1}
+. "$ROOT/scripts/version.env"
+VERSION=${STORAGE_MONITOR_VERSION:-$STORAGE_MONITOR_RELEASE_VERSION}
+BUILD=${STORAGE_MONITOR_BUILD:-$STORAGE_MONITOR_RELEASE_BUILD}
 IDENTITY=${STORAGE_MONITOR_SIGN_IDENTITY:--}
 ARCHS=${STORAGE_MONITOR_ARCHS:-arm64 x86_64}
 MIN_MACOS=14.0
@@ -116,6 +118,7 @@ sign() { # path identifier
 sign "$HELPER" local.macbook.storage-monitor          # nested code first
 sign "$APP" local.macbook.storage-monitor.viewer
 /usr/bin/codesign --verify --deep --strict "$APP"
+if [ "${STORAGE_MONITOR_APP_ONLY:-0}" = 1 ]; then echo "Built $APP (no disk image)"; exit 0; fi
 
 echo "==> Disk image"
 STAGE="$WORK/dmg-root"

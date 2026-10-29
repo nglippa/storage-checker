@@ -30,8 +30,9 @@ Options, all set through environment variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `STORAGE_MONITOR_VERSION` | `1.0.0` | `CFBundleShortVersionString` of the app and helper; also the DMG file name |
-| `STORAGE_MONITOR_BUILD` | `1` | `CFBundleVersion` |
+| `STORAGE_MONITOR_VERSION` | `scripts/version.env` (2.1.0) | `CFBundleShortVersionString` of the app and helper; also the DMG file name |
+| `STORAGE_MONITOR_BUILD` | `scripts/version.env` (9) | `CFBundleVersion`; only ever increases |
+| `STORAGE_MONITOR_APP_ONLY` | unset | `1` stops after building and verifying `build/dist/work/Storage Monitor.app`; no disk image |
 | `STORAGE_MONITOR_SIGN_IDENTITY` | `-` (ad-hoc) | codesign identity |
 | `STORAGE_MONITOR_ARCHS` | `arm64 x86_64` | architectures |
 | `SOURCE_DATE_EPOCH` | last commit time | timestamps of every file in the image |

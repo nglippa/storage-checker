@@ -130,6 +130,22 @@ private func accountingTests(_ test: (Bool, String) throws -> Void) throws {
     finished.wait()
     try test(box.value?.indexedAllocated == oracleAllocated && box.value?.unavailableFolders == 1 && box.value?.protectedFolders == 0 && box.value?.fullDiskAccess == "not_granted" && box.value?.rootStatus == "partial",
              "accounting summary reads the root total, the unavailable folder and the worker's own Full Disk Access state")
+    // The accounting reader finds limits with a loose index scan over kinds. The plain full scan it replaced is the
+    // oracle: both must give the same tallies on every database the tests build.
+    var oracle = (excluded: Int64(0), unreadable: Int64(0), protected: Int64(0), unavailable: Int64(0))
+    for row in try db.rows("""
+        SELECT kind,status,COALESCE(reason,'') AS reason,COUNT(*) AS n FROM inventory_nodes
+        WHERE generation_id=(SELECT id FROM inventory_generations WHERE active=1 ORDER BY id DESC LIMIT 1) AND status IN ('unknown','excluded')
+        GROUP BY kind,status,reason
+        """) {
+        let count = Int64(row["n"] ?? "") ?? 0
+        if row["status"] == "excluded" { oracle.excluded += count }
+        else if row["kind"] != "directory" { oracle.unreadable += count }
+        else if ["consent", "privacy", "metadata:privacy"].contains(row["reason"] ?? "") { oracle.protected += count }
+        else { oracle.unavailable += count }
+    }
+    try test(box.value.map { ($0.excludedFolders, $0.unreadableEntries, $0.protectedFolders, $0.unavailableFolders) == oracle } == true,
+             "accounting limits from the indexed kind scan equal a full scan of the generation (\(oracle))")
     if cloned {
         let clones = try db.rows("SELECT total_allocated FROM inventory_nodes WHERE name IN ('plain','plain-clone')").compactMap { Int64($0["total_allocated"] ?? "") }
         try test(clones.count == 2 && clones[0] == clones[1] && clones[0] >= 1_000_000,

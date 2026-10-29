@@ -8,6 +8,7 @@ struct ViewerConfiguration {
     let windowSize: CGSize?
     let isQA: Bool
     let readinessOutput: String?
+    var windowTitle: String { ViewerIdentity.windowTitle(isQA: isQA, nativeQA: NativeQARuntime.active != nil, database: database) }
     static let current: Self = {
         if let runtime = NativeQARuntime.active { return Self(database: runtime.database, appearance: nil, windowSize: nil, isQA: true, readinessOutput: runtime.readiness) }
         let args = CommandLine.arguments
@@ -94,9 +95,11 @@ struct ViewerConfiguration {
         appearance = AppAppearance.load(preferences, override: configuration.appearance)
     }
     nonisolated static func preferences(for configuration: ViewerConfiguration) -> UserDefaults {
-        if NativeQARuntime.active != nil { return .standard }
-        return configuration.isQA ? UserDefaults(suiteName: "local.macbook.storage-monitor.viewer.qa")! : .standard
+        guard let suite = ViewerIdentity.preferencesSuite(isQA: configuration.isQA, nativeQA: NativeQARuntime.active != nil) else { return .standard }
+        return UserDefaults(suiteName: suite)!
     }
+    /// Where every persisted view preference (`@AppStorage` included) is kept for this launch.
+    nonisolated(unsafe) static let viewPreferences = preferences(for: .current)  // UserDefaults is thread-safe
     func applyAppearance() { Self.apply(appearance) }
     static func apply(_ appearance: AppAppearance) {
         let target: NSAppearance? = appearance == .system ? nil : NSAppearance(named: appearance == .dark ? .darkAqua : .aqua)
@@ -279,13 +282,14 @@ private struct WindowSetup: NSViewRepresentable {
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             guard let window else { return }
-            if NativeQARuntime.active != nil { window.isRestorable = false; window.disableSnapshotRestoration() }
-            else { window.setFrameAutosaveName(ViewerConfiguration.current.isQA ? "StorageMonitorQA" : "StorageMonitorMain") }
+            // QA windows save no frame or restoration state: those live in the app's own domain, which a QA database
+            // read by a production build must not change.
+            if NativeQARuntime.active != nil || ViewerConfiguration.current.isQA { window.isRestorable = false; window.disableSnapshotRestoration() }
+            else { window.setFrameAutosaveName("StorageMonitorMain") }
             window.minSize = NSSize(width:1000,height:700)   // frame size: about 640 pt of content below the toolbar
             releaseInitialTextFocus(window)
             if let size = ViewerConfiguration.current.windowSize { window.setContentSize(size) }
-            if NativeQARuntime.active != nil { window.title = "Storage Monitor — Native QA — Disposable Fixtures" }
-            else if ViewerConfiguration.current.isQA { window.title = "Storage Monitor — QA: \(URL(fileURLWithPath:ViewerConfiguration.current.database).lastPathComponent)" }
+            window.title = ViewerConfiguration.current.windowTitle
             // QA-only capture of the actual rendered native content. This is
             // independent of WindowServer's animated/minimized screenshot state.
             let args = CommandLine.arguments
@@ -391,7 +395,7 @@ private struct AppearanceSettings: View {
         .frame(width:480)
         .onAppear {
             refreshMonitoring()
-            if NativeQARuntime.active != nil { for window in NSApp.windows { window.isRestorable = false; window.disableSnapshotRestoration() } }
+            if NativeQARuntime.active != nil || store.configuration.isQA { for window in NSApp.windows { window.isRestorable = false; window.disableSnapshotRestoration() } }
         }
         .alert(pending == .disable ? "Disable background monitoring?" : (monitoring?.state == .off ? "Enable background monitoring?" : "Update background monitoring?"),
                isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {

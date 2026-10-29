@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+. "$ROOT/scripts/version.env"
+VERSION=${STORAGE_MONITOR_VERSION:-$STORAGE_MONITOR_RELEASE_VERSION}
+BUILD=${STORAGE_MONITOR_BUILD:-$STORAGE_MONITOR_RELEASE_BUILD}
 APP="$ROOT/build/MacBook Storage Monitor.app"
 /bin/mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ROOT/build/module-cache" "$ROOT/build/AppIcon.iconset"
 # Keep the supplied artwork intact; macOS icon representations are proportional resizes.
@@ -23,7 +26,7 @@ if ! /usr/bin/iconutil -c icns "$ROOT/build/AppIcon.iconset" -o "$APP/Contents/R
   /usr/bin/xcrun swift -module-cache-path "$ROOT/build/module-cache" "$ROOT/scripts/pack-icon.swift" "$ROOT/build/AppIcon.iconset" "$APP/Contents/Resources/AppIcon.icns"
 fi
 /usr/bin/xcrun swiftc -target arm64-apple-macos14.0 -swift-version 5 -O -module-cache-path "$ROOT/build/module-cache" -framework AppKit -framework UserNotifications -parse-as-library "$ROOT"/Sources/*.swift "$ROOT"/SourcesShared/*.swift "$ROOT/tests/InventoryTests.swift" -o "$APP/Contents/MacOS/StorageMonitor"
-/bin/cat > "$APP/Contents/Info.plist" <<'PLIST'
+/bin/cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -33,8 +36,8 @@ fi
 <key>CFBundleExecutable</key><string>StorageMonitor</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>1.0.0</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>$VERSION</string>
+<key>CFBundleVersion</key><string>$BUILD</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>

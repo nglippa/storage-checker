@@ -20,7 +20,7 @@ private struct EventInspector: View {
     @ViewState private var expanded = TechnicalSection.expandedByDefault
     @ViewState private var showFullExplanation = false
     /// The measurements behind the summary. Remembered while the viewer is open.
-    @AppStorage("event.showEvidence") private var showEvidence = false
+    @AppStorage("event.showEvidence", store: ViewerStore.viewPreferences) private var showEvidence = false
 
     // QA-only capture aids; ignored unless the viewer was opened on a QA database.
     private static let qaArgs = ViewerConfiguration.current.isQA ? CommandLine.arguments : []

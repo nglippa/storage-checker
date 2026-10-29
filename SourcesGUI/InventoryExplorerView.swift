@@ -308,16 +308,16 @@ struct InventoryExplorerView: View {
     /// Owned by the browser model, so the outline and the storage map share one navigation and selection
     /// state, and switching browse modes keeps what was expanded.
     @ObservedObject private var explorer: InventoryExplorerController
-    @AppStorage("inventory.explorer.showMap") private var showMap = true
+    @AppStorage("inventory.explorer.showMap", store: ViewerStore.viewPreferences) private var showMap = true
     /// Height of the map above the outline; kept between launches.
-    @AppStorage("inventory.explorer.mapHeight") private var mapHeight = 440.0
+    @AppStorage("inventory.explorer.mapHeight", store: ViewerStore.viewPreferences) private var mapHeight = 440.0
     @State private var dragStartHeight: Double?
     /// The Navigator (default) or the detailed table, the technical view.
-    @AppStorage("inventory.explorer.technical") private var technicalView = false
-    @AppStorage("inventory.explorer.inspector") private var showInspector = true
+    @AppStorage("inventory.explorer.technical", store: ViewerStore.viewPreferences) private var technicalView = false
+    @AppStorage("inventory.explorer.inspector", store: ViewerStore.viewPreferences) private var showInspector = true
     /// The visualization above the Navigator: the Storage Atlas or the Living Tree (remembered).
-    @AppStorage("inventory.explorer.visualization") private var visualization = InventoryVisualization.atlas
-    @AppStorage("inventory.explorer.treeNavigatorExpanded") private var treeNavigatorExpanded = false
+    @AppStorage("inventory.explorer.visualization", store: ViewerStore.viewPreferences) private var visualization = InventoryVisualization.atlas
+    @AppStorage("inventory.explorer.treeNavigatorExpanded", store: ViewerStore.viewPreferences) private var treeNavigatorExpanded = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Space not attributed to indexed files is stated once, in the Disk Inventory header above the explorer.

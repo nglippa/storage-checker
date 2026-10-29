@@ -362,10 +362,10 @@ struct CleanupReviewQueueView: View {
 
     private func reveal(_ node: InventoryNode, visualization: InventoryVisualization?) {
         if let visualization {
-            UserDefaults.standard.set(visualization.rawValue, forKey: "inventory.explorer.visualization")
-            UserDefaults.standard.set(true, forKey: "inventory.explorer.showMap")
+            ViewerStore.viewPreferences.set(visualization.rawValue, forKey: "inventory.explorer.visualization")
+            ViewerStore.viewPreferences.set(true, forKey: "inventory.explorer.showMap")
         }
-        UserDefaults.standard.set(false, forKey: "inventory.explorer.technical")
+        ViewerStore.viewPreferences.set(false, forKey: "inventory.explorer.technical")
         browser.revealReviewCandidate(node)
     }
 }

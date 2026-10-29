@@ -645,7 +645,7 @@ struct LivingTreeView: View {
     @State private var shownRoot: Int64?
     @FocusState private var focused: Bool
     /// 2D or 3D, remembered.
-    @AppStorage("inventory.livingTree.dimension") private var dimensionSetting = LivingTreeDimension.flat.rawValue
+    @AppStorage("inventory.livingTree.dimension", store: ViewerStore.viewPreferences) private var dimensionSetting = LivingTreeDimension.flat.rawValue
 
     var body: some View {
         VStack(spacing: 0) {

@@ -4,10 +4,17 @@ import AppKit
 /// QA-only navigation benchmark run inside a native window, without pointer, keyboard or accessibility input: each
 /// step sets the same state its control sets. Enabled only for a QA database with `--perf-script` and `--perf-log`;
 /// every step is logged by `PerformanceTrace` with its time to ready. The remembered visualization is restored at the end.
+/// Distribution builds keep only an inert shell: `start` does nothing and no step can run.
 @MainActor final class PerformanceScript {
     static let shared = PerformanceScript()
-    static var isEnabled: Bool { ViewerConfiguration.current.isQA && CommandLine.arguments.contains("--perf-script") && PerformanceTrace.isLogging }
     var setSection: ((String) -> Void)?
+    #if STORAGE_MONITOR_DISTRIBUTION
+    func start(store: ViewerStore, inventory: InventoryBrowserModel) {}
+    #else
+    static var isEnabled: Bool {
+        ViewerIdentity.performanceScriptEnabled(compiledIn: ViewerIdentity.performanceToolingCompiledIn, isQA: ViewerConfiguration.current.isQA,
+                                                arguments: CommandLine.arguments) && PerformanceTrace.isLogging
+    }
     private var started = false
 
     func start(store: ViewerStore, inventory: InventoryBrowserModel) {
@@ -24,7 +31,7 @@ import AppKit
 
     private func run(store: ViewerStore, inventory: InventoryBrowserModel) async {
         let explorer = inventory.explorer
-        let defaults = UserDefaults.standard, visualizationKey = "inventory.explorer.visualization"
+        let defaults = ViewerStore.viewPreferences, visualizationKey = "inventory.explorer.visualization"
         let savedVisualization = defaults.object(forKey: visualizationKey)
         func storageReady() -> Bool {
             guard !inventory.loading, inventory.status != nil, let directory = inventory.directory else { return false }
@@ -75,4 +82,5 @@ import AppKit
         if let savedVisualization { defaults.set(savedVisualization, forKey: visualizationKey) } else { defaults.removeObject(forKey: visualizationKey) }
         PerformanceTrace.mark("script.done")
     }
+    #endif
 }

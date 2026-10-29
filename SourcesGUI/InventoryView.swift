@@ -17,7 +17,7 @@ struct MonitorRootView: View {
             else { DiskInventoryView(configuration: store.configuration, history: store, model: inventory) }
         }
         // Set for both sections, so the QA marker stays in the title after Monitoring is left.
-        .navigationTitle(store.configuration.isQA ? "Storage Monitor — QA: \(URL(fileURLWithPath:store.configuration.database).lastPathComponent)" : "Storage Monitor")
+        .navigationTitle(store.configuration.windowTitle)
         // D6: when the content is taller than the window, SwiftUI centred it and pushed its top rows
         // under the title bar and toolbar. Anchor it to the top so any overflow leaves at the bottom.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -332,7 +332,7 @@ struct DiskInventoryView: View {
     let configuration: ViewerConfiguration
     @ObservedObject var history: ViewerStore
     @ObservedObject var model: InventoryBrowserModel
-    @AppStorage("inventory.header.details") private var showingIndexDetails = false
+    @AppStorage("inventory.header.details", store: ViewerStore.viewPreferences) private var showingIndexDetails = false
     @ObservedObject private var qaWorker = NativeQAWorker.shared
     private var workerAvailable: Bool {
         let data = URL(fileURLWithPath: configuration.database).deletingLastPathComponent()
