@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import AppKit
 
 extension EventSeverity {
     var color: Color { switch self { case .normal: return .secondary; case .information: return .blue; case .warning: return .orange; case .critical: return .red } }
@@ -256,7 +257,30 @@ struct CapacityChart: View {
     @Binding var range: EventTimeFilter
     let compact: Bool
     let selectEvent: (String) -> Void
+    /// Geometry regression seams (tests/CapacityChartGeometryTests.swift): start hovered on the reading at this time, and
+    /// report the plot frame and point positions after each layout. Nil in the app.
+    var inspectHoverAt: Date? = nil
+    var onPlotLayout: ((CGRect,[Date:CGPoint]) -> Void)? = nil
+    /// Hover seam: the hovered reading after each pointer move, and the drawn hover callout's frame in the overlay.
+    var onHoverLayout: ((Date?,CGRect?) -> Void)? = nil
     @ViewState private var hovered: PlotReading?
+    /// Time, available space, and the change from the previous joined reading (none at a segment's start).
+    /// The pointer, in the overlay's coordinates (nil: it left the chart), hovers the nearest drawn reading in reach.
+    private func pointerMoved(to location: CGPoint?,proxy: ChartProxy,plot: CGRect) {
+        let next = location.flatMap { location in
+            CapacityChartHover.nearest(location,among:points.compactMap { point -> (PlotReading,CGPoint)? in
+                guard let x = proxy.position(forX:point.date), let y = proxy.position(forY:point.freeGB) else { return nil }
+                return (point,CGPoint(x:plot.minX+x,y:plot.minY+y))
+            })
+        }
+        if next?.id != hovered?.id { hovered = next }   // only invalidate when the hovered reading changes
+        onHoverLayout?(hovered?.date,nil)
+    }
+    private func hoverText(_ reading: PlotReading) -> String {
+        let shown = points
+        let previous = shown.firstIndex { $0.id == reading.id }.flatMap { i in i > 0 && shown[i-1].segment == reading.segment ? shown[i-1].measurement.free : nil }
+        return CapacityChartHover.describe(date:reading.date,free:reading.measurement.free,previousFree:previous)
+    }
     @ViewState private var selectionMessage: String?
     private var points: [PlotReading] {
         let cutoff = Date().addingTimeInterval(-(range.seconds ?? 86400))
@@ -306,20 +330,16 @@ struct CapacityChart: View {
                             .symbolSize(42)
                             .accessibilityLabel("\(item.event.category), \(item.event.delta.map(signedChange) ?? "")")
                     }
+                    // No `.annotation` here: an annotation near a plot edge makes Charts pad the scale to fit it, which moved
+                    // every point (and the hovered one out from under the pointer) — the hover/unhover flicker. The labels
+                    // are drawn in the overlay below, which cannot change the chart's layout.
                     if let hovered, points.contains(where: { $0.id == hovered.id }) {
                         RuleMark(x:.value("Selected reading",hovered.date)).foregroundStyle(.secondary.opacity(0.5))
                         PointMark(x:.value("Selected reading",hovered.date),y:.value("Available",hovered.freeGB)).foregroundStyle(Color.accentColor).symbolSize(55)
-                            .annotation(position:.top,alignment:.leading) { Text("\(hovered.date.formatted(date:.abbreviated,time:.standard)) · \(capacity(hovered.measurement.free))").font(.caption2).padding(5).background(.regularMaterial,in:RoundedRectangle(cornerRadius:5)) }
                     }
                     if let selectedPoint {
                         PointMark(x:.value("Selected event",selectedPoint.date),y:.value("Available",selectedPoint.freeGB))
                             .foregroundStyle(Color.accentColor).symbolSize(90)
-                            .annotation(position:.top,alignment:.trailing) {
-                                if hovered == nil, let delta = events.first(where: { $0.id == selectedEventID })?.delta {
-                                    Text("\(selectedPoint.date.formatted(date:.abbreviated,time:.shortened)) · \(signedChange(delta)) · \(capacity(selectedPoint.measurement.free))")
-                                        .font(.caption2.monospacedDigit()).padding(5).background(.regularMaterial,in:RoundedRectangle(cornerRadius:5))
-                                }
-                            }
                     }
                 }
                 .chartYScale(domain:0...max(30,(points.map(\.freeGB).max() ?? 25)+3))
@@ -328,17 +348,14 @@ struct CapacityChart: View {
                 .chartLegend(.hidden)
                 .chartOverlay { proxy in
                     GeometryReader { geometry in
-                        Rectangle().fill(.clear).contentShape(Rectangle()).onContinuousHover { phase in
-                            switch phase {
-                            case .active(let location):
-                                guard let frame = proxy.plotFrame else { return }
-                                let origin = geometry[frame].origin, local = CGPoint(x:location.x-origin.x,y:location.y-origin.y)
-                                hovered = points.compactMap { point -> (PlotReading,CGFloat)? in
-                                    guard let x = proxy.position(forX:point.date), let y = proxy.position(forY:point.freeGB) else { return nil }
-                                    return (point,hypot(x-local.x,y-local.y))
-                                }.min { $0.1 < $1.1 }.flatMap { $0.1 <= 14 ? $0.0 : nil }
-                            case .ended: hovered = nil
-                            }
+                        let plot = proxy.plotFrame.map { geometry[$0] } ?? .zero
+                        Rectangle().fill(.clear).contentShape(Rectangle())
+                        .onAppear { if let inspectHoverAt { hovered = points.first { $0.date == inspectHoverAt } } }
+                        .onChange(of:"\(plot)|\(hovered?.id ?? 0)|\(proxy.position(forX:points[0].date) ?? 0),\(proxy.position(forY:points[0].freeGB) ?? 0)",initial:true) { _, _ in
+                            guard let onPlotLayout else { return }
+                            var positions: [Date:CGPoint] = [:]
+                            for point in points { if let x = proxy.position(forX:point.date), let y = proxy.position(forY:point.freeGB) { positions[point.date] = CGPoint(x:plot.minX+x,y:plot.minY+y) } }
+                            onPlotLayout(plot,positions)
                         }
                         .gesture(SpatialTapGesture().onEnded { value in
                             guard let frame = proxy.plotFrame else { return }
@@ -353,7 +370,17 @@ struct CapacityChart: View {
                                 selectionMessage = "That reading has no unique event in the current filters. Use the event table or adjust Filters."
                             }
                         })
+                        // Pointer moves arrive through an AppKit tracking area that never takes clicks (the tap above and
+                        // the tooltip still receive them). The pointer is in this overlay's coordinates, as are the points.
+                        ChartPointerLayer { pointerMoved(to:$0,proxy:proxy,plot:plot) }.allowsHitTesting(false)
+                        if let hovered, let x = proxy.position(forX:hovered.date), let y = proxy.position(forY:hovered.freeGB) {
+                            ChartCallout(text:hoverText(hovered),anchor:CGPoint(x:plot.minX+x,y:plot.minY+y),bounds:geometry.size) { onHoverLayout?(hovered.date,$0) }
+                        } else if let selectedPoint, let delta = events.first(where: { $0.id == selectedEventID })?.delta,
+                                  let x = proxy.position(forX:selectedPoint.date), let y = proxy.position(forY:selectedPoint.freeGB) {
+                            ChartCallout(text:"\(selectedPoint.date.formatted(date:.abbreviated,time:.shortened)) · \(signedChange(delta)) · \(capacity(selectedPoint.measurement.free))",anchor:CGPoint(x:plot.minX+x,y:plot.minY+y),bounds:geometry.size)
+                        }
                     }
+                    .coordinateSpace(name:ChartCallout.space)
                 }.frame(height:compact ? 96 : 160)
                 .accessibilityIdentifier("capacity.chart")
                 .help("Actual recorded points. Lines connect adjacent readings only; gaps over 75 minutes and container changes are not joined. Click close to a point to open its unique visible event.")
@@ -361,4 +388,65 @@ struct CapacityChart: View {
             if let selectionMessage { Text(selectionMessage).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("chart.selectionMessage") }
         }.padding(.horizontal,22).padding(.vertical,12)
     }
+}
+/// A chart label drawn in the overlay, beside its point and always inside the chart. It extends away from the nearer
+/// horizontal edge and sits above the point unless that would leave the top, so it never needs measuring and never
+/// feeds back into the chart's layout or the hover hit test.
+private struct ChartCallout: View {
+    static let space = "capacityChart.overlay"
+    let text: String
+    let anchor: CGPoint
+    let bounds: CGSize
+    var drawn: ((CGRect) -> Void)? = nil
+    var body: some View {
+        let leftward = anchor.x > bounds.width/2, above = anchor.y > 30
+        Text(text).font(.caption2.monospacedDigit()).lineLimit(1).padding(5)
+            .background(.regularMaterial,in:RoundedRectangle(cornerRadius:5))
+            .background(GeometryReader { g in
+                let frame = g.frame(in:.named(Self.space))
+                Color.clear.onChange(of:"\(frame)",initial:true) { _, _ in drawn?(frame) }
+            })
+            .frame(width:max(0,leftward ? min(bounds.width,anchor.x+6) : bounds.width-max(0,anchor.x-6)),height:max(0,above ? anchor.y-6 : bounds.height-anchor.y-6),
+                   alignment:Alignment(horizontal:leftward ? .trailing : .leading,vertical:above ? .bottom : .top))
+            .offset(x:leftward ? 0 : max(0,anchor.x-6),y:above ? 0 : anchor.y+6)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+/// Which reading a pointer is on: the nearest drawn point within `radius`, or none over empty plot.
+enum CapacityChartHover {
+    static let radius: CGFloat = 14
+    static func nearest<Reading>(_ location: CGPoint,among positions: [(Reading,CGPoint)],radius: CGFloat = radius) -> Reading? {
+        positions.map { ($0.0,hypot($0.1.x-location.x,$0.1.y-location.y)) }.min { $0.1 < $1.1 }.flatMap { $0.1 <= radius ? $0.0 : nil }
+    }
+    /// The hover callout: time, available space, and the change from the previous joined reading when there is one.
+    static func describe(date: Date,free: Int64,previousFree: Int64?) -> String {
+        var parts = [date.formatted(date:.abbreviated,time:.standard),"\(capacity(free)) available"]
+        if let previousFree { parts.append("\(signedChange(free-previousFree)) since previous reading") }
+        return parts.joined(separator:" · ")
+    }
+}
+/// The chart's pointer tracking. `moved` receives the pointer in this view's (top-left) coordinates, nil on leaving.
+/// It never takes clicks: hit testing passes through to the chart below.
+struct ChartPointerLayer: NSViewRepresentable {
+    let moved: (CGPoint?) -> Void
+    func makeNSView(context: Context) -> ChartPointerView { let view = ChartPointerView(); view.moved = moved; return view }
+    func updateNSView(_ view: ChartPointerView, context: Context) { view.moved = moved }
+}
+final class ChartPointerView: NSView {
+    var moved: ((CGPoint?) -> Void)?
+    private var tracking: NSTrackingArea?
+    override var isFlipped: Bool { true }
+    override func isAccessibilityElement() -> Bool { false }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let tracking { removeTrackingArea(tracking) }
+        let area = NSTrackingArea(rect:.zero,options:[.mouseMoved,.mouseEnteredAndExited,.activeInActiveApp,.inVisibleRect],owner:self)
+        addTrackingArea(area); tracking = area
+    }
+    private func point(_ event: NSEvent) -> CGPoint { convert(event.locationInWindow,from:nil) }
+    override func mouseEntered(with event: NSEvent) { moved?(point(event)) }
+    override func mouseMoved(with event: NSEvent) { moved?(point(event)) }
+    override func mouseExited(with event: NSEvent) { moved?(nil) }
 }

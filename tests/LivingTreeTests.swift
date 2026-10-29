@@ -703,15 +703,45 @@ func livingTreeCameraTests(_ test: (Bool, String) throws -> Void) throws {
              && g.down(at: .zero, clickCount: 2, modifiers: [], target: nil, opens: opens) == []
              && g.up(at: .zero, clickCount: 2, target: folderKey) == [],
              "living tree input: double-click opens a folder (subtree navigation as before), focuses a file, and Option-double-click focuses any branch")
+    // Native QA NQ-4: the first click selects, which re-places labels (and may move the camera) before the second press
+    // arrives; that press can then land on a neighbour's label. A double-click opens what its first click chose, and a
+    // third press (hit-tested against the folder just opened) navigates nowhere.
+    let neighbour = LivingTreeKey.node(ids.values.first { LivingTreeKey.node($0) != folderKey && model[.node($0)]?.node?.kind == .directory }!)
+    var double = LivingTreeGesture()
+    let press = CGPoint(x: 120, y: 80), nudged = CGPoint(x: 122, y: 81)
+    let first = double.down(at: press, clickCount: 1, modifiers: [], target: folderKey, opens: opens) + double.up(at: press, clickCount: 1, target: folderKey)
+    let second = double.down(at: nudged, clickCount: 2, modifiers: [], target: neighbour, opens: opens) + double.up(at: nudged, clickCount: 2, target: neighbour)
+    let third = double.down(at: nudged, clickCount: 3, modifiers: [], target: neighbour, opens: opens) + double.up(at: nudged, clickCount: 3, target: neighbour)
+    var apart = LivingTreeGesture()
+    _ = apart.down(at: press, clickCount: 1, modifiers: [], target: folderKey, opens: opens) + apart.up(at: press, clickCount: 1, target: folderKey)
+    let elsewhere = apart.down(at: CGPoint(x: 400, y: 300), clickCount: 2, modifiers: [], target: neighbour, opens: opens)
+    try test(first == [.select(folderKey)] && second == [.open(folderKey)] && third.isEmpty && elsewhere == [.open(neighbour)],
+             "living tree input: a double-click opens the folder its first click selected even if the second press lands on a neighbour's re-placed label; a triple-click navigates once (first \(first), second \(second), third \(third), elsewhere \(elsewhere))")
     let p = CGPoint(x: 300, y: 200)
-    try test(LivingTreeGesture.scroll(CGVector(dx: 4, dy: -7), precise: true, modifiers: [], at: p) == .pan(CGVector(dx: 4, dy: -7))
+    try test(LivingTreeGesture.scroll(CGVector(dx: 4, dy: -7), precise: true, modifiers: [], at: p) == .zoom(factor: exp(-7 * LivingTreeGesture.preciseZoomRate), at: p, animated: false)
              && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 1), precise: false, modifiers: [], at: p) == .zoom(factor: 1.2, at: p, animated: true)
              && LivingTreeGesture.scroll(CGVector(dx: 0, dy: -10), precise: false, modifiers: [], at: p) == .zoom(factor: pow(1.2, -3), at: p, animated: true)
              && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 50), precise: true, modifiers: .command, at: p) == .zoom(factor: exp(0.6), at: p, animated: false)
              && LivingTreeGesture.scroll(CGVector(dx: 2, dy: 0), precise: false, modifiers: .shift, at: p) == .pan(CGVector(dx: 32, dy: 0))
+             && LivingTreeGesture.scroll(CGVector(dx: 4, dy: -7), precise: true, modifiers: .option, at: p) == .pan(CGVector(dx: 4, dy: -7))
+             && LivingTreeGesture.scroll(CGVector(dx: 12, dy: 3), precise: true, modifiers: [], at: p) == .pan(CGVector(dx: 12, dy: 0))
+             && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 9), precise: true, modifiers: [], at: p, momentum: true) == nil
              && LivingTreeGesture.scroll(.zero, precise: true, modifiers: [], at: p) == nil
              && LivingTreeGesture.magnify(0.25, at: p) == .zoom(factor: 1.25, at: p, animated: false) && LivingTreeGesture.magnify(0, at: p) == nil,
-             "living tree input: trackpad scrolling pans; a mouse wheel zooms about the pointer in animated steps; Command-scroll and pinch zoom directly; Shift-wheel pans sideways")
+             "living tree input: vertical scrolling zooms about the pointer from any device (wheel lines animated, pixel deltas direct); Shift/Option-scroll and sideways swipes pan; momentum does not zoom; pinch zooms")
+    // Regression: smooth-scrolling mice and the Magic Mouse report precise deltas like a trackpad, and used to pan the
+    // 2D tree and turn the 3D one. No scroll, of any kind, may turn the tree or select anything.
+    var scrollTurnsOrSelects = 0
+    for precise in [true, false] { for momentum in [true, false] { for modifiers: LivingTreeGesture.Modifiers in [[], .shift, .option, .command, [.command, .option]] {
+        for delta in [CGVector(dx: 0, dy: 3), CGVector(dx: 0, dy: -40), CGVector(dx: 25, dy: -4), CGVector(dx: -1, dy: 0.5)] {
+            switch LivingTreeGesture.scroll(delta, precise: precise, modifiers: modifiers, at: p, momentum: momentum) {
+            case .orbit?, .select?, .open?, .focus?: scrollTurnsOrSelects += 1
+            default: break
+            }
+        }
+    } } }
+    try test(scrollTurnsOrSelects == 0 && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 2.5), precise: true, modifiers: [], at: p).map { if case .zoom = $0 { return true } else { return false } } == true,
+             "living tree input regression: a precise (smooth-scrolling mouse) vertical scroll zooms; no scroll input in 2D or 3D orbits or selects (80 combinations)")
 }
 
 // MARK: - 3D
@@ -846,10 +876,9 @@ func livingTree3DTests(_ test: (Bool, String) throws -> Void) throws {
     try test(actions == [.dragBegan, .orbit(yaw: 20 * LivingTreeGesture.orbitRate, pitch: -10 * LivingTreeGesture.orbitRate), .dragEnded]
              && panned == [.dragBegan, .pan(CGVector(dx: 20, dy: -10))]
              && LivingTreeGesture.rotate(90) == .orbit(yaw: -.pi / 2, pitch: 0) && LivingTreeGesture.rotate(0) == nil
-             && LivingTreeGesture.scroll(CGVector(dx: 10, dy: -5), precise: true, modifiers: [], at: .zero, orbits: true) == .orbit(yaw: 10 * LivingTreeGesture.scrollOrbitRate, pitch: -5 * LivingTreeGesture.scrollOrbitRate)
-             && LivingTreeGesture.scroll(CGVector(dx: 10, dy: -5), precise: true, modifiers: .shift, at: .zero, orbits: true) == .pan(CGVector(dx: 10, dy: -5))
-             && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 1), precise: false, modifiers: [], at: .zero, orbits: true) == .zoom(factor: 1.2, at: .zero, animated: true),
-             "living tree 3d input: dragging and two-finger scrolling turn the tree, Shift pans, a trackpad rotation turns it, a mouse wheel still zooms")
+             && LivingTreeGesture.scroll(CGVector(dx: 10, dy: -5), precise: true, modifiers: .shift, at: .zero) == .pan(CGVector(dx: 10, dy: -5))
+             && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 1), precise: false, modifiers: [], at: .zero) == .zoom(factor: 1.2, at: .zero, animated: true),
+             "living tree 3d input: dragging turns the tree, Shift-drag and Shift-scroll pan, a trackpad rotation turns it, scrolling zooms")
 
     // MARK: Labels
     func measure(_ text: String, _ title: Bool) -> CGSize { CGSize(width: CGFloat(text.count) * (title ? 6.2 : 5.6), height: title ? 13 : 12) }
@@ -910,4 +939,306 @@ func livingTreeColorTests(_ test: (Bool, String) throws -> Void) throws {
              "living tree color: grouped small items take their folder's color, quieter")
     try test(colors.present.first == .video && colors.present.contains(.development) && !colors.present.contains(.audio),
              "living tree color: the color key lists the kinds present, largest first")
+}
+
+// MARK: - Structured Explorer
+
+/// The Structured Explorer (the Living Tree's default presentation): hierarchy, documented scale, clockwise order,
+/// repeated names, camera, hit testing after zoom, depth, recentring, refresh, empty folders, selection preservation,
+/// labels, keyboard movement and the renderer fallback. Synthetic catalogs only.
+func structuredExplorerTests(_ test: (Bool, String) throws -> Void) throws {
+    let wide = LivingTreeBudget(elements: 2_000, perFolder: 64, slack: 0, minimumShare: 0)
+    let (catalog, ids) = standardCatalog()
+    let model = catalog.build(budget: wide)
+    let layout = StructuredExplorerLayout(model: model, depth: 3)
+    let rootDepth = model[model.rootKey]!.depth
+
+    // Hierarchy: every shown element hangs off its own parent, on the ring of its depth.
+    var hierarchyOK = layout.nodes[0].key == model.rootKey && layout.nodes[0].ring == 0 && layout.nodes[0].point == .zero
+    for node in layout.nodes.dropFirst() {
+        let element = model[node.key]!
+        hierarchyOK = hierarchyOK && layout.nodes[node.parent].key == element.parent && node.ring == element.depth - rootDepth && node.ring <= 3
+        hierarchyOK = hierarchyOK && abs(hypot(node.point.x, node.point.y) - CGFloat(node.ring) * StructuredExplorerScale.ringGap) < 0.001
+    }
+    try test(hierarchyOK && layout.nodes.count > 20, "structured explorer: every shown element hangs off its parent, on the ring of its level (\(layout.nodes.count) shown)")
+
+    // Shown + hidden accounts for every child of every shown folder.
+    var accounted = true
+    for (i, node) in layout.nodes.enumerated() where node.elided == 0 { accounted = accounted && layout.children[i].count + node.hidden == model[node.key]!.children.count }
+    try test(accounted, "structured explorer: shown and +N hidden children add up to each folder's children")
+
+    // Scale: disc area ∝ bytes above the minimum; the centre is the reference; unknown sizes never look like sizes.
+    let total = model[model.rootKey]!.bytes!
+    let rA = StructuredExplorerScale.radius(total / 4, of: total), rB = StructuredExplorerScale.radius(total / 16, of: total)
+    try test(abs(StructuredExplorerScale.radius(total, of: total) - StructuredExplorerScale.centerRadius) < 1e-9 && abs((rA * rA) / (rB * rB) - 4) < 1e-6
+             && StructuredExplorerScale.radius(1, of: total) == StructuredExplorerScale.minimumRadius && StructuredExplorerScale.radius(nil, of: total) == StructuredExplorerScale.minimumRadius
+             && StructuredExplorerScale.radius(total * 2, of: total) == StructuredExplorerScale.centerRadius,
+             "structured explorer scale: disc area ∝ bytes (¼ vs 1/16 → 4× area), centre = reference, tiny and unknown at the 3.5 pt minimum, never above the centre")
+    var flowOK = true
+    for (i, node) in layout.nodes.enumerated() where !layout.children[i].isEmpty && model[node.key]!.bytes != nil {
+        let w = StructuredExplorerScale.linkWidth(model[node.key]!.bytes, of: total)
+        let sum = layout.children[i].reduce(CGFloat(0)) { s, c in let x = StructuredExplorerScale.linkWidth(model[layout.nodes[c].key]!.bytes, of: total); return s + (x > StructuredExplorerScale.minimumLinkWidth ? x * x : 0) }
+        flowOK = flowOK && sum <= w * w + 1e-6
+    }
+    try test(flowOK, "structured explorer scale: link widths conserve area — a folder's children never carry more width² than it does")
+
+    // Order: around each parent, siblings run clockwise largest first (grouped and unmeasured last).
+    var clockwise = true
+    for i in layout.nodes.indices {
+        let kids = layout.children[i].map { layout.nodes[$0] }
+        clockwise = clockwise && zip(kids, kids.dropFirst()).allSatisfy { $0.angle < $1.angle }
+        clockwise = clockwise && kids.map(\.key) == StructuredExplorerLayout.sortedChildren(of: layout.nodes[i].key, in: model).prefix(kids.count).map { $0 }
+    }
+    try test(clockwise, "structured explorer: siblings run clockwise from 12 o'clock, largest first, grouped and unmeasured last")
+
+    // Determinism and refresh: the same tree lays out identically; a resized tree reorders by the new sizes.
+    let again = StructuredExplorerLayout(model: catalog.build(budget: wide), depth: 3)
+    try test(again.nodes == layout.nodes, "structured explorer: the same tree always lays out identically")
+    var grown = catalog
+    grown.resize(ids["Projects/a"]! + 1, 9_000_000_000); grown.finalize()
+    let refreshed = StructuredExplorerLayout(model: grown.build(budget: wide), depth: 4)   // Projects is on ring 3
+    let projects = refreshed.index[.node(ids["Projects"]!)].map { refreshed.children[$0].map { refreshed.nodes[$0].key } } ?? []
+    try test(projects.first == .node(ids["Projects/a"]!), "structured explorer: after a size change the grown folder moves first in its folder")
+
+    // Depth: fewer levels show fewer rings; more show more; the setting is clamped.
+    let one = StructuredExplorerLayout(model: model, depth: 1), six = StructuredExplorerLayout(model: model, depth: 9)
+    try test(one.nodes.allSatisfy { $0.ring <= 1 } && one.rings == 1 && six.depth == 6 && six.nodes.count > layout.nodes.count && one.nodes.count < layout.nodes.count,
+             "structured explorer: Levels 1 shows one ring; more levels show more (clamped to 6)")
+
+    // Recentring: a folder's own tree has it at the centre.
+    let users = catalog.nodes[ids["Users"]!]!
+    let usersModel = LivingTreeBuilder.build(root: users, budget: wide) { catalog.span($0, $1) }
+    let usersLayout = StructuredExplorerLayout(model: usersModel, depth: 3)
+    try test(usersLayout.nodes[0].key == .node(users.id) && usersLayout.nodes[0].radius == StructuredExplorerScale.centerRadius && usersLayout.index[.node(ids["Documents"]!)] != nil,
+             "structured explorer: exploring a folder centres it and lays out its own contents")
+
+    // Empty hierarchy: an empty folder is a lone centre that still answers clicks and labels.
+    var empty = TreeCatalog(); empty.add(nil, "", folder: true); empty.finalize()
+    let lone = StructuredExplorerLayout(model: empty.build(budget: wide), depth: 3)
+    let loneT = StructuredExplorerCamera().transform(bounds: lone.bounds, size: CGSize(width: 600, height: 400))
+    try test(lone.nodes.count == 1 && lone.rings == 0 && lone.bounds.width > 0 && lone.hit(loneT.apply(CGPoint.zero), transform: loneT, labels: []) == lone.rootKey,
+             "structured explorer: an empty folder lays out as a lone centre that can still be selected")
+
+    // Selection preservation: past the per-folder limit the selection is kept; past the shown levels it hangs on a spur.
+    var many = TreeCatalog()
+    let top = many.add(nil, "", folder: true)
+    let crowd = many.add(top, "crowd", folder: true)
+    var smallest: Int64 = 0
+    for i in 0..<40 { smallest = many.add(crowd, "f\(i)", folder: true); many.add(smallest, "x", size: Int64(1_000_000 - i * 1_000)) }
+    var chainParent = many.add(top, "chain", folder: true)
+    for level in 0..<7 { chainParent = many.add(chainParent, "level\(level)", folder: true) }
+    let deepFile = many.add(chainParent, "deep.bin", size: 5_000)
+    many.finalize()
+    let crowded = many.build(budget: LivingTreeBudget(elements: 2_000, perFolder: 64, slack: 0, minimumShare: 0))
+    let plain = StructuredExplorerLayout(model: crowded, depth: 3)
+    let kept = StructuredExplorerLayout(model: crowded, depth: 3, keep: .node(smallest))
+    try test(plain.index[.node(smallest)] == nil && kept.index[.node(smallest)] != nil && kept.nodes[kept.index[.node(crowd)]!].hidden == 40 - StructuredExplorerLayout.perFolder - 1,
+             "structured explorer: a selection beyond the 14 largest is kept on screen, and +N counts the rest")
+    let spur = StructuredExplorerLayout(model: crowded, depth: 3, keep: .node(deepFile))
+    let spurNode = spur[.node(deepFile)]
+    try test(spurNode.map { $0.elided == crowded[.node(deepFile)]!.depth - rootDepth - 3 - 1 && spur.nodes[$0.parent].ring == 3 && $0.ring == 4 && $0.ring + $0.elided == crowded[.node(deepFile)]!.depth - rootDepth && spur.rings == 4 } == true
+             && spur.shownKey(for: .node(deepFile), in: crowded) == .node(deepFile) && plain.shownKey(for: .node(deepFile), in: crowded).map { plain[$0]!.ring == 3 } == true,
+             "structured explorer: a selection deeper than the shown levels hangs on a spur from its deepest shown folder (levels skipped counted)")
+
+    // Repeated names are titled with their folder, and spoken with their path.
+    var twins = TreeCatalog()
+    let twinRoot = twins.add(nil, "", folder: true)
+    let comfy = twins.add(twinRoot, "ComfyUI", folder: true), ollama = twins.add(twinRoot, ".ollama", folder: true)
+    let m1 = twins.add(comfy, "models", folder: true), m2 = twins.add(ollama, "models", folder: true)
+    twins.add(m1, "a.bin", size: 7_000_000); twins.add(m2, "b.bin", size: 9_000_000)
+    twins.finalize()
+    let twinModel = twins.build(budget: wide), twinLayout = StructuredExplorerLayout(model: twinModel, depth: 3)
+    try test(twinLayout.title(.node(m1), in: twinModel) == "ComfyUI › models" && twinLayout.title(.node(m2), in: twinModel) == ".ollama › models"
+             && twinLayout.title(.node(comfy), in: twinModel) == "ComfyUI",
+             "structured explorer: repeated folder names are titled with their folder (ComfyUI › models vs .ollama › models)")
+
+    // Camera: zoom about the pointer keeps that point fixed; limits hold; panning never loses the hierarchy.
+    let size = CGSize(width: 1000, height: 640)
+    var camera = StructuredExplorerCamera()
+    let anchor = CGPoint(x: 700, y: 210)
+    let under = camera.transform(bounds: layout.bounds, size: size).invert(anchor)
+    for _ in 0..<12 { camera.zoom(by: 1.3, at: anchor, bounds: layout.bounds, size: size) }
+    let kept0 = camera.transform(bounds: layout.bounds, size: size).apply(under)
+    var limited = StructuredExplorerCamera(); limited.zoom(by: 1e6, at: nil, bounds: layout.bounds, size: size)
+    var outer = StructuredExplorerCamera(); outer.zoom(by: 1e-6, at: nil, bounds: layout.bounds, size: size)
+    var panned = StructuredExplorerCamera(); panned.pan(by: CGVector(dx: 1e7, dy: -1e7), bounds: layout.bounds, size: size)
+    try test(hypot(kept0.x - anchor.x, kept0.y - anchor.y) < 0.001 && limited.zoom == StructuredExplorerCamera.zoomRange.upperBound && outer.zoom == StructuredExplorerCamera.zoomRange.lowerBound
+             && panned.center.map { layout.bounds.insetBy(dx: -1, dy: -1).contains($0) } == true,
+             "structured explorer camera: zoom keeps the point under the pointer exactly; zoom is limited to 40%–2400%; panning stays over the hierarchy")
+
+    // Hit testing after zoom: every shown disc is found at its centre at the fit, 4× and 12×; empty space finds nothing.
+    var hits = 0, checked = 0
+    for zoom in [1.0, 4.0, 12.0] {
+        for node in layout.nodes {
+            var c = StructuredExplorerCamera(); c.zoom(by: zoom, at: nil, bounds: layout.bounds, size: size)
+            if zoom > 1 { c.center = node.point }
+            let t = c.transform(bounds: layout.bounds, size: size)
+            checked += 1
+            if layout.hit(t.apply(node.point), transform: t, labels: []) == node.key { hits += 1 }
+        }
+    }
+    let fitT = StructuredExplorerCamera().transform(bounds: layout.bounds, size: size)
+    try test(hits == checked && layout.hit(CGPoint(x: 3, y: 3), transform: fitT, labels: []) == nil,
+             "structured explorer: every shown disc is hit at its centre at 1×, 4× and 12× (\(hits)/\(checked)); empty space selects nothing")
+
+    // Labels: the selection is always named; nothing else overlaps; all stay inside; more appear when zoomed in.
+    let selectedKey = layout.nodes[min(5, layout.nodes.count - 1)].key
+    let measure = { (title: String, detail: String) in CGSize(width: CGFloat(title.count + detail.count) * 6.5 + 18, height: 18) }
+    let fitLabels = layout.labels(model: model, transform: fitT, size: size, selected: selectedKey, hovered: nil, detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+    // Centre an actually unlabelled branch: zooming only at the root can legitimately show fewer labels as outer
+    // rings leave the viewport, so it is not a valid test of progressive detail.
+    let hiddenLabel = layout.nodes.first { node in node.ring > 1 && !fitLabels.contains { $0.key == node.key } }
+    let zoomed = StructuredExplorerCamera(zoom: 8, center: hiddenLabel?.point)
+    let zoomT = zoomed.transform(bounds: layout.bounds, size: size)
+    let zoomLabels = layout.labels(model: model, transform: zoomT, size: size, selected: nil, hovered: nil, detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+    let free = fitLabels.filter { !$0.emphasized && $0.key != layout.rootKey }
+    var overlaps = 0
+    for (a, x) in free.enumerated() { for y in free.dropFirst(a + 1) where x.footprint.intersects(y.footprint) { overlaps += 1 } }
+    let inside = free.allSatisfy { CGRect(origin: .zero, size: size).contains($0.footprint) }
+    try test(fitLabels.first?.key == selectedKey && fitLabels.first?.emphasized == true && overlaps == 0 && inside,
+             "structured explorer labels: the selection is always named first; other labels never overlap and stay inside the view (\(fitLabels.count) at the fit)")
+    let visibleAtFit = Set(fitLabels.map(\.key))
+    func labelPoint(_ label: StructuredExplorerLabel, x: CGFloat, y: CGFloat) -> CGPoint {
+        let p = CGPoint(x: label.rect.minX + label.rect.width * x - label.anchor.x,
+                        y: label.rect.minY + label.rect.height * y - label.anchor.y)
+        return CGPoint(x: label.anchor.x + p.x * cos(label.angle) - p.y * sin(label.angle),
+                       y: label.anchor.y + p.x * sin(label.angle) + p.y * cos(label.angle))
+    }
+    let labelHits = [(fitLabels, fitT), (zoomLabels, zoomT)].allSatisfy { labels, transform in
+        labels.allSatisfy { label in
+            [CGFloat(0.25), 0.5, 0.75].allSatisfy { x in
+                layout.hit(labelPoint(label, x: x, y: 0.5), transform: transform, labels: labels) == label.key
+            }
+        }
+    }
+    try test(zoomLabels.contains { !visibleAtFit.contains($0.key) } && labelHits && (fitLabels + zoomLabels).contains { abs($0.angle) > 0.01 },
+             "structured explorer labels: zooming into an unlabelled branch reveals further labels; horizontal and rotated label interiors hit their own element (fit=\(fitLabels.count), zoom=\(zoomLabels.count), revealed=\(zoomLabels.contains { !visibleAtFit.contains($0.key) }), hits=\(labelHits), rotated=\((fitLabels + zoomLabels).filter { abs($0.angle) > 0.01 }.count))")
+
+    // Every label, including selection, hover and centre, must obey viewport and mutual collision rules.
+    var labelCases = 0, labelFailures = 0
+    for viewport in [CGSize(width: 640, height: 360), size] {
+        for z in [0.4, 1.0, 4.0] {
+            for node in layout.nodes.prefix(18) {
+                var camera = StructuredExplorerCamera(zoom: z)
+                camera.center = node.point
+                // Place the selected disc near an edge, where its ordinary right-hand label cannot fit.
+                camera.pan(by: CGVector(dx: viewport.width * 0.36, dy: viewport.height * 0.28), bounds: layout.bounds, size: viewport)
+                let transform = camera.transform(bounds: layout.bounds, size: viewport)
+                let labels = layout.labels(model: model, transform: transform, size: viewport, selected: node.key,
+                                           hovered: layout.nodes[1].key, detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+                let view = CGRect(origin: .zero, size: viewport)
+                let inBounds = labels.allSatisfy { view.contains($0.footprint) }
+                let disjoint = labels.enumerated().allSatisfy { i, a in !labels.dropFirst(i + 1).contains { a.footprint.intersects($0.footprint) } }
+                let selectionVisible = view.insetBy(dx: -1, dy: -1).contains(transform.apply(node.point))
+                let selectionNamed = !selectionVisible || labels.contains { $0.key == node.key && $0.emphasized }
+                labelCases += 1
+                if !inBounds || !disjoint || !selectionNamed { labelFailures += 1 }
+            }
+        }
+    }
+    try test(labelFailures == 0, "structured explorer labels: selection, hover and centre stay inside and never overlap in edge/zoom/window cases (\(labelCases - labelFailures)/\(labelCases))")
+
+    let smallTransform = StructuredExplorerCamera(zoom: 0.4).transform(bounds: layout.bounds, size: size)
+    let smallLabels = layout.labels(model: model, transform: smallTransform, size: size, selected: nil, hovered: nil,
+                                    detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+    var heavyLinkClearance = true
+    for (i, node) in layout.nodes.enumerated() where node.parent >= 0 {
+        let width = StructuredExplorerScale.linkWidth(model[node.key]?.bytes, of: total) * min(1.6, max(0.6, smallTransform.scale))
+        guard width >= 3 else { continue }
+        let radius = max(3, width / 2 + 2), curve = layout.link(i, smallTransform)
+        for k in 1...15 {
+            let p = curve(CGFloat(k) / 16)
+            let blocked = CGRect(x: p.x - radius, y: p.y - radius, width: 2 * radius, height: 2 * radius)
+            let ordinary = smallLabels.filter { label in
+                guard let node = layout[label.key] else { return true }
+                return !(node.ring == 1 && (StructuredExplorerScale.share(model[label.key]?.bytes, of: total) ?? 0) >= 0.01)
+            }
+            heavyLinkClearance = heavyLinkClearance && !ordinary.contains { $0.footprint.intersects(blocked) }
+        }
+    }
+    try test(heavyLinkClearance, "structured explorer labels: ordinary labels clear sampled heavy links at 40% zoom using the drawn width")
+
+    var majorNamed = true
+    for depth in 1...6 {
+        let overview = StructuredExplorerLayout(model: model, depth: depth)
+        let transform = StructuredExplorerCamera().transform(bounds: overview.bounds, size: size)
+        let labels = overview.labels(model: model, transform: transform, size: size, selected: model.rootKey, hovered: nil,
+                                     detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+        if let largest = overview.children.first?.first.map({ overview.nodes[$0].key }) {
+            majorNamed = majorNamed && labels.contains { $0.key == largest }
+        }
+    }
+    try test(majorNamed, "structured explorer labels: the largest top-level folder stays named at every Levels setting")
+
+    // Ring captions (native QA NQ-2: crowded at the minimum window). Placed after labels, they stay inside the view and
+    // never touch a label, a disc or another caption, at compact, medium and typical canvas sizes, every Levels setting
+    // and zooms from 40% to 6×. The legacy placement (widest empty arc, drawn regardless) is counted for comparison.
+    let captionMeasure = { (text: String) in CGSize(width: CGFloat(text.count) * 5.2 + 2, height: 12) }
+    var captionCases = 0, captionFailures = [String](), legacyCollisions = 0, captionsShown = 0
+    for viewport in [CGSize(width: 560, height: 400), CGSize(width: 760, height: 480), CGSize(width: 1100, height: 600)] {
+        for depth in 1...6 {
+            let levels = StructuredExplorerLayout(model: model, depth: depth)
+            for z in [0.4, 1.0, 2.5, 6.0] {
+                var camera = StructuredExplorerCamera(zoom: z)
+                if z > 1 { camera.center = levels.nodes[min(3, levels.nodes.count - 1)].point }
+                let t = camera.transform(bounds: levels.bounds, size: viewport)
+                let labels = levels.labels(model: model, transform: t, size: viewport, selected: levels.nodes[min(2, levels.nodes.count - 1)].key,
+                                           hovered: levels.nodes[min(4, levels.nodes.count - 1)].key, detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+                let captions = levels.ringCaptions(transform: t, size: viewport, labels: labels, measure: captionMeasure)
+                captionCases += 1; captionsShown += captions.count
+                let view = CGRect(origin: .zero, size: viewport)
+                let discs = levels.nodes.compactMap { n -> CGRect? in
+                    let r = levels.screenRadius(n, t); guard r >= 2 else { return nil }
+                    let c = t.apply(n.point); return CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
+                }
+                let spacing = StructuredExplorerScale.ringGap * t.scale
+                let ok = captions.allSatisfy { c in view.contains(c.rect) && c.ring <= depth && !labels.contains { $0.footprint.intersects(c.rect) } && !discs.contains { $0.intersects(c.rect) } }
+                    && captions.enumerated().allSatisfy { i, a in !captions.dropFirst(i + 1).contains { $0.rect.intersects(a.rect) } }
+                    && (spacing >= StructuredExplorerLayout.captionRingSpacing || captions.isEmpty)
+                if !ok { captionFailures.append("\(Int(viewport.width))×\(Int(viewport.height)) L\(depth) \(z)×") }
+                // Legacy: every shown ring with an on-screen radius over 24 pt captioned at its widest empty arc.
+                let legacyAngles = levels.ringCaptionAngles(), centre = t.apply(CGPoint.zero)
+                var legacy = [CGRect]()
+                if levels.rings > 0 {
+                    for ring in 1...min(levels.rings, depth) {
+                        let radius = CGFloat(ring) * spacing
+                        guard radius > 24, let a = legacyAngles[ring] else { continue }
+                        let box = captionMeasure("Level \(ring)"), p = CGPoint(x: centre.x + sin(a) * radius, y: centre.y - cos(a) * radius)
+                        legacy.append(CGRect(x: p.x - box.width / 2, y: p.y - box.height / 2, width: box.width, height: box.height))
+                    }
+                }
+                for (i, r) in legacy.enumerated() {
+                    let onScreen = view.contains(CGPoint(x: r.midX, y: r.midY))
+                    if onScreen && (labels.contains { $0.footprint.intersects(r) } || legacy.dropFirst(i + 1).contains { $0.intersects(r) } || discs.contains { $0.intersects(r) } || !view.contains(r)) { legacyCollisions += 1 }
+                }
+            }
+        }
+    }
+    try test(captionFailures.isEmpty && captionsShown > 0,
+             "structured explorer ring captions: inside the view, clear of labels, discs and each other, and absent when rings are too close (\(captionCases - captionFailures.count)/\(captionCases) cases, \(captionsShown) captions; legacy placement collided or clipped \(legacyCollisions) times) \(captionFailures.prefix(4))")
+
+    // Adaptive density: a compact canvas names fewer secondary labels than a typical one, the selection is still named,
+    // and no plate is shrunk (every label keeps its measured size).
+    let typicalSize = CGSize(width: 1100, height: 600), compactSize = CGSize(width: 560, height: 400)
+    let typicalT = StructuredExplorerCamera().transform(bounds: layout.bounds, size: typicalSize)
+    let compactT = StructuredExplorerCamera().transform(bounds: layout.bounds, size: compactSize)
+    let deepKey = layout.nodes.last { $0.ring >= 2 }?.key ?? selectedKey
+    let typicalLabels = layout.labels(model: model, transform: typicalT, size: typicalSize, selected: nil, hovered: nil, detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+    let compactLabels = layout.labels(model: model, transform: compactT, size: compactSize, selected: deepKey, hovered: nil, detail: { $0.bytes.map { "\($0)" } ?? "?" }, measure: measure)
+    let unshrunk = compactLabels.allSatisfy { abs($0.rect.width - measure($0.title, $0.detail).width) < 0.01 && abs($0.rect.height - 18) < 0.01 }
+    let compactSelectionVisible = CGRect(origin: .zero, size: compactSize).contains(compactT.apply(layout[deepKey]!.point))
+    try test(compactLabels.count <= typicalLabels.count + 1 && (!compactSelectionVisible || compactLabels.contains { $0.key == deepKey && $0.emphasized }) && unshrunk,
+             "structured explorer labels: a compact canvas names fewer secondary labels than a typical one (\(compactLabels.count) incl. selection vs \(typicalLabels.count)); the selection stays named and no plate is shrunk")
+
+    // Keyboard movement over what is shown.
+    let firstChild = layout.children[0].first.map { layout.nodes[$0].key }
+    let secondChild = layout.children[0].dropFirst().first.map { layout.nodes[$0].key }
+    try test(layout.move(.outward, from: model.rootKey) == firstChild && layout.move(.inward, from: firstChild) == model.rootKey
+             && layout.move(.nextSibling, from: firstChild) == secondChild && layout.move(.previousSibling, from: secondChild) == firstChild && layout.move(.inward, from: model.rootKey) == nil,
+             "structured explorer keyboard: up goes to the largest item inside, down to the enclosing folder, left and right around the ring")
+
+    // Fallback: the classic tree stays selectable for QA; anything else is the Structured Explorer.
+    try test(LivingTreeRenderer(preference: "classic") == .classic && LivingTreeRenderer(preference: nil) == .structured && LivingTreeRenderer(preference: "structured") == .structured
+             && LivingTreeRenderer(preference: "garbage") == .structured,
+             "living tree renderer: Structured Explorer by default; the classic tree only when the QA preference says classic")
 }

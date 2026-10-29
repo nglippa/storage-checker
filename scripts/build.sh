@@ -6,6 +6,7 @@ VERSION=${STORAGE_MONITOR_VERSION:-$STORAGE_MONITOR_RELEASE_VERSION}
 BUILD=${STORAGE_MONITOR_BUILD:-$STORAGE_MONITOR_RELEASE_BUILD}
 APP="$ROOT/build/MacBook Storage Monitor.app"
 /bin/mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ROOT/build/module-cache" "$ROOT/build/AppIcon.iconset"
+/bin/cp "$ROOT/THIRD-PARTY-NOTICES.md" "$APP/Contents/Resources/THIRD-PARTY-NOTICES.md"
 # Keep the supplied artwork intact; macOS icon representations are proportional resizes.
 /usr/bin/xcrun swift -module-cache-path "$ROOT/build/module-cache" "$ROOT/scripts/prepare-icon.swift" "$ROOT/Assets/AppIcon.png" "$ROOT/build/AppIcon-RGBA.png"
 while read -r pixels name; do

@@ -76,6 +76,8 @@ done
 /usr/bin/lipo -create $viewers -output "$APP/Contents/MacOS/StorageMonitorViewer"
 /bin/cp "$WORK/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 /bin/cp "$WORK/AppIcon.icns" "$HELPER/Contents/Resources/AppIcon.icns"
+/bin/cp "$ROOT/THIRD-PARTY-NOTICES.md" "$APP/Contents/Resources/THIRD-PARTY-NOTICES.md"
+/bin/cp "$ROOT/THIRD-PARTY-NOTICES.md" "$HELPER/Contents/Resources/THIRD-PARTY-NOTICES.md"
 
 info() { # identifier name executable extra-keys
   /bin/cat <<PLIST

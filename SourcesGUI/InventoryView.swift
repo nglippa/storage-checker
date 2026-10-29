@@ -85,6 +85,8 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     lazy var explorer = InventoryExplorerController(database: database)
     /// The Living Tree of the explorer's current folder; created the first time the tree is shown.
     lazy var livingTree = LivingTreeController(database: database)
+    /// The Structured Explorer's camera and layout cache (it draws `livingTree`'s model), kept across visualization switches.
+    lazy var structuredExplorer = StructuredExplorerState()
     /// A bounded review of this catalog, independent of the currently open folder.
     lazy var reviewQueue = CleanupReviewQueueController(database: database)
     /// Cleanup Inspector evidence for the Inspector's subject (read-only; created on first use).

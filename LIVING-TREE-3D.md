@@ -1,3 +1,5 @@
+> Structured Explorer integration, 2026-10-29: Prototype B is now the default Living Tree renderer in this integration branch. This document describes the retained classic renderer/camera. See [the integration report](artifacts/structured-explorer-integration/INTEGRATION-REPORT.md) for the new renderer, wheel-fix preservation, verification limits and reversible fallback.
+
 # Living Tree 3D — orbiting the tree
 
 Status, 2026-10-26: implemented as an opt-in mode (the 3D/2D button in the tree's controls, remembered; 2D stays the default). Verified by model tests, headless controller tests and offscreen renders of an APFS clone of a 2.07M-node catalog. Uncommitted, not packaged or installed; nothing production was touched; nothing was shown on screen. **Not checked in a real window** (section 7). Builds on `LIVING-TREE-CAMERA.md`.
@@ -22,10 +24,10 @@ Each frame the dome is **projected** for an orbit (yaw around the trunk, pitch a
 | Input | Action |
 |---|---|
 | Drag | Turn the tree (yaw and pitch) |
-| Shift- or Option-drag, trackpad scroll | Pan |
+| Shift- or Option-drag, ⇧- or ⌥-scroll | Pan (scrolling never turns the tree) |
 | Trackpad rotation | Turn about the trunk |
 | ⌘-arrows | Turn 20° / tilt 10°, animated |
-| Wheel, pinch, ⌘-scroll, +/−, smart zoom | Zoom, as in 2D |
+| Wheel, trackpad or mouse scroll, pinch, +/−, smart zoom | Zoom, as in 2D |
 | F, Option-double-click, double-click a file, Focus button | Turn the element side-on (to the nearer side, 20° toward the viewer) and frame it |
 | 0 / Reset View | Fit, standard orientation, forget remembered views |
 | Everything else | As in 2D (click selects, double-click opens a folder, arrows, Return, Escape) |
@@ -85,7 +87,7 @@ Coverage: the dome holds every element once and is deterministic; widths equal 2
 ## 7. Real-window checklist (NOT VERIFIED)
 
 - [ ] 3D/2D button switches with a short cross-fade and is remembered.
-- [ ] Dragging turns smoothly; Shift-drag and trackpad scroll pan; trackpad rotation turns; pinch zooms about the fingers.
+- [ ] Dragging turns smoothly; Shift-drag and ⇧-scroll pan; scrolling (wheel or trackpad) zooms and never turns; trackpad rotation turns; pinch zooms about the fingers.
 - [ ] ⌘-arrows turn; Reduce Motion makes them jump.
 - [ ] F / Option-double-click turns the selection to the front and frames it.
 - [ ] Hover and click hit the nearer branch where branches cross.

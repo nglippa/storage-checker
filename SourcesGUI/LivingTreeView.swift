@@ -80,6 +80,7 @@ import AppKit
     private var changeCursor: InventoryChangeCursor?
     private var building = false, buildPending = false
     private var lastBuild = Date.distantPast
+    private var throttle: Task<Void, Never>?
     private var polling = false, pollPending = false
     private var lastPoll = Date.distantPast, lastSignalRead = Date.distantPast
     private var deferred: Task<Void, Never>?
@@ -165,11 +166,19 @@ import AppKit
         let interval = model != nil && model?.journalCursor == nil ? 5 : Self.rebuildInterval
         let wait = interval - Date().timeIntervalSince(lastBuild)
         if wait > 0, model?.root.id == trunk {
-            buildPending = true
-            building = true
-            Task { try? await Task.sleep(for: .seconds(wait)); building = false; if buildPending { buildPending = false; rebuild() } }
+            // Coalesce rapid updates of the same folder. The wait is not a build: opening another folder meanwhile
+            // cancels it and reads at once instead of queueing behind it.
+            guard throttle == nil else { return }
+            statistics.throttledRebuilds += 1
+            throttle = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(wait))
+                guard let self, !Task.isCancelled else { return }
+                self.throttle = nil
+                self.rebuild()
+            }
             return
         }
+        throttle?.cancel(); throttle = nil
         building = true; buildPending = false; lastBuild = Date()
         let reader = reader, budget = budget, memory = memories[trunk] ?? LivingTreeMemory(), reveal = reveal
         Task {
@@ -617,6 +626,8 @@ struct LivingTreeStatistics: Equatable {
     var labelPlacements = 0, lastLabelSeconds = 0.0
     /// Rebuilds after which the camera was adjusted to keep the viewed element in place.
     var viewsHeld = 0
+    /// Same-folder rebuilds that waited for `rebuildInterval` (coalescing rapid updates).
+    var throttledRebuilds = 0
 }
 
 // MARK: - View
@@ -837,8 +848,8 @@ struct LivingTreeView: View {
             pointer = point
             guard !gesture.isDragging else { return }
             hover = point.flatMap { p in hit(p).map { ($0, p) } }
-        case .scroll(let delta, let precise, let modifiers, let point):
-            if let action = LivingTreeGesture.scroll(delta, precise: precise, modifiers: modifiers, at: point, orbits: tree.dimension == .depth) { apply([action], model: model) }
+        case .scroll(let delta, let precise, let momentum, let modifiers, let point):
+            if let action = LivingTreeGesture.scroll(delta, precise: precise, modifiers: modifiers, at: point, momentum: momentum) { apply([action], model: model) }
         case .magnify(let magnification, let point):
             if let action = LivingTreeGesture.magnify(magnification, at: point) { apply([action], model: model) }
         case .smartMagnify(let point):
@@ -1183,8 +1194,8 @@ struct LivingTreeView: View {
                 helpRow("Select a folder or file", "Click its branch. Its details appear in the Inspector.")
                 helpRow("Open a folder", "Double-click it, or select it and press Return.")
                 helpRow("Go back up", "The Up button, a folder name in the path, or Esc.")
-                helpRow("Zoom", "The − and + buttons, pinch, or ⌘-scroll.")
-                helpRow(tree.dimension == .depth ? "Turn and move" : "Move around", tree.dimension == .depth ? "Drag or two-finger scroll to turn. Hold ⇧ while dragging or scrolling to move." : "Drag or scroll.")
+                helpRow("Zoom", "Scroll (mouse wheel or trackpad), pinch, or the − and + buttons.")
+                helpRow(tree.dimension == .depth ? "Turn and move" : "Move around", tree.dimension == .depth ? "Drag to turn. Hold ⇧ while dragging or scrolling to move." : "Drag, or hold ⇧ or ⌥ while scrolling.")
                 helpRow("See everything", "Fit frames the whole tree. Reset (0) also undoes turning.")
                 helpRow("Find the selection", "View Selection (F) frames it; Isolate (I) hides the rest.")
             }
@@ -1242,7 +1253,7 @@ final class LivingTreeInputView: NSView {
         case up(CGPoint, clicks: Int)
         /// Nil: the pointer left the canvas.
         case moved(CGPoint?)
-        case scroll(CGVector, precise: Bool, LivingTreeGesture.Modifiers, CGPoint)
+        case scroll(CGVector, precise: Bool, momentum: Bool, LivingTreeGesture.Modifiers, CGPoint)
         case magnify(Double, CGPoint)
         case smartMagnify(CGPoint)
         /// Trackpad rotation, degrees counter-clockwise.
@@ -1286,7 +1297,7 @@ final class LivingTreeInputView: NSView {
     override func mouseEntered(with event: NSEvent) { handle?(.moved(point(event))) }
     override func mouseExited(with event: NSEvent) { handle?(.moved(nil)) }
     override func scrollWheel(with event: NSEvent) {
-        handle?(.scroll(CGVector(dx: event.scrollingDeltaX, dy: event.scrollingDeltaY), precise: event.hasPreciseScrollingDeltas, Self.modifiers(event), point(event)))
+        handle?(.scroll(CGVector(dx: event.scrollingDeltaX, dy: event.scrollingDeltaY), precise: event.hasPreciseScrollingDeltas, momentum: !event.momentumPhase.isEmpty, Self.modifiers(event), point(event)))
     }
     override func magnify(with event: NSEvent) { handle?(.magnify(Double(event.magnification), point(event))) }
     override func smartMagnify(with event: NSEvent) { handle?(.smartMagnify(point(event))) }

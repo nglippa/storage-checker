@@ -316,8 +316,11 @@ struct InventoryExplorerView: View {
     @AppStorage("inventory.explorer.technical", store: ViewerStore.viewPreferences) private var technicalView = false
     @AppStorage("inventory.explorer.inspector", store: ViewerStore.viewPreferences) private var showInspector = true
     /// The visualization above the Navigator: the Storage Atlas or the Living Tree (remembered).
-    @AppStorage("inventory.explorer.visualization", store: ViewerStore.viewPreferences) private var visualization = InventoryVisualization.atlas
+    @AppStorage("inventory.explorer.visualization", store: ViewerStore.viewPreferences) private var visualization = InventoryVisualization.tree
     @AppStorage("inventory.explorer.treeNavigatorExpanded", store: ViewerStore.viewPreferences) private var treeNavigatorExpanded = false
+    /// The Living Tree's presentation: the Structured Explorer, or (QA fallback, set only with `defaults write`) the
+    /// classic branching tree. Not offered in the interface; an absent or unknown value is the Structured Explorer.
+    @AppStorage("inventory.livingTree.renderer", store: ViewerStore.viewPreferences) private var treeRenderer = LivingTreeRenderer.structured.rawValue
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Space not attributed to indexed files is stated once, in the Disk Inventory header above the explorer.
@@ -345,7 +348,11 @@ struct InventoryExplorerView: View {
                             Group {
                                 switch visualization {
                                 case .atlas: StorageAtlasView(browser: browser, explorer: explorer)
-                                case .tree: LivingTreeView(browser: browser, explorer: explorer, tree: browser.livingTree, showsSelectionContext: !showInspector)
+                                case .tree:
+                                    switch LivingTreeRenderer(preference: treeRenderer) {
+                                    case .structured: StructuredExplorerView(browser: browser, explorer: explorer, tree: browser.livingTree, showsSelectionContext: !showInspector)
+                                    case .classic: LivingTreeView(browser: browser, explorer: explorer, tree: browser.livingTree, showsSelectionContext: !showInspector)
+                                    }
                                 }
                             }.frame(height: height)
                             if navigatorVisible {

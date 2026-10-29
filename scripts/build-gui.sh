@@ -23,6 +23,7 @@ if [ ! -f "$ICON" ]; then ICON="$HOME/Applications/MacBook Storage Monitor.app/C
 if [ ! -f "$ICON" ]; then /usr/bin/printf '%s\n' 'Build the background monitor icon resource first with scripts/build.sh.' >&2; exit 1; fi
 /bin/mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$ROOT/build/module-cache"
 /bin/cp "$ICON" "$APP/Contents/Resources/AppIcon.icns"
+/bin/cp "$ROOT/THIRD-PARTY-NOTICES.md" "$APP/Contents/Resources/THIRD-PARTY-NOTICES.md"
 /usr/bin/xcrun swiftc -sdk "$SDK_PATH" -target arm64-apple-macos14.0 -swift-version 5 -O -parse-as-library -module-cache-path "$ROOT/build/module-cache" -framework SwiftUI -framework Charts -framework AppKit "$ROOT"/SourcesGUI/*.swift "$ROOT"/SourcesShared/*.swift -o "$APP/Contents/MacOS/StorageMonitorViewer"
 /bin/cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

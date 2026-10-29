@@ -1,3 +1,5 @@
+> 2.2.0 integration, 2026-10-29: Structured Explorer and its stabilization fixes are recorded in [the integration report](artifacts/structured-explorer-integration/INTEGRATION-REPORT.md) and [the release record](STORAGE-MONITOR-2.2.0-RELEASE.md). The latest native session verified sampled hover/input/layout behavior, with strict Up latency and physical-input/coverage gaps still open. Earlier acceptance results below describe the prior baseline.
+
 # Verification report — 2026-10-21
 
 Status: **installed and running; native notification delivery verified from launchd**.

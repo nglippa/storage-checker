@@ -339,6 +339,26 @@ private final class TrashControllerGate: @unchecked Sendable {
                     test(again && moves.count >= 3 && moves.allSatisfy { $0 < 0.5 },
                          "a small change elsewhere while zoomed in moves nothing on screen (\(moves.count) tips, max \(String(format: "%.3f", moves.max() ?? -1)) pt)")
                 } else { test(false, "a small change elsewhere while zoomed in moves nothing on screen (d7 not drawn)") }
+                // Navigation is never held behind the same-folder rebuild throttle (native QA: a folder opened while that
+                // throttle waited showed its tree 1.5–2.7 s later, though the read itself took 40 ms).
+                if let d5Now = tree.model?[.node(d5.id)]?.node {
+                    let throttled = tree.statistics.throttledRebuilds
+                    _ = try sql(database, "UPDATE inventory_nodes SET total_allocated=total_allocated+4096 WHERE id IN (\(d5.id),\(top.id))")
+                    tree.inventoryChanged()
+                    let waiting = await waitUntil(timeout: 4) { tree.statistics.throttledRebuilds > throttled }
+                    let opened = Date()
+                    tree.show(root: d5Now, trail: [top, d5Now])
+                    let entered = await waitUntil(timeout: 6) { tree.model?.root.id == d5.id }
+                    let into = Date().timeIntervalSince(opened)
+                    let back = Date()
+                    tree.show(root: top, trail: [top])
+                    let returned = await waitUntil(timeout: 6) { tree.model?.root.id == top.id }
+                    let up = Date().timeIntervalSince(back)
+                    // The scratch read takes ~20 ms; any remaining throttle wait shows as hundreds of milliseconds.
+                    test(waiting && entered && returned && into < 0.12 && up < 0.12,
+                         "a folder opened while a same-folder rebuild is throttled shows at once, and so does its parent (into \(Int(into * 1000)) ms, up \(Int(up * 1000)) ms; throttle \(Int(LivingTreeController.rebuildInterval * 1000)) ms, throttled \(waiting))")
+                    try? await Task.sleep(for: .milliseconds(1_600))
+                } else { test(false, "a folder opened while a rebuild is throttled shows at once (d5 not drawn)") }
                 // Into a folder and back: the folder starts fitted, the volume returns as it was left.
                 if let d5Now = tree.model?[.node(d5.id)]?.node {
                     let before = tree.revision, cameraLeft = tree.cameraTarget

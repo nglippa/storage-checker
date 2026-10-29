@@ -5,7 +5,7 @@ SDK_PATH=${STORAGE_MONITOR_SDK_PATH:-$(/usr/bin/xcrun --show-sdk-path)}
 MONITOR="$ROOT/build/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor"
 if [ ! -x "$MONITOR" ]; then /usr/bin/printf '%s\n' 'Build the monitor first with scripts/build.sh.' >&2; exit 1; fi
 /bin/mkdir -p "$ROOT/build/module-cache"
-WORK=$(/usr/bin/mktemp -d "$ROOT/build/inventory-model-tests.XXXXXX")
+WORK=$(/usr/bin/mktemp -d /private/tmp/storage-monitor-inventory-model-tests.XXXXXX)
 # The viewer's @main entry point is removed from a scratch copy; the test supplies its own entry point.
 /usr/bin/sed 's/^@main struct StorageMonitorViewerApp/struct StorageMonitorViewerApp/' "$ROOT/SourcesGUI/StorageMonitorApp.swift" > "$WORK/StorageMonitorApp.swift"
 set --

@@ -1,3 +1,5 @@
+> Structured Explorer integration, 2026-10-29: Prototype B is now the default Living Tree renderer in this integration branch. This document describes the retained classic renderer/camera. See [the integration report](artifacts/structured-explorer-integration/INTEGRATION-REPORT.md) for the new renderer, wheel-fix preservation, verification limits and reversible fallback.
+
 # Living Tree camera — interactive 2D exploration
 
 Status, 2026-10-26: implemented; verified by model tests, headless controller tests and offscreen renders of an APFS clone of a 2.07M-node catalog. Uncommitted, not packaged or installed. No production database, LaunchAgent or installed app was touched; no full-volume scan was run; nothing was shown on screen. **Nothing was checked in a real window** (checklist in section 9). No 3D.
@@ -35,10 +37,9 @@ Atlas, Navigator, Inspector, search, the indexer, the worker, the schema, the ch
 
 | Input | Action |
 |---|---|
-| Trackpad two-finger scroll | Pan |
-| Mouse wheel | Zoom about the pointer, animated (×1.2 per line) |
-| ⌘- or ⌥-scroll (trackpad) | Zoom about the pointer, direct |
-| Shift-wheel | Pan sideways |
+| Mouse wheel (line steps) | Zoom about the pointer, animated (×1.2 per line) |
+| Pixel scrolling: trackpad, Magic Mouse, smooth-scrolling mice | Zoom about the pointer, direct (vertical); a mostly sideways swipe pans; momentum does not zoom |
+| ⇧- or ⌥-scroll | Pan (a wheel pans sideways) |
 | Pinch | Zoom about the pointer, direct |
 | Smart zoom (two-finger double tap) | Zoom in 2.5× about the point, or back to the fit |
 | Drag (more than 3 pt) | Pan (never selects; closed-hand cursor) |
@@ -109,7 +110,7 @@ At 120 Hz the pinch path (labels placed again at each ~9% zoom step) is near the
 ## 8. Limitations
 
 1. No real-window verification (section 9): trackpad and wheel feel, pinch, cursor, focus and key handling with the AppKit input layer, context menu, VoiceOver.
-2. The scroll mapping is fixed (trackpad pans, wheel zooms); there is no preference.
+2. The scroll mapping is fixed (scrolling zooms from every device; ⇧/⌥-scroll pans); there is no preference. Changed 2026-10-29: pixel-precise devices (Magic Mouse, smooth-scrolling mice) were indistinguishable from a trackpad and panned (2D) or turned (3D) the tree; see `artifacts/storage-monitor-living-tree-research/CAMERA-INPUT-REPORT.md`.
 3. The sideways stretch (≤1.3×) slightly flattens branch angles in wide views; widths and sizes are unaffected.
 4. Labels are placed again when the zoom changes by more than ~9% or the view pans by more than 48 pt; between placements they stay attached to their tips and are not re-checked for collisions.
 5. Level of detail hides only deep branches shorter than 3 pt; the element budget (about 3,000) is unchanged, so zooming in reveals what is already in the tree, not more of the catalog.
@@ -117,7 +118,7 @@ At 120 Hz the pinch path (labels placed again at each ~9% zoom step) is near the
 
 ## 9. Real-window checklist (NOT VERIFIED)
 
-- [ ] Trackpad: two-finger scroll pans, pinch zooms about the fingers, smart zoom toggles; momentum stops at the pan limit.
+- [ ] Trackpad: two-finger vertical scroll zooms, a sideways swipe or ⇧-scroll pans, pinch zooms about the fingers, smart zoom toggles; momentum does not keep zooming.
 - [ ] Mouse: wheel zooms smoothly about the pointer; drag pans with a closed hand; a click without movement selects.
 - [ ] Double-click a folder opens it; double-click a file focuses it; ⌥-double-click focuses a folder.
 - [ ] Clicking the canvas gives it keyboard focus: + − 0 F, ⌥-arrows and plain arrows work; focus is not stolen from the Navigator otherwise.

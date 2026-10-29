@@ -490,8 +490,8 @@ public enum LivingTreeLabeler {
 
 /// Interprets pointer, scroll and pinch input as tree actions. A press that moves more than `dragThreshold` pans
 /// and never selects; a click selects on release; a double click opens a folder (the existing subtree navigation)
-/// or, on a file or with Option, focuses the camera on the element. Trackpad scrolling pans; a mouse wheel, Command-
-/// or Option-scrolling and pinching zoom about the pointer.
+/// or, on a file or with Option, focuses the camera on the element. Scrolling (wheel, mouse or trackpad) and pinching
+/// zoom about the pointer; Shift- or Option-scrolling pans.
 public struct LivingTreeGesture: Sendable {
     public enum Action: Equatable, Sendable {
         case select(LivingTreeKey)
@@ -519,6 +519,10 @@ public struct LivingTreeGesture: Sendable {
 
     private var pressed: CGPoint?
     private var last: CGPoint?
+    /// What the last single click selected, and where: the target of a double-click that follows it.
+    private var clicked: (key: LivingTreeKey, point: CGPoint)?
+    /// How far the second press of a double-click may land from the first and still act on the first's target.
+    public static let doubleClickSlop: CGFloat = 6
     private var orbiting = false
     public private(set) var isDragging = false
 
@@ -530,8 +534,14 @@ public struct LivingTreeGesture: Sendable {
     public mutating func down(at point: CGPoint, clickCount: Int, modifiers: Modifiers, target: LivingTreeKey?, orbits: Bool = false, opens: (LivingTreeKey) -> Bool) -> [Action] {
         pressed = point; last = point; isDragging = false
         orbiting = orbits && !modifiers.contains(.shift) && !modifiers.contains(.option)
-        guard clickCount >= 2, let target else { return [] }
-        return [opens(target) && !modifiers.contains(.option) ? .open(target) : .focus(target)]
+        // Only the second press acts: a third would be hit-tested against the folder the second one just opened.
+        guard clickCount == 2 else { return [] }
+        // The first click's selection re-places labels (and can move the view) before this press arrives, so it may
+        // land on a neighbour's label: a double-click acts on what its first click chose.
+        let chosen = clicked.flatMap { hypot($0.point.x - point.x, $0.point.y - point.y) <= Self.doubleClickSlop ? $0.key : nil } ?? target
+        clicked = nil
+        guard let chosen else { return [] }
+        return [opens(chosen) && !modifiers.contains(.option) ? .open(chosen) : .focus(chosen)]
     }
 
     public mutating func dragged(to point: CGPoint) -> [Action] {
@@ -550,29 +560,28 @@ public struct LivingTreeGesture: Sendable {
 
     public mutating func up(at point: CGPoint, clickCount: Int, target: LivingTreeKey?) -> [Action] {
         defer { pressed = nil; last = nil; isDragging = false }
-        if isDragging { return [.dragEnded] }
-        guard pressed != nil, clickCount <= 1, let target else { return [] }
+        if isDragging { clicked = nil; return [.dragEnded] }
+        guard pressed != nil, clickCount <= 1, let target else { if clickCount <= 1 { clicked = nil }; return [] }
+        clicked = (target, point)
         return [.select(target)]
     }
 
-    /// Radians of turn per trackpad scroll point (3D).
-    public static let scrollOrbitRate = 0.006
-
+    /// Vertical scrolling zooms about the pointer in 2D and 3D, whatever the device: `precise` cannot tell a trackpad
+    /// from a Magic Mouse or a smooth-scrolling wheel, so it only chooses between direct (pixel) and animated (line)
+    /// zoom. Scrolling never turns the tree; dragging, the trackpad's rotation and the arrow keys do. Shift- or
+    /// Option-scrolling pans, as does a mostly sideways swipe. Momentum after the fingers lift pans but does not zoom.
     /// - Parameters:
-    ///   - precise: trackpad (pixel) deltas rather than mouse-wheel lines.
-    ///   - orbits: 3D: two-finger scrolling turns the tree (Shift or Option pans; Command zooms).
-    public static func scroll(_ delta: CGVector, precise: Bool, modifiers: Modifiers, at point: CGPoint, orbits: Bool = false) -> Action? {
+    ///   - precise: pixel deltas (trackpad, Magic Mouse, smooth-scrolling mice) rather than mouse-wheel lines.
+    ///   - momentum: an inertial event that follows a precise scroll gesture.
+    public static func scroll(_ delta: CGVector, precise: Bool, modifiers: Modifiers, at point: CGPoint, momentum: Bool = false) -> Action? {
         guard delta.dx != 0 || delta.dy != 0 else { return nil }
+        let pans = modifiers.contains(.shift) || (modifiers.contains(.option) && !modifiers.contains(.command))
         if precise {
-            if modifiers.contains(.command) || (!orbits && modifiers.contains(.option)) {
-                return delta.dy == 0 ? nil : .zoom(factor: exp(Double(delta.dy) * preciseZoomRate), at: point, animated: false)
-            }
-            if orbits && !modifiers.contains(.shift) && !modifiers.contains(.option) {
-                return .orbit(yaw: Double(delta.dx) * scrollOrbitRate, pitch: Double(delta.dy) * scrollOrbitRate)
-            }
-            return .pan(delta)
+            if pans { return .pan(delta) }
+            if abs(delta.dx) > abs(delta.dy) { return .pan(CGVector(dx: delta.dx, dy: 0)) }
+            return momentum ? nil : .zoom(factor: exp(Double(delta.dy) * preciseZoomRate), at: point, animated: false)
         }
-        if delta.dy != 0 && !modifiers.contains(.shift) {
+        if delta.dy != 0 && !pans {
             return .zoom(factor: pow(wheelStep, min(3, max(-3, Double(delta.dy)))), at: point, animated: true)
         }
         // Shift with a wheel scrolls sideways (AppKit reports it horizontally).
