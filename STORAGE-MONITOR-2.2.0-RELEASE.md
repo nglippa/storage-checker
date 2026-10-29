@@ -6,7 +6,7 @@ Version metadata is shared by all build scripts through `scripts/version.env`: m
 
 ## Automated verification
 
-All nine release commands completed with exit 0 on 2026-10-29, using the macOS 26.5 SDK. Logs and machine-readable results remain local in `build/release-2.2.0-verification/` of the integration worktree.
+All nine release commands completed with exit 0 on 2026-10-29, using the macOS 26.5 SDK. Logs and machine-readable results remain local in `build/release-2.2.0-verification/` in the main checkout, with the original test evidence and renders also preserved in the integration worktree.
 
 | Check | Result |
 |---|---|
@@ -34,6 +34,15 @@ The authorized development-binary native session ran before the version-only rel
 
 ## Package verification
 
-At source integration, package construction and verification have not yet run. They run from the merged master commit; the completed package result is recorded in a follow-up documentation commit.
+Built successfully from merged master source commit `4b8d772b11ef2e079de69761f9676e1c41636940`. The source commit and integration branch point to the identical tested tree; this follow-up commit records package evidence only.
+
+- DMG: `build/dist/Storage-Monitor-2.2.0.dmg` — **15,673,130 bytes** (about 14.95 MiB).
+- SHA-256: `9464630294e5b4265a958b0b4f4e77f63ba2ce7b102ca28f4c3676339304ea04`. Sidecar: `Storage-Monitor-2.2.0.dmg.sha256`.
+- `scripts/build-dmg.sh` completed with exit 0; `scripts/verify-dmg.sh` passed all **25 checks**, including **235 monitor self-tests** directly from the mounted image.
+- Both bundles are **2.2.0 (10)**, universal **arm64 + x86_64**, target **macOS 14.0+**, use only system libraries, and pass deep/strict code-signature verification. Both carry the matching third-party notice.
+- Signing is **ad-hoc**. Gatekeeper assessment is `rejected`, as expected without Developer ID signing and notarization.
+- The image mounted read-only without Finder and was detached after verification. Local logs: `build/release-2.2.0-verification/package.log` and `package-result.json`.
+
+Native distribution GUI checks are **NOT VERIFIED**: launching/interacting with the packaged viewer; dragging the app from the DMG; Enable/Disable and real launchd registration. The physical-input, accessibility and native-acceptance gaps above remain open. No additional native GUI session was run for this release.
 
 The DMG verifier mounts read-only with `-nobrowse -noautoopen`, inspects both bundles, and executes only the monitor's isolated self-test. It does not open the viewer or Finder. Installed apps, production data/preferences, LaunchAgents and the active inventory QA worker are untouched. No installation, notarization, tag, remote push or hosted release is part of this task.

@@ -203,6 +203,12 @@ Failure and interruption:
 
 For the 2.2.0 (build 10) release, see [the release record](STORAGE-MONITOR-2.2.0-RELEASE.md) for automated checks, packaging verification and remaining native acceptance gaps.
 
+Latest packaged build (2026-10-29): `build/dist/Storage-Monitor-2.2.0.dmg`, 15,673,130 bytes (14.95 MiB), sha256 `9464630294e5b4265a958b0b4f4e77f63ba2ce7b102ca28f4c3676339304ea04`.
+
+- Version 2.2.0 (build 10), ad-hoc signed, universal, macOS 14+.
+- All 25 noninteractive DMG checks passed, including 235 bundled monitor self-tests from the read-only image.
+- Gatekeeper rejects the ad-hoc, unnotarized app. Native distribution GUI/installation and real launchd registration remain **NOT VERIFIED**; see the release record for the remaining acceptance gaps.
+
 Historical development build (2026-10-23): `build/dist/Storage-Monitor-1.0.0.dmg`, 9,211,261 bytes (8.8 MB), sha256 `4f4c05cf0cfccb8027a1e39cc7f0f5240455289b630f1f2faf57d88af8ea4e87`.
 
 - Version 1.0.0 (build 1), ad-hoc signed, universal, macOS 14+.
