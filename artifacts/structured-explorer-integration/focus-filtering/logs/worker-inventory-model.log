@@ -1,0 +1,14 @@
+/Users/nicholaslippa/storage-checker/SourcesGUI/CleanupInspectorView.swift:184:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+181 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+182 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+183 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+184 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+185 |         }
+186 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+scripts/test-inventory-model.sh: line 17: 44964 Trace/BPT trap: 5       "$ROOT/build/InventoryModelTests" "$MONITOR" "$WORK/scratch"

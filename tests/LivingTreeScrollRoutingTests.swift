@@ -34,6 +34,12 @@ import AppKit
         if case .orbit? = deliver(units, dy: dy, dx: dx) { turned += 1 }
     } }
     check(turned == 0, "living tree AppKit routing: no wheel or pixel scroll event turns the tree (\(turned) of 8 did)")
+    let defaultMenu = view.menu(for: NSEvent.mouseEvent(with: .rightMouseDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 0)!)
+    check(defaultMenu?.items.map(\.title).contains("Fit Tree") == true,
+          "classic fallback input keeps its original context menu without a provider")
+    view.contextMenu = { _ in let menu = NSMenu(); menu.addItem(withTitle: "Isolate This Path", action: nil, keyEquivalent: ""); return menu }
+    let customMenu = view.menu(for: NSEvent.mouseEvent(with: .rightMouseDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 0)!)
+    check(customMenu?.items.first?.title == "Isolate This Path", "structured input accepts a per-canvas path menu without changing the classic default")
 }
 
 /// Camera/layout cache checks use a tiny in-memory hierarchy, no catalog or desktop events.
@@ -132,4 +138,40 @@ import AppKit
     scroll(.pixel, dy: 25, flags: .maskAlternate); let optioned = under(camera)
     check(camera.zoom == zoomBefore && sideways != centreBefore && shifted != sideways && optioned != shifted && selections == 0,
           "structured explorer scroll: sideways, Shift- and Option-scroll pan without zooming, and no scroll ever selects a folder (\(selections) selections)")
+
+    let filtering = StructuredExplorerState()
+    check(!filtering.isolate(tree.rootKey, model: tree, selection: 5) && filtering.isolatedRoot == nil,
+          "isolating the current visual root is a no-op, so Up never performs two navigation steps")
+    let original = filtering.layout(tree, revision: 10, depth: 1, selection: .node(2))
+    let builds = filtering.layouts
+    filtering.filter.minimumBytes = 100
+    let threshold = filtering.layout(tree, revision: 10, depth: 1, selection: .node(2))
+    filtering.filter.presentation = .hide
+    filtering.filter.focus = .subtree
+    let focused = filtering.layout(tree, revision: 10, depth: 1, selection: .node(2))
+    let visibility = filtering.visibility(focused, model: tree, selection: .node(2))
+    check(filtering.layouts == builds && original.nodes == threshold.nodes && threshold.nodes == focused.nodes && visibility.visible.contains(.node(2)),
+          "presentation filters and focus reuse radial geometry for an already placed selection without catalog work")
+    filtering.filter.minimumBytes = 150
+    let retainedChain = filtering.layout(tree, revision: 10, depth: 1, selection: .node(4))
+    let exceptions = filtering.visibility(retainedChain, model: tree, selection: .node(4))
+    check(exceptions.selectedBelowThreshold && exceptions.visible.contains(.node(4)) && retainedChain[.node(4)].map { retainedChain.nodes[$0.parent].key == .node(3) } == true,
+          "filter changes retain a deep selected node through its real parents as a below-filter exception")
+    let isolated = filtering.isolate(.node(2), model: tree, selection: 5)
+    check(!filtering.isolate(.node(2), model: tree, selection: 2) && filtering.isolationSelection == 5,
+          "re-isolating the active root preserves the original entry selection")
+    let isolatedLayout = filtering.layout(tree, revision: 10, depth: 1, selection: .node(4))
+    check(isolated && isolatedLayout.rootKey == .node(2) && isolatedLayout[.node(5)] == nil && tree.rootKey == .node(1),
+          "isolation changes only the visual root of the immutable loaded hierarchy")
+    _ = filtering.isolate(.node(3), model: tree, selection: 2)
+    check(filtering.isolationSelection == 5 && filtering.layout(tree, revision: 10, depth: 1, selection: .node(4)).rootKey == .node(3),
+          "nested isolation retains the original entry selection")
+    let up = filtering.upIsolation(model: tree)
+    let upToRoot = filtering.upIsolation(model: tree)
+    check(up == .node(2) && upToRoot == tree.rootKey && filtering.isolatedRoot == nil,
+          "Up follows actual parents out of isolation instead of restoring the entry child selection")
+    _ = filtering.isolate(.node(3), model: tree, selection: 5)
+    let restore = filtering.resetFilters()
+    check(restore == 5 && filtering.isolatedRoot == nil && filtering.filter == StructuredExplorerFilter(),
+          "Reset restores All, Dim, focus off, isolation off and the entry selection")
 }

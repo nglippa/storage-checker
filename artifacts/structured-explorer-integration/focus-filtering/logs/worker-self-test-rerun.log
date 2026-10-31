@@ -1,0 +1,50 @@
+Storage Monitor: FAIL: swap allocation and usage are separate exact values
+PASS 25 GB boundary is normal
+PASS strict low threshold
+PASS 15 GB boundary warning
+PASS critical below 15 GB
+PASS 3 GB previous reading boundary
+PASS below 3 GB excluded
+PASS 5 GB inclusive two-hour boundary
+PASS outside two-hour window excluded
+PASS container isolation
+PASS 30-day retention readings
+PASS 30-day retention alerts
+PASS 30-day retention diagnostics
+PASS unchanged warning deduplicated persistently
+PASS critical escalates warning
+PASS recovery rearms warning
+PASS new warning requests notification
+PASS delivered persistent warning never duplicates
+PASS critical escalation bypasses retry delay
+PASS failed delivery retry rate limited
+PASS failed delivery retries after thirty minutes
+PASS resolved growth does not renotify unchanged low condition
+PASS SQLite lifecycle low plus growth alerts
+PASS SQLite reopen growth resolves without duplicate low alert
+PASS SQLite critical escalation
+PASS SQLite recovery clears acknowledged state
+PASS SQLite recovery rearms and denied delivery stays pending
+PASS SQLite failed retry rate limit
+PASS SQLite failed notification retries after cooldown
+PASS SQLite successful retry deduplicates
+PASS SQLite container change resets baseline
+PASS single calendar schedule and login startup
+PASS calendar wake catch-up
+PASS LaunchAgent absolute executable/data arguments with spaces
+PASS overlapping check lock
+PASS subprocess deadlines enforced
+PASS noisy stderr cannot displace directory-size stdout
+PASS continuous output cannot starve deadline or exceed capture cap
+PASS timed-out subprocess is terminated and reaped, not orphaned
+PASS truncated APFS plist output is rejected
+PASS complete APFS plist output parses
+PASS complete directory measurement is exact
+PASS directory measurement records its duration
+PASS permission refusals make a usable partial lower bound
+PASS repeated permission refusals are aggregated (12 counted, 3 examples kept)
+PASS permission count is persisted, not raw error text
+PASS directory time budget marks the measurement incomplete
+PASS entry cap marks the measurement incomplete
+PASS absent optional location is not an error
+PASS exhausted total budget skips instead of blocking

@@ -1,0 +1,43 @@
+{
+  "baseline": "/private/tmp/structured-filtering-baseline-20261031T111033Z",
+  "filesChecked": 448,
+  "missing": [],
+  "intentionalChanges": [
+    "SourcesGUI/LivingTreeView.swift",
+    "SourcesGUI/StructuredExplorerView.swift",
+    "SourcesShared/StructuredExplorer.swift",
+    "scripts/test-gui.sh",
+    "tests/GUIModelTests.swift",
+    "tests/LivingTreeScrollRoutingTests.swift"
+  ],
+  "unexpectedChanges": [],
+  "modeChanges": [],
+  "HEADUnchanged": true,
+  "stagedDiffUnchanged": true,
+  "protected": {
+    "/Users/nicholaslippa/storage-checker/build/dist/Storage-Monitor-2.2.0.dmg": {
+      "unchanged": true,
+      "sha256": "9464630294e5b4265a958b0b4f4e77f63ba2ce7b102ca28f4c3676339304ea04",
+      "size": 15673130,
+      "mtime_ns": 1793315984008718808,
+      "inode": 53567675
+    },
+    "/Users/nicholaslippa/storage-checker/build/release-artifacts/2.1.0-9-20261029T063406Z/Storage-Monitor-2.1.0.dmg": {
+      "unchanged": true,
+      "sha256": "3484abea58524cd090808714e38672cc0f82a628d3b42b9c797c66674f774f0c",
+      "size": 15137570,
+      "mtime_ns": 1793256101904014389,
+      "inode": 52472448
+    },
+    "/Users/nicholaslippa/storage-checker/build/inventory-fresh-20261023T031313Z/previous-catalog.sqlite3": {
+      "unchanged": true,
+      "sha256": "0fa4373a1198e6dc17fe145c79fc9e882195a3e67ff6b298329bf54114f133a1",
+      "size": 1460211712,
+      "mtime_ns": 1792725135160196782,
+      "inode": 33594103
+    },
+    "v2.1-rc": {
+      "unchanged": true
+    }
+  }
+}

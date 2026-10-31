@@ -12,9 +12,18 @@ import AppKit
 /// Camera, viewport and the cached layout; kept outside the view so pointer moves do not rebuild the layout.
 @MainActor final class StructuredExplorerState: ObservableObject {
     @Published var camera = StructuredExplorerCamera()
+    @Published var filter = StructuredExplorerFilter()
+    @Published private(set) var isolatedRoot: LivingTreeKey?
+    private(set) var isolationSelection: Int64?
+    private var isolationBase: LivingTreeKey?
     var viewport = CGSize(width: 900, height: 520)
     private var baseline: (revision: Int, depth: Int, layout: StructuredExplorerLayout, stamp: Int)?
-    private var retained: (key: LivingTreeKey, layout: StructuredExplorerLayout, stamp: Int)?
+    private var retained: (key: LivingTreeKey, fullChain: Bool, layout: StructuredExplorerLayout, stamp: Int)?
+    private struct VisibilityKey: Equatable {
+        let layout: Int, filter: StructuredExplorerFilter, selection: LivingTreeKey?
+    }
+    private var visibilityCache: (key: VisibilityKey, value: StructuredExplorerVisibility)?
+    private(set) var visibilityEvaluations = 0
     /// The last drawn layout and transform (where a folder was on screen when the tree moves to it).
     private(set) var drawn: (root: LivingTreeKey, layout: StructuredExplorerLayout, transform: StructuredExplorerTransform)?
     private var previousDrawn: (root: LivingTreeKey, layout: StructuredExplorerLayout, transform: StructuredExplorerTransform)?
@@ -23,6 +32,7 @@ import AppKit
     private var current = 0
     private struct LabelKey: Equatable {
         let layout: Int, transform: StructuredExplorerTransform, size: CGSize, selected: LivingTreeKey?, hovered: LivingTreeKey?
+        let filter: StructuredExplorerFilter, filtered: Bool
     }
     private var placed: (key: LabelKey, labels: [StructuredExplorerLabel])?
     private(set) var labelPlacements = 0
@@ -30,13 +40,15 @@ import AppKit
     /// The layout for this tree and level count. A selection that is already shown never re-lays the tree out; one that
     /// is not (beyond the per-folder limit or the shown levels) is laid out on its chain.
     func layout(_ model: LivingTreeModel, revision: Int, depth: Int, selection: LivingTreeKey?) -> StructuredExplorerLayout {
-        if baseline?.revision != revision || baseline?.depth != depth || baseline?.layout.rootKey != model.rootKey {
+        let root = isolatedRoot.flatMap { model[$0]?.isFolder == true ? $0 : nil } ?? model.rootKey
+        if baseline?.revision != revision || baseline?.depth != depth || baseline?.layout.rootKey != root {
             baseline = (revision, depth, build(model, depth: depth, selection: nil), layouts)
             retained = nil
         }
         let base = baseline!
         guard let selection, base.layout.index[selection] == nil, model[selection] != nil else { current = base.stamp; return base.layout }
-        if retained?.key != selection { retained = (selection, build(model, depth: depth, selection: selection), layouts) }
+        let fullChain = filter.isActive || isolatedRoot != nil
+        if retained?.key != selection || retained?.fullChain != fullChain { retained = (selection, fullChain, build(model, depth: depth, selection: selection), layouts) }
         current = retained!.stamp
         return retained!.layout
     }
@@ -45,17 +57,19 @@ import AppKit
     /// every pointer move (the hover lens follows the pointer); only a change of hover, selection, camera, canvas or tree
     /// places them again.
     func labels(_ layout: StructuredExplorerLayout, model: LivingTreeModel, transform: StructuredExplorerTransform, size: CGSize,
-                selected: LivingTreeKey?, hovered: LivingTreeKey?) -> [StructuredExplorerLabel] {
-        let key = LabelKey(layout: current, transform: transform, size: size, selected: selected, hovered: hovered)
+                selected: LivingTreeKey?, hovered: LivingTreeKey?, visibility: StructuredExplorerVisibility? = nil) -> [StructuredExplorerLabel] {
+        let key = LabelKey(layout: current, transform: transform, size: size, selected: selected, hovered: hovered, filter: filter, filtered: visibility != nil)
         if let placed, placed.key == key { return placed.labels }
         let labels = layout.labels(model: model, transform: transform, size: size, selected: selected, hovered: hovered,
-                                   detail: StructuredExplorerText.size, measure: StructuredExplorerPainter.measure)
+                                   detail: StructuredExplorerText.size, measure: StructuredExplorerPainter.measure,
+                                   allowed: visibility?.visible, preferred: visibility?.prominent)
         placed = (key, labels); labelPlacements += 1
         return labels
     }
     private func build(_ model: LivingTreeModel, depth: Int, selection: LivingTreeKey?) -> StructuredExplorerLayout {
         let started = Date()
-        let layout = StructuredExplorerLayout(model: model, depth: depth, keep: selection)
+        let layout = StructuredExplorerLayout(model: model, depth: depth, keep: selection, root: isolatedRoot,
+                                             keepFullAncestry: filter.isActive || isolatedRoot != nil)
         lastLayoutSeconds = Date().timeIntervalSince(started); layouts += 1
         return layout
     }
@@ -68,6 +82,45 @@ import AppKit
         return previousDrawn?.root == root ? previousDrawn : nil
     }
     func transform(_ layout: StructuredExplorerLayout) -> StructuredExplorerTransform { camera.transform(bounds: layout.bounds, size: viewport) }
+
+    func visibility(_ layout: StructuredExplorerLayout, model: LivingTreeModel, selection: LivingTreeKey?) -> StructuredExplorerVisibility {
+        let key = VisibilityKey(layout: current, filter: filter, selection: selection)
+        if let visibilityCache, visibilityCache.key == key { return visibilityCache.value }
+        let value = StructuredExplorerVisibility(layout: layout, model: model, filter: filter, selection: selection)
+        visibilityCache = (key, value); visibilityEvaluations += 1
+        return value
+    }
+
+    @discardableResult func isolate(_ key: LivingTreeKey, model: LivingTreeModel, selection: Int64?) -> Bool {
+        guard key.nodeID != nil, model[key]?.isFolder == true, key != (isolatedRoot ?? model.rootKey) else { return false }
+        if isolatedRoot == nil { isolationSelection = selection; isolationBase = model.rootKey }
+        isolatedRoot = key; camera = StructuredExplorerCamera()
+        return true
+    }
+
+    @discardableResult func exitIsolation() -> Int64? {
+        let selection = isolationSelection
+        isolatedRoot = nil; isolationSelection = nil; isolationBase = nil
+        camera = StructuredExplorerCamera()
+        return selection
+    }
+
+    @discardableResult func resetFilters() -> Int64? {
+        filter = StructuredExplorerFilter()
+        return exitIsolation()
+    }
+
+    @discardableResult func upIsolation(model: LivingTreeModel) -> LivingTreeKey? {
+        guard let root = isolatedRoot else { return nil }
+        guard let parent = model[root]?.parent else { exitIsolation(); return model.rootKey }
+        if parent == model.rootKey { exitIsolation() }
+        else { isolatedRoot = parent; camera = StructuredExplorerCamera() }
+        return parent
+    }
+
+    func reconcileIsolation(_ model: LivingTreeModel) {
+        if let isolatedRoot, isolationBase != model.rootKey || model[isolatedRoot]?.isFolder != true { exitIsolation() }
+    }
 }
 
 /// Colours: category tones from the Living Tree's colouring, adapted to the appearance; orange marks the selection.
@@ -175,14 +228,19 @@ struct StructuredExplorerView: View {
         .onChange(of: explorer.revealRequest) { _, request in if let request { tree.reveal(request.node, serial: request.serial) } }
         .onChange(of: explorer.selection) { _, id in
             if let override = tree.focusOverride, override.restFolder != id { tree.focusOverride = nil }
+            if let root = state.isolatedRoot, let model = tree.model,
+               let key = selectionKey(model), !model.ancestry(of: key).contains(root) { state.exitIsolation() }
             revealSelection()
         }
-        .onChange(of: tree.revision) { _, _ in transition() }
+        .onChange(of: tree.revision) { _, _ in if let model = tree.model { state.reconcileIsolation(model) }; transition() }
         .onChange(of: depth) { _, _ in state.camera = StructuredExplorerCamera() }
+        .onChange(of: state.filter) { _, _ in hover = nil; revealSelection() }
+        .onChange(of: state.isolatedRoot) { _, _ in hover = nil }
     }
 
     private func sync() {
         guard let folder = browser.directory else { return }
+        if tree.model?.root.id != folder.id, state.isolatedRoot != nil { state.exitIsolation() }
         tree.show(root: folder, trail: browser.breadcrumbs)
         if let request = explorer.revealRequest, request.folder == folder.id { tree.reveal(request.node, serial: request.serial) }
     }
@@ -213,25 +271,46 @@ struct StructuredExplorerView: View {
         let t = state.camera.transform(bounds: layout.bounds, size: size)
         let _ = state.noteDrawn(layout, t)
         let shownSelection = selection.flatMap { layout.shownKey(for: $0, in: model) }
-        let labels = state.labels(layout, model: model, transform: t, size: size, selected: shownSelection, hovered: hover)
+        let visibility = state.visibility(layout, model: model, selection: selection)
+        let labels = state.labels(layout, model: model, transform: t, size: size, selected: shownSelection, hovered: hover, visibility: visibility)
         let palette = StructuredExplorerPalette(dark: scheme == .dark)
         let coloring = tree.coloring
         // Bound virtual children at high depth, while always exposing the current selection. The Navigator lists all.
-        let accessibleNodes = Array(layout.nodes.prefix(160)) + layout.nodes.dropFirst(160).filter { $0.key == shownSelection }
+        let visibleNodes = layout.nodes.filter { visibility.visible.contains($0.key) }
+        let accessibleNodes = Array(visibleNodes.prefix(160)) + visibleNodes.dropFirst(160).filter { $0.key == shownSelection }
         return ZStack(alignment: .topLeading) {
             Canvas(rendersAsynchronously: false) { context, _ in
                 StructuredExplorerPainter(layout: layout, model: model, coloring: coloring, palette: palette)
-                    .paint(&context, transform: t, size: size, selected: shownSelection, exact: selection == shownSelection, hovered: hover, labels: labels)
+                    .paint(&context, transform: t, size: size, selected: shownSelection, exact: selection == shownSelection, hovered: hover, labels: labels, visibility: visibility)
             }
+            .id(state.filter)
+            .transition(.opacity)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: state.filter)
             .allowsHitTesting(false)
             if model[model.rootKey]?.children.isEmpty ?? true {
                 Text("Nothing indexed inside this folder yet.").font(.callout).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom).padding(.bottom, 24)
             }
             if interactive {
-                LivingTreeInputLayer { event in handle(event, model: model, layout: layout, transform: t, labels: labels) }
+                LivingTreeInputLayer(contextMenu: { p in contextMenu(at: p, model: model, layout: layout, transform: t, labels: labels, visibility: visibility) }) {
+                    event in handle(event, model: model, layout: layout, transform: t, labels: labels)
+                }
             }
-            sizeKey(model: model, transform: t, palette: palette).padding(10).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading).allowsHitTesting(false)
+            if visibility.noMatches {
+                HStack(spacing: 8) {
+                    Text("No folders meet this size in the loaded view.")
+                    Button("Show All") { state.filter.minimumBytes = 0 }
+                }.font(.caption).padding(8).background(palette.plate, in: RoundedRectangle(cornerRadius: 5))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top).padding(.top, 8)
+            } else if state.isolatedRoot != nil, model[layout.rootKey]?.children.isEmpty == true {
+                VStack(spacing: 6) {
+                    Text(model[layout.rootKey]?.expanded == true ? "No additional indexed items in this folder." : "This folder's descendants are not loaded in the current view.")
+                    if model[layout.rootKey]?.expanded != true, let node = model[layout.rootKey]?.node {
+                        Button("Explore indexed folder") { state.exitIsolation(); browser.navigate(node) }
+                    }
+                }.font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom).padding(.bottom, 12)
+            }
+            sizeKey(model: model, root: layout.rootKey, transform: t, palette: palette).padding(10).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading).allowsHitTesting(false)
             lens(model: model, size: size)
         }
         .contentShape(Rectangle())
@@ -256,7 +335,7 @@ struct StructuredExplorerView: View {
             case .leftArrow: move = .previousSibling
             default: move = .nextSibling
             }
-            guard let next = layout.move(move, from: shownSelection) else { return .ignored }
+            guard let next = layout.move(move, from: shownSelection, allowed: visibility.visible) else { return .ignored }
             choose(next, model: model)
             return .handled
         }
@@ -273,7 +352,7 @@ struct StructuredExplorerView: View {
         .onKeyPress(.escape) { if showingHelp { showingHelp = false } else { goUp() }; return .handled }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Structured Explorer of \(browser.directory.map(browser.displayName) ?? "the current folder")")
-        .accessibilityValue("\(layout.nodes.count - 1) items shown, \(layout.depth) levels, zoom \(LivingTreeView.percent(state.camera.zoom))")
+        .accessibilityValue("\(filterStatus(visibility)), \(layout.depth) levels, zoom \(LivingTreeView.percent(state.camera.zoom)), \(state.filter.presentation.rawValue), focus \(state.filter.focus.rawValue)")
         .accessibilityHint("Arrow keys move: up to the largest item inside, down to the enclosing one, left and right around the ring. Return explores a folder; Escape goes to the enclosing folder; plus and minus zoom; 0 resets the view.")
         .accessibilityZoomAction { action in
             switch action.direction {
@@ -284,17 +363,32 @@ struct StructuredExplorerView: View {
         }
         .accessibilityChildren {
             ForEach(accessibleNodes, id: \.key) { node in
-                let selected = node.key == shownSelection
-                let element = model[node.key]
-                Circle().frame(width: max(12, layout.screenRadius(node, t) * 2), height: max(12, layout.screenRadius(node, t) * 2)).position(t.apply(node.point))
-                    .accessibilityLabel(StructuredExplorerText.spoken(node.key, layout: layout, model: model, selected: selected))
-                    .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-                    .accessibilityAction { choose(node.key, model: model) }
-                    .accessibilityAction(named: "Explore") { open(node.key, model: model) }
-                    .accessibilityAction(named: "Up one level") { goUp() }
-                    .accessibilityHint(element?.isFolder == true && node.key != model.rootKey ? "Explore shows what is inside" : "")
+                accessibleNode(node, layout: layout, model: model, transform: t, selected: node.key == shownSelection)
             }
         }
+    }
+
+    @ViewBuilder private func accessibleNode(_ node: StructuredExplorerLayout.Node, layout: StructuredExplorerLayout,
+                                model: LivingTreeModel, transform: StructuredExplorerTransform, selected: Bool) -> some View {
+        let diameter = max(CGFloat(12), layout.screenRadius(node, transform) * 2)
+        let label = StructuredExplorerText.spoken(node.key, layout: layout, model: model, selected: selected)
+        let traits: AccessibilityTraits = selected ? [.isButton, .isSelected] : .isButton
+        let base = Circle().frame(width: diameter, height: diameter).position(transform.apply(node.point))
+            .accessibilityLabel(label).accessibilityAddTraits(traits)
+            .accessibilityAction { choose(node.key, model: model) }
+            .accessibilityAction(named: "Explore") { open(node.key, model: model) }
+            .accessibilityAction(named: "Up one level") { goUp() }
+        let actions = base
+            .accessibilityAction(named: "Clear Focus / Isolation") { clearFocus() }
+            .accessibilityHint(model[node.key]?.isFolder == true && node.key != layout.rootKey ? "Explore shows what is inside" : "")
+        if model[node.key]?.isFolder == true && node.key.nodeID != nil {
+            let folderActions = actions
+                .accessibilityAction(named: "Show Path to Root") { pathFocus(node.key, model: model, mode: .path) }
+                .accessibilityAction(named: "Focus on Selection") { pathFocus(node.key, model: model, mode: .subtree) }
+            if node.key != layout.rootKey {
+                folderActions.accessibilityAction(named: "Isolate This Path") { isolate(node.key, model: model) }
+            } else { folderActions }
+        } else { actions }
     }
 
     // MARK: Camera
@@ -318,7 +412,8 @@ struct StructuredExplorerView: View {
     // MARK: Input
 
     private func handle(_ event: LivingTreeInputView.Event, model: LivingTreeModel, layout: StructuredExplorerLayout, transform t: StructuredExplorerTransform, labels: [StructuredExplorerLabel]) {
-        let hit = { (p: CGPoint) in layout.hit(p, transform: t, labels: labels) }
+        let visibility = state.visibility(layout, model: model, selection: selectionKey(model))
+        let hit = { (p: CGPoint) in filteredHit(p, layout: layout, transform: t, labels: labels, visibility: visibility) }
         let opens = { (key: LivingTreeKey) -> Bool in
             guard key != model.rootKey, let element = model[key] else { return false }
             return element.role == .rest || element.node?.kind == .directory
@@ -389,6 +484,7 @@ struct StructuredExplorerView: View {
 
     /// Double-click or Return: the folder becomes the centre (the app's folder navigation); grouped items open their folder.
     private func open(_ key: LivingTreeKey, model: LivingTreeModel) {
+        if state.isolatedRoot != nil, model[key]?.isFolder == true, key != state.isolatedRoot { isolate(key, model: model); return }
         switch key {
         case .node:
             guard let node = model[key]?.node, node.kind == .directory, key != model.rootKey else { return }
@@ -400,6 +496,10 @@ struct StructuredExplorerView: View {
     }
 
     private func goUp() {
+        if let root = state.isolatedRoot, let model = tree.model {
+            if root == model.rootKey { state.exitIsolation(); return }
+            else if let parent = state.upIsolation(model: model) { choose(parent, model: model); return }
+        }
         guard let folder = browser.directory, let parent = folder.parentID, let node = browser.breadcrumbs.first(where: { $0.id == parent }) else { return }
         browser.navigate(node)
     }
@@ -463,8 +563,8 @@ struct StructuredExplorerView: View {
 
     /// Relative reference areas: the centre's size, a tenth and a hundredth. One bounded scale applies to all three,
     /// so zooming never independently clips a large reference and changes the ratios.
-    private func sizeKey(model: LivingTreeModel, transform t: StructuredExplorerTransform, palette: StructuredExplorerPalette) -> some View {
-        let total = model[model.rootKey]?.bytes
+    private func sizeKey(model: LivingTreeModel, root: LivingTreeKey, transform t: StructuredExplorerTransform, palette: StructuredExplorerPalette) -> some View {
+        let total = model[root]?.bytes
         let sizes = StructuredExplorerScale.keySizes(total)
         let keyScale = min(t.scale, 40 / StructuredExplorerScale.centerRadius)
         return HStack(alignment: .bottom, spacing: 10) {
@@ -491,13 +591,30 @@ struct StructuredExplorerView: View {
                 HStack(spacing: 8) { pathBar; Spacer(minLength: 8); viewControls }
                 VStack(alignment: .leading, spacing: 6) { HStack { pathBar; Spacer() }; HStack { Spacer(); viewControls } }
             }
+            StructuredExplorerFilterControls(state: state, canFocus: selectedFolder != nil,
+                canIsolate: selectedFolder != nil && selectedFolder != (state.isolatedRoot ?? tree.model?.rootKey),
+                isolate: { if let model = tree.model, let key = selectedFolder { isolate(key, model: model) } },
+                showPath: { if let model = tree.model, let key = selectedFolder { pathFocus(key, model: model, mode: .path) } },
+                clear: clearFocus, reset: resetFilters)
+            if let key = state.isolatedRoot, let node = tree.model?[key]?.node {
+                HStack(spacing: 8) {
+                    Label("Isolated: \(node.name)", systemImage: "scope").lineLimit(1).truncationMode(.middle).help(node.path)
+                    Spacer(minLength: 4)
+                    Button("Exit Isolation", action: exitIsolation).accessibilityLabel("Exit isolation and restore previous selection")
+                }.font(.caption).foregroundStyle(.secondary)
+            }
+            if let model = tree.model, let layout = currentLayout,
+               state.visibility(layout, model: model, selection: selectionKey(model)).selectedBelowThreshold {
+                Label(selectionExceptionText, systemImage: "info.circle")
+                    .font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
             if showsSelectionContext, let model = tree.model, let key = selectionKey(model), let element = model[key] { selectionContext(element, key: key, model: model) }
         }
         .padding(.horizontal, StorageDesign.gutter).padding(.vertical, 7)
     }
 
     private var pathBar: some View {
-        let trail = browser.breadcrumbs.isEmpty ? (browser.directory.map { [$0] } ?? []) : browser.breadcrumbs
+        let trail = visualTrail
         let parent = trail.count > 1 ? trail[trail.count - 2] : nil
         return HStack(spacing: 6) {
             Button { goUp() } label: { Label("Up", systemImage: "chevron.up").font(.caption.weight(.medium)).frame(minHeight: 22).contentShape(Rectangle()) }
@@ -508,7 +625,7 @@ struct StructuredExplorerView: View {
             ForEach(Array(trail.suffix(4).enumerated()), id: \.element.id) { index, node in
                 if index > 0 || trail.count > 4 { Image(systemName: "chevron.compact.right").font(.caption2).foregroundStyle(.tertiary) }
                 let current = node.id == trail.last?.id
-                Button(browser.displayName(node)) { if !current { browser.navigate(node) } }
+                Button(browser.displayName(node)) { if !current { navigateCrumb(node) } }
                     .buttonStyle(.plain).font(.caption.weight(current ? .semibold : .regular))
                     .foregroundStyle(current ? .primary : .secondary).lineLimit(1)
                     .help(current ? node.path : "Go to \(browser.displayName(node))")
@@ -534,7 +651,7 @@ struct StructuredExplorerView: View {
             Divider().frame(height: 16)
             Button("Fit") { if let model = tree.model, let l = currentLayout { frameSelection(l, model: model) } }
                 .help("Frame the selected folder's branch, or everything shown (F)")
-            Button("Reset") { resetView() }.help("Show everything at the default zoom (0)").disabled(state.camera.isFit)
+            Button("Reset View") { resetView() }.help("Default zoom and pan; keeps filters (0)").disabled(state.camera.isFit)
             Button { showingHelp.toggle() } label: { Image(systemName: "questionmark.circle") }
                 .help("How to get around").accessibilityLabel("Help")
                 .popover(isPresented: $showingHelp, arrowEdge: .top) { navigationHelp }
@@ -573,7 +690,8 @@ struct StructuredExplorerView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Text(footerText).font(.caption).foregroundStyle(.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true).help(footerText)
+            Text(footerText).font(.caption).foregroundStyle(.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                .help(footerText + ". Counts cover real descendant folders placed by the current Levels/per-folder limits, excluding the centre, files and grouped remainders. Context is extra ancestry/selection, not a threshold match. Disc area is indexed size; arcs show share of the actual parent. This bounded loaded view is not the whole catalog.")
             Spacer(minLength: 12)
             Text("Click to select · double-click to explore · Esc goes up").font(.caption).foregroundStyle(.tertiary).lineLimit(1)
         }
@@ -583,14 +701,100 @@ struct StructuredExplorerView: View {
 
     private var footerText: String {
         guard let model = tree.model else { return " " }
-        var parts = ["Disc area shows indexed size (small items have a visible minimum); arcs show share of parent; rings show levels"]
+        var parts = [String]()
         if let layout = currentLayout {
+            parts.append(filterStatus(state.visibility(layout, model: model, selection: selectionKey(model))))
             let hidden = layout.nodes.reduce(0) { $0 + $1.hidden }
-            parts.append("\((layout.nodes.count - 1).formatted()) shown" + (hidden > 0 ? ", \(hidden.formatted()) more inside (+N)" : ""))
+            if hidden > 0 { parts.append("\(hidden.formatted()) more items inside (+N)") }
         }
         if model.truncated { parts.append("reduced to keep the read short") }
         parts.append("not reclaimable storage")
         return parts.joined(separator: " · ")
+    }
+
+    private func filterStatus(_ visibility: StructuredExplorerVisibility) -> String {
+        "Showing \(visibility.visibleFolders) of \(visibility.availableFolders) folders · \(visibility.matchingFolders) match · \(visibility.contextFolders) context"
+    }
+
+    private var selectedFolder: LivingTreeKey? {
+        guard let model = tree.model, let key = selectionKey(model), key.nodeID != nil, model[key]?.isFolder == true else { return nil }
+        return key
+    }
+
+    private var selectionExceptionText: String {
+        guard let model = tree.model, let key = selectionKey(model), let element = model[key] else { return "Selected path is retained." }
+        if element.role == .rest { return "Selected group is retained as navigation context." }
+        if element.bytes == nil { return "Selected item's size is unknown; its path is retained." }
+        return "Selected item is below the size filter; its path is retained."
+    }
+
+    private var visualTrail: [InventoryNode] {
+        var trail = browser.breadcrumbs.isEmpty ? (browser.directory.map { [$0] } ?? []) : browser.breadcrumbs
+        if let root = state.isolatedRoot, let model = tree.model {
+            for key in model.ancestry(of: root) {
+                if let node = model[key]?.node, !trail.contains(where: { $0.id == node.id }) { trail.append(node) }
+            }
+        }
+        return trail
+    }
+
+    private func navigateCrumb(_ node: InventoryNode) {
+        if state.isolatedRoot != nil, let model = tree.model, model[.node(node.id)] != nil {
+            if node.id == model.root.id { state.exitIsolation(); choose(.node(node.id), model: model) }
+            else { isolate(.node(node.id), model: model) }
+        } else { state.exitIsolation(); browser.navigate(node) }
+    }
+
+    private func isolate(_ key: LivingTreeKey, model: LivingTreeModel) {
+        if state.isolate(key, model: model, selection: explorer.selection) { choose(key, model: model) }
+    }
+
+    private func exitIsolation() {
+        guard state.isolatedRoot != nil else { return }
+        restoreSelection(state.exitIsolation())
+        revealSelection()
+    }
+
+    private func resetFilters() {
+        let hadIsolation = state.isolatedRoot != nil
+        let selection = state.resetFilters()
+        if hadIsolation { restoreSelection(selection) }
+    }
+
+    private func restoreSelection(_ selection: Int64?) {
+        if let selection, let model = tree.model, model[.node(selection)] != nil {
+            choose(.node(selection), model: model)
+        } else { explorer.selection = selection }
+    }
+
+    private func clearFocus() { state.filter.focus = .off; exitIsolation() }
+
+    private func pathFocus(_ key: LivingTreeKey, model: LivingTreeModel, mode: StructuredExplorerFocus) {
+        guard model[key]?.isFolder == true else { return }
+        choose(key, model: model); state.filter.focus = mode
+    }
+
+    private func filteredHit(_ p: CGPoint, layout: StructuredExplorerLayout, transform: StructuredExplorerTransform,
+                             labels: [StructuredExplorerLabel], visibility: StructuredExplorerVisibility) -> LivingTreeKey? {
+        let strong = Set(visibility.visible.filter { visibility.opacity($0) >= 0.7 })
+        return layout.hit(p, transform: transform, labels: labels.filter { strong.contains($0.key) }, allowed: strong)
+            ?? layout.hit(p, transform: transform, labels: [], allowed: visibility.visible.subtracting(strong))
+    }
+
+    private func contextMenu(at p: CGPoint, model: LivingTreeModel, layout: StructuredExplorerLayout,
+                             transform: StructuredExplorerTransform, labels: [StructuredExplorerLabel], visibility: StructuredExplorerVisibility) -> NSMenu {
+        let key = filteredHit(p, layout: layout, transform: transform, labels: labels, visibility: visibility)
+        let folder = key.flatMap { model[$0]?.isFolder == true && $0.nodeID != nil ? $0 : nil }
+        let menu = NSMenu(title: "Structured Explorer")
+        menu.autoenablesItems = false
+        menu.addItem(StructuredExplorerMenuAction.item("Isolate This Path", enabled: folder != nil && folder != layout.rootKey) { if let folder { isolate(folder, model: model) } })
+        menu.addItem(StructuredExplorerMenuAction.item("Show Path to Root", enabled: folder != nil) { if let folder { pathFocus(folder, model: model, mode: .path) } })
+        menu.addItem(StructuredExplorerMenuAction.item("Focus on Selection", enabled: folder != nil) { if let folder { pathFocus(folder, model: model, mode: .subtree) } })
+        menu.addItem(.separator())
+        menu.addItem(StructuredExplorerMenuAction.item("Clear Focus / Isolation") { clearFocus() })
+        menu.addItem(StructuredExplorerMenuAction.item("Fit") { frameSelection(layout, model: model) })
+        menu.addItem(StructuredExplorerMenuAction.item("Reset") { resetFilters() })
+        return menu
     }
 
     private var navigationHelp: some View {
@@ -646,7 +850,7 @@ struct StructuredExplorerPainter {
     /// A label's plate: bold name, then size.
     @MainActor static func measure(_ title: String, _ detail: String) -> CGSize { CGSize(width: width(title, detail: false) + width(detail, detail: true) + 18, height: 18) }
 
-    @MainActor func paint(_ ctx: inout GraphicsContext, transform t: StructuredExplorerTransform, size: CGSize, selected: LivingTreeKey?, exact: Bool, hovered: LivingTreeKey?, labels: [StructuredExplorerLabel]) {
+    @MainActor func paint(_ ctx: inout GraphicsContext, transform t: StructuredExplorerTransform, size: CGSize, selected: LivingTreeKey?, exact: Bool, hovered: LivingTreeKey?, labels: [StructuredExplorerLabel], visibility: StructuredExplorerVisibility? = nil) {
         let view = CGRect(origin: .zero, size: size).insetBy(dx: -40, dy: -40)
         let centre = t.apply(CGPoint.zero)
         let total = model[layout.rootKey]?.bytes
@@ -668,53 +872,57 @@ struct StructuredExplorerPainter {
         let path = Set(selected.map { model.ancestry(of: $0) } ?? [])
         for i in order {
             let node = layout.nodes[i]
+            guard visibility?.visible.contains(node.key) != false else { continue }
+            var ink = ctx; ink.opacity *= visibility?.opacity(node.key) ?? 1
             let (p0, c1, c2, p3) = layout.linkControls(i)
             let a = t.apply(p0), d = t.apply(p3)
             guard view.intersects(CGRect(x: min(a.x, d.x), y: min(a.y, d.y), width: abs(a.x - d.x), height: abs(a.y - d.y)).insetBy(dx: -30, dy: -30)) else { continue }
             var curve = Path(); curve.move(to: a); curve.addCurve(to: d, control1: t.apply(c1), control2: t.apply(c2))
             let width = StructuredExplorerScale.linkWidth(model[node.key]?.bytes, of: total) * min(1.6, max(0.6, t.scale))
             let onPath = path.contains(node.key)
-            ctx.stroke(curve, with: .color(onPath ? StructuredExplorerPalette.accent : palette.tone(node.key, coloring: coloring).opacity(0.42)),
+            ink.stroke(curve, with: .color(onPath ? StructuredExplorerPalette.accent : palette.tone(node.key, coloring: coloring).opacity(0.42)),
                        style: StrokeStyle(lineWidth: onPath ? max(2.5, width) : width, lineCap: .round, dash: node.elided > 0 ? [4, 4] : []))
             if node.elided > 0 {
                 let mid = layout.link(i, t)(0.5)
-                ctx.draw(Text("⋯ \(node.elided) level\(node.elided == 1 ? "" : "s")").font(.system(size: 9, weight: .semibold)).foregroundColor(palette.secondary), at: CGPoint(x: mid.x, y: mid.y - 9))
+                ink.draw(Text("⋯ \(node.elided) level\(node.elided == 1 ? "" : "s")").font(.system(size: 9, weight: .semibold)).foregroundColor(palette.secondary), at: CGPoint(x: mid.x, y: mid.y - 9))
             }
         }
         // Discs, largest first so small ones stay on top and clickable.
         for node in layout.nodes.sorted(by: { $0.radius > $1.radius }) {
+            guard visibility?.visible.contains(node.key) != false else { continue }
+            var ink = ctx; ink.opacity *= visibility?.opacity(node.key) ?? 1
             let c = t.apply(node.point), r = layout.screenRadius(node, t)
             guard view.contains(c), let element = model[node.key] else { continue }
             let rect = CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
             if node.ring == 0 {
-                ctx.fill(Path(ellipseIn: rect), with: .color(palette.dark ? Color(white: 0.86) : Color(white: 0.30)))
+                ink.fill(Path(ellipseIn: rect), with: .color(palette.dark ? Color(white: 0.86) : Color(white: 0.30)))
             } else if element.bytes == nil {
-                ctx.stroke(Path(ellipseIn: rect), with: .color(palette.secondary), style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                ink.stroke(Path(ellipseIn: rect), with: .color(palette.secondary), style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
             } else if element.role == .rest {
-                ctx.fill(Path(ellipseIn: rect), with: .color(palette.secondary.opacity(0.22)))
-                ctx.stroke(Path(ellipseIn: rect), with: .color(palette.secondary.opacity(0.6)), lineWidth: 0.75)
+                ink.fill(Path(ellipseIn: rect), with: .color(palette.secondary.opacity(0.22)))
+                ink.stroke(Path(ellipseIn: rect), with: .color(palette.secondary.opacity(0.6)), lineWidth: 0.75)
             } else if element.isFolder {
-                ctx.fill(Path(ellipseIn: rect), with: .color(palette.tone(node.key, coloring: coloring)))
+                ink.fill(Path(ellipseIn: rect), with: .color(palette.tone(node.key, coloring: coloring)))
             } else {
-                ctx.fill(Path(ellipseIn: rect), with: .color(palette.ground))
-                ctx.stroke(Path(ellipseIn: rect), with: .color(palette.tone(node.key, coloring: coloring)), lineWidth: max(1, min(2.5, r / 4)))
+                ink.fill(Path(ellipseIn: rect), with: .color(palette.ground))
+                ink.stroke(Path(ellipseIn: rect), with: .color(palette.tone(node.key, coloring: coloring)), lineWidth: max(1, min(2.5, r / 4)))
             }
             // Share of the folder it is in: an arc just outside the disc, from 12 o'clock.
             if node.ring > 0, r >= 4, let parent = element.parent, let share = StructuredExplorerScale.share(element.bytes, of: model[parent]?.bytes), share > 0 {
                 var arc = Path()
                 arc.addArc(center: c, radius: r + 2.5, startAngle: .degrees(-90), endAngle: .degrees(-90 + 360 * share), clockwise: false)
-                ctx.stroke(arc, with: .color(palette.ink.opacity(0.55)), style: StrokeStyle(lineWidth: 1.5))
+                ink.stroke(arc, with: .color(palette.ink.opacity(0.55)), style: StrokeStyle(lineWidth: 1.5))
             }
             // Contents not shown: "+N", outward.
             if node.hidden > 0, element.isFolder, node.ring > 0 {
                 let out = CGPoint(x: sin(node.angle), y: -cos(node.angle))
                 if r >= 6 || node.key == hovered || node.key == selected {
-                    ctx.draw(Text("+\(node.hidden)").font(.system(size: 8.5, weight: .semibold)).foregroundColor(palette.secondary),
+                    ink.draw(Text("+\(node.hidden)").font(.system(size: 8.5, weight: .semibold)).foregroundColor(palette.secondary),
                              at: CGPoint(x: c.x + out.x * (r + 10), y: c.y + out.y * (r + 10)))
                 } else {
                     // More inside, too small to count here: a short outward tick (the count appears on hover or zoom).
                     var tick = Path(); tick.move(to: CGPoint(x: c.x + out.x * (r + 2), y: c.y + out.y * (r + 2))); tick.addLine(to: CGPoint(x: c.x + out.x * (r + 6), y: c.y + out.y * (r + 6)))
-                    ctx.stroke(tick, with: .color(palette.secondary.opacity(0.7)), lineWidth: 1)
+                    ink.stroke(tick, with: .color(palette.secondary.opacity(0.7)), lineWidth: 1)
                 }
             }
         }
@@ -727,7 +935,10 @@ struct StructuredExplorerPainter {
             let c = t.apply(node.point), r = layout.screenRadius(node, t) + 4
             ctx.stroke(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)), with: .color(palette.ink.opacity(0.7)), lineWidth: 1)
         }
-        for label in labels { pill(&ctx, label) }
+        for label in labels {
+            var ink = ctx; ink.opacity *= visibility?.labelOpacity(label.key) ?? 1
+            pill(&ink, label)
+        }
     }
 
     @MainActor private func pill(_ ctx: inout GraphicsContext, _ label: StructuredExplorerLabel) {

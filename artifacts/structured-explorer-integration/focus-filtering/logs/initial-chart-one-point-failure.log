@@ -1,0 +1,64 @@
+/Users/nicholaslippa/storage-checker/SourcesGUI/CleanupInspectorView.swift:184:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+181 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+182 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+183 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+184 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+185 |         }
+186 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+Charts: Custom UnitPoint values are not supported in AxisValueLabel's anchor property. Please use leading, topLeading, center, etc.
+PASS 640pt compact light: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 640pt compact light: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 640pt compact light with selected event: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 640pt compact light with selected event: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 640pt regular dark: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 640pt regular dark: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 640pt regular dark with selected event: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 640pt regular dark with selected event: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 1100pt regular light: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 1100pt regular light: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 1100pt regular light with selected event: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 1100pt regular light with selected event: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 1100pt compact dark: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 1100pt compact dark: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 1100pt compact dark with selected event: hovering any of 47 readings leaves the plot frame unchanged (0 changed it)
+PASS 1100pt compact dark with selected event: the hovered reading stays under the pointer after the hover layout (0 would drop and re-enter: )
+PASS 640pt compact light: a pointer on each of 47 readings shows that reading's callout, including the last third (0 missed: )
+FAIL 640pt compact light: every hover callout is drawn inside the chart, near the plot edges too (1 outside: #30 (-1.0, 8.0, 362.0, 24.0))
+PASS 640pt compact light: the callout holds still while the pointer stays on its reading, and the plot never resizes (0 unstable, 0 resized)
+PASS 640pt compact light: no callout over empty plot, and leaving the chart dismisses it (empty plot clear true)
+PASS 1100pt regular dark: a pointer on each of 47 readings shows that reading's callout, including the last third (0 missed: )
+PASS 1100pt regular dark: every hover callout is drawn inside the chart, near the plot edges too (0 outside: )
+PASS 1100pt regular dark: the callout holds still while the pointer stays on its reading, and the plot never resizes (0 unstable, 0 resized)
+PASS 1100pt regular dark: no callout over empty plot, and leaving the chart dismisses it (empty plot clear true)
+PASS 1000pt regular light: a pointer on each of 47 readings shows that reading's callout, including the last third (0 missed: )
+PASS 1000pt regular light: every hover callout is drawn inside the chart, near the plot edges too (0 outside: )
+PASS 1000pt regular light: the callout holds still while the pointer stays on its reading, and the plot never resizes (0 unstable, 0 resized)
+PASS 1000pt regular light: no callout over empty plot, and leaving the chart dismisses it (empty plot clear true)
+PASS the hover callout gives time, available space and the change since the previous reading (Oct 30, 2026 at 22:33:02 · 89.80 GB available · −0.10 GB since previous reading)
+PASS living tree AppKit routing: a line-unit mouse wheel event zooms in and out (animated) — got Optional(CapacityChartGeometryTests.LivingTreeGesture.Action.zoom(factor: 1.2, at: (300.0, 600.0), animated: true)), Optional(CapacityChartGeometryTests.LivingTreeGesture.Action.zoom(factor: 0.8333333333333334, at: (300.0, 600.0), animated: true))
+PASS living tree AppKit routing: a pixel-unit (smooth-scrolling mouse / Magic Mouse / trackpad) scroll zooms in and out directly — got Optional(CapacityChartGeometryTests.LivingTreeGesture.Action.zoom(factor: 1.1548841085249137, at: (300.0, 600.0), animated: false)), Optional(CapacityChartGeometryTests.LivingTreeGesture.Action.zoom(factor: 0.865887748059205, at: (300.0, 600.0), animated: false))
+PASS living tree AppKit routing: Shift-scroll pans — got Optional(CapacityChartGeometryTests.LivingTreeGesture.Action.pan((0.0, 12.0)))
+PASS living tree AppKit routing: no wheel or pixel scroll event turns the tree (0 of 8 did)
+PASS classic fallback input keeps its original context menu without a provider
+PASS structured input accepts a per-canvas path menu without changing the classic default
+PASS structured explorer cache: selecting an already shown folder does not rebuild layout
+PASS structured explorer cache: a deep selection is retained on a counted spur
+PASS structured explorer cache: clearing or replacing a deep selection restores the baseline hierarchy and hidden counts
+PASS structured explorer transition: rendering the new root preserves the previous root geometry for its transition
+PASS structured explorer labels: placed once per drawn state; pointer moves that change nothing reuse them; hover and a new tree place again (3 placements)
+PASS structured explorer wheel: forward zooms in, the same reverse returns exactly, further reverse zooms out below 100%, about the pointer (in 1.44, back 1.0, out 0.6944444444444445)
+PASS structured explorer smooth/trackpad scroll: both directions zoom directly; inertia after the fingers lift does not zoom (in 1.4333294145603401, back 0.9999999999999999)
+PASS structured explorer wheel: zoom stops at 2400% and 40% in either direction
+PASS structured explorer scroll: sideways, Shift- and Option-scroll pan without zooming, and no scroll ever selects a folder (0 selections)
+PASS presentation filters and focus reuse radial geometry for an already placed selection without catalog work
+PASS filter changes retain a deep selected node through its real parents as a below-filter exception
+PASS isolation changes only the visual root of the immutable loaded hierarchy
+PASS nested isolation retains the original entry selection
+PASS Reset restores All, Dim, focus off, isolation off and the entry selection
+48 of 49 hosted chart geometry and scroll routing checks passed

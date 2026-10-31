@@ -1,0 +1,27 @@
+work: /private/tmp/storage-monitor-cleanup-scroll.u20wfb
+/Users/nicholaslippa/storage-checker/SourcesGUI/CleanupInspectorView.swift:184:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+181 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+182 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+183 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+184 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+185 |         }
+186 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+PASS idle Inspector preserves a deep scroll offset
+same-node: offset before 1319.5, minimum 1319.5, after 1319.5; document initial 1839.5, minimum 1839.5
+PASS same-node queue revalidation never collapses or clamps a deep Inspector offset
+PASS same-node queue revalidation keeps the Inspector document height stable
+PASS same-node queue revalidation preserves the open cleanup preview
+PASS a completed queue refresh rebuilds the preview from its returned row measurement
+PASS an object replacement discovered during refresh closes the old object's preview
+PASS failed queue revalidation discards retained evidence and cannot offer Trash
+PASS a replaced filesystem object with the same catalog ID clears stale evidence and preview
+PASS a different queue selection clears stale evidence and preview
+PASS cleanup Inspector scroll regression
+exit: 0
+log: /private/tmp/storage-monitor-cleanup-scroll.u20wfb/test.log

@@ -1,0 +1,33 @@
+work: /private/tmp/storage-monitor-filter-bench.0AxoiT
+/Users/nicholaslippa/storage-checker/SourcesGUI/CleanupInspectorView.swift:184:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+181 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+182 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+183 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+184 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+185 |         }
+186 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+/Users/nicholaslippa/storage-checker/scripts/benchmark-structured-filtering.swift:70:40: error: value of optional type 'Int64?' must be unwrapped to a value of type 'Int64'
+ 68 |                 path: path(id), name: names[id]!, kind: .directory, logicalBytes: bytes, allocatedBytes: bytes,
+ 69 |                 previousLogicalBytes: nil, previousAllocatedBytes: nil, objectLogicalBytes: nil, objectAllocatedBytes: nil,
+ 70 |                 directLogicalBytes: own[id], directAllocatedBytes: own[id], childCount: Int64(children[id]?.count ?? 0),
+    |                                        |- error: value of optional type 'Int64?' must be unwrapped to a value of type 'Int64'
+    |                                        |- note: coalesce using '??' to provide a default when the optional value contains 'nil'
+    |                                        `- note: force-unwrap using '!' to abort execution if the optional value contains 'nil'
+ 71 |                 descendantFiles: 0, descendantDirectories: 0, status: .complete, coverageState: "complete", listingState: nil,
+ 72 |                 statusReason: nil, measuredAt: nil, modifiedAt: nil, generation: 1, isHardlinkAlias: false, historicalGrowthBytes: nil)
+
+/Users/nicholaslippa/storage-checker/scripts/benchmark-structured-filtering.swift:70:71: error: value of optional type 'Int64?' must be unwrapped to a value of type 'Int64'
+ 68 |                 path: path(id), name: names[id]!, kind: .directory, logicalBytes: bytes, allocatedBytes: bytes,
+ 69 |                 previousLogicalBytes: nil, previousAllocatedBytes: nil, objectLogicalBytes: nil, objectAllocatedBytes: nil,
+ 70 |                 directLogicalBytes: own[id], directAllocatedBytes: own[id], childCount: Int64(children[id]?.count ?? 0),
+    |                                                                       |- error: value of optional type 'Int64?' must be unwrapped to a value of type 'Int64'
+    |                                                                       |- note: coalesce using '??' to provide a default when the optional value contains 'nil'
+    |                                                                       `- note: force-unwrap using '!' to abort execution if the optional value contains 'nil'
+ 71 |                 descendantFiles: 0, descendantDirectories: 0, status: .complete, coverageState: "complete", listingState: nil,
+ 72 |                 statusReason: nil, measuredAt: nil, modifiedAt: nil, generation: 1, isHardlinkAlias: false, historicalGrowthBytes: nil)

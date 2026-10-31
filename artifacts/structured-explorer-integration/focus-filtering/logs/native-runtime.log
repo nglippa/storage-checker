@@ -1,0 +1,213 @@
+PASS normal invocation has no QA activation
+PASS QA identity without explicit opt-in refuses before lifecycle
+PASS production identity cannot activate profile
+PASS baked anchor is absolute and independent of working directory
+PASS registered file and complete registered directory pass additional boundary
+PASS deny unregistered/root/operational path runtime-unit-50404709-1DA7-4DC7-BE63-C6ED5A86452F
+PASS deny unregistered/root/operational path fixtures
+PASS deny unregistered/root/operational path history.sqlite3
+PASS deny unregistered/root/operational path StorageMonitor
+PASS deny unregistered/root/operational path outside-fixture
+PASS deny unregistered/root/operational path StorageMonitor
+PASS worker request cannot leave fixture root
+PASS worker rejects unknown mode
+PASS disappeared path may reconcile only through contained canonical ancestor
+PASS unregistered descendant blocks parent
+PASS pathname replacement fails pinned inode check
+PASS hard-linked disposable file is rejected
+PASS symlinked SQLite sidecar is rejected before write
+PASS profile symlink replacement refused before content read
+PASS root permission widening refuses session
+PASS exclusive session lock rejects second viewer
+PASS strict bootstrap refuses conflicting database override
+PASS strict bootstrap refuses HOME override
+PASS strict bootstrap refuses dynamic loader override
+PASS strict bootstrap refuses implicit environment activation
+PASS expired profile refused
+PASS catalog must be a regular file
+PASS device identity mismatch refused
+PASS missing required runtime component refused
+PASS symbolic-link root refused
+PASS stale catalog outside-root generation refused before worker reads
+PASS strict registered target reaches ordinary safety confirmation
+PASS strict cancellation never reaches Trash adapter
+PASS strict token is single-use even when adapter fails
+PASS strict policy denies existing unregistered file
+PASS strict mode retains protected-data hard block
+PASS strict mode retains active-dependency hard block
+PASS prepared token retains QA scope when execution environment omits it; replacement is refused
+PASS active strict runtime is applied when caller omits environment scope
+PASS central active scope blocks unregistered target even without environment scope
+PASS mismatched supplied profile is refused
+PASS registered .git-file folder is denied before resolving external gitdir
+NATIVE QA SCOPE ASSERTIONS: 42 passed
+PASS trash safety: ordinary files require an explicit uncertainty warning
+PASS trash safety: cancelling invalidates the confirmation
+PASS trash safety: ordinary-file warning must be acknowledged
+PASS trash safety: confirmed ordinary file moves only its verified object through the retained adapter
+PASS trash safety: a confirmation is one-use
+PASS trash safety: ordinary directory acknowledgment explicitly includes all contents
+PASS trash safety: confirmed ordinary directory moves with contents retained
+PASS trash safety: permission API failure is reported without claiming an unchanged outcome
+PASS trash safety: nil result fails verification and never falls through to native Trash
+PASS trash safety: unreadable returned destination fails verification
+PASS trash safety: mismatched returned identity reports uncertainty without touching unrelated objects
+PASS trash safety: adapter error after a retained move reports uncertainty and requires reconciliation, never a false no-move claim
+PASS trash execution boundary: unchanged explicitly confirmed target reaches exactly one retained adapter
+PASS trash execution boundary: leaf-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: directory-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: parent-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: ancestor-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: leaf-symlink preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: symlink-to-file preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: parent-symlink preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: descendant-added preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: protected-child-added preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: protected-child-added independently blocks advisory validation
+PASS trash execution boundary: protected-substitute preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: protected-substitute independently blocks advisory validation
+PASS trash execution boundary: in-place-edit preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: permission-change preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: moved-target preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: missing-target preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: forged legacy permission cannot bypass independently prepared warning or reach adapter
+PASS trash execution boundary: raw systemTrash refuses before URL resolution (direct.txt)
+PASS trash execution boundary: raw systemTrash refuses before URL resolution (nonexistent)
+PASS trash execution boundary: injected mount/device identity mismatch independently fails advisory prepare
+PASS trash execution boundary: separate confirmations retain their own immutable path, indexed ID and identity
+PASS trash execution boundary: concurrent requests consume exactly one shared token and invoke one adapter
+PASS trash execution boundary: distinct concurrent tokens fail without waiting, consume authorization and never retry
+PASS trash execution boundary: acknowledged concurrent cancellation precedes execution without sleeps
+PASS trash execution boundary: acknowledged concurrent replacement during revalidation retains both objects and independently invalidates evidence
+PASS trash execution boundary: pre-cancelled validation task independently fails closed without mutation
+PASS trash execution boundary: validated adapter is reached once; nil result fails without native fallback
+PASS trash safety: a direct child of /tmp resolves its exact alias parent without following unexpected ancestors
+PASS trash safety: protected credential target is blocked
+PASS trash safety: directory containing protected descendants is blocked
+PASS trash safety: active application data cannot be moved
+PASS trash safety: a broken protection-root link fails closed instead of falling back to a lexical path
+PASS trash safety: /tmp home alias cannot bypass protected credentials
+PASS trash safety: absent protected descendants inherit the canonical existing ancestor
+PASS trash safety: home root is blocked
+PASS trash safety: unrecognized artifact remains advisory and eligible
+PASS trash safety: insufficient evidence never becomes a review candidate through Trash eligibility
+PASS trash safety: verified review candidate retains its assessment
+PASS trash safety: review candidate plain confirmation executes its exact validated target
+PASS trash safety: current-dependency fixture establishes positive current use without process or PATH
+PASS trash safety: ordinary parent containing a verified current dependency is blocked
+PASS trash safety: completely assessed clean ordinary parent remains eligible
+PASS trash safety: expired confirmation refuses before any adapter
+PASS trash safety: a confirmation that expires during the final check refuses before any adapter (refused("The confirmation expired during the final check. Review the item again."))
+PASS trash safety: running executable is a hard block
+PASS trash safety: running executable hard-link alias is blocked by object identity
+PASS trash safety: ancestor containing a running executable is blocked
+PASS trash safety: PATH symlink reference to an otherwise unrecognized executable is hard blocked
+PASS trash safety: completely unavailable initial active-use provider blocks even an ordinary file
+PASS trash safety: a provider becoming unavailable at final observation blocks before any adapter
+PASS trash safety: partially observed program requires the program-use warning and an unaccepted warning moves nothing
+PASS trash safety: a completely observed program still requires the program-use warning
+PASS trash safety: an ordinary file without programs has no program-use warning
+PASS trash safety: partial observations require acknowledgment even for a review candidate before any adapter
+PASS trash safety: ordinary partial scoped observations require an explicit non-use uncertainty warning
+PASS trash safety: a nonprotected inactive database remains eligible with an uncertainty warning
+PASS trash safety: database classification alone is advisory when active-use checks are reliable
+PASS trash safety: conservative database Preserve reasons remain explicit in the warning
+PASS trash safety: verified open SQLite WAL blocks its database
+PASS trash safety: an observed active database hard-blocks its -wal companion
+PASS trash safety: incomplete database-use evidence requires the program-use warning for a -wal companion
+PASS trash safety: active database alias blocks its -wal companion
+PASS trash safety: base becoming active at the final observation blocks its -wal companion before any adapter
+PASS trash safety: an observed active database hard-blocks its -shm companion
+PASS trash safety: incomplete database-use evidence requires the program-use warning for a -shm companion
+PASS trash safety: active database alias blocks its -shm companion
+PASS trash safety: base becoming active at the final observation blocks its -shm companion before any adapter
+PASS trash safety: an observed active database hard-blocks its -journal companion
+PASS trash safety: incomplete database-use evidence requires the program-use warning for a -journal companion
+PASS trash safety: active database alias blocks its -journal companion
+PASS trash safety: base becoming active at the final observation blocks its -journal companion before any adapter
+PASS trash safety: incomplete database-use check requires the program-use warning
+PASS trash safety fixture: the unrelated open file is genuinely unresolvable
+PASS trash safety: an unresolvable file named like the database's companion fails closed in any folder
+PASS trash safety: an unresolvable open file in an unrelated folder does not block a database
+PASS trash safety: unrelated unresolvable open file is not a database companion
+PASS trash safety: resolvable companion still matches its database
+PASS trash safety: an unresolvable open file beside the database fails closed
+PASS trash safety: a nested open file (observed through an alias) blocks its ancestor
+PASS trash safety: a working directory nested in the target blocks it
+PASS trash safety: a working directory inside a contained link's target blocks the item
+PASS trash safety: a 5,050-entry folder exceeds the Inspector's quick budget
+PASS trash safety: the Trash preflight budget assesses an ordinary 5,050-entry folder
+PASS trash safety: preflight reports items checked while it walks a large folder (5000)
+PASS trash guidance: inUse for “A running process uses the target or a descendan”
+PASS trash guidance: tooLarge for “The directory cannot be assessed within the safe”
+PASS trash guidance: neverMoved for “This folder is too broad to move to the Trash as”
+PASS trash guidance: neverMoved for “Protected: credential store.”
+PASS trash guidance: notYours for “A descendant is not owned by the current user.”
+PASS trash guidance: unsavedWork for “A Git worktree contains uncommitted, untracked, ”
+PASS trash guidance: needsReview for “The confirmation expired. Review the item again.”
+PASS trash guidance: needsReview for “Active-use observations are stale; review the it”
+PASS trash guidance: qaCopy for “Not available in QA builds: the catalog is a cop”
+PASS trash guidance: needsReview for “Move to Trash requires the current explicit conf”
+PASS trash guidance: neverMoved for “Protected: credential store. (/Users/x/Projects/”
+PASS trash guidance: inUse for “A running process uses the target or a descendan”
+PASS trash guidance: unsavedWork for “A Git worktree contains uncommitted, untracked, ”
+PASS trash guidance: neverMoved for “A command on the current PATH resolves to this e”
+PASS trash guidance: neverMoved for “This executable is directly available through a ”
+PASS trash guidance: needsReview for “The path now refers to a different item; nothing”
+PASS trash guidance: needsReview for “Git state could not be reliably assessed.”
+PASS trash guidance: needsReview for “An open file beside this database could not be r”
+PASS trash guidance: notYours for “Required descendant evidence could not be comple”
+PASS trash guidance: tooLarge for “The directory cannot be assessed within the safe”
+PASS trash guidance: needsReview for “The confirmation expired during the final check.”
+PASS trash guidance: a permanent restriction offers no misleading next step
+PASS trash sheet: the generic not-established sentence is stated once by the sheet and every specific risk is kept in order
+PASS trash safety: stale active-use evidence cannot authorize Trash
+PASS trash safety: active-use evidence is collected again after confirmation
+PASS trash safety: process use starting after traversal is rejected by the final observation
+PASS trash safety: replacement before confirmation rejects indexed identity
+PASS trash safety: replacement after confirmation is rejected before execution
+PASS trash safety: target replacement during final execution checks is rejected
+PASS trash safety: in-place content changes invalidate confirmation
+PASS trash safety: added descendant invalidates confirmation
+PASS trash safety: permission changes are rechecked before execution
+PASS trash safety: bounded descendant budget fails closed
+PASS trash safety: confirmed symbolic-link operation moves only link and preserves referent
+PASS trash safety: symbolic link into protected content is blocked
+PASS trash safety: symbolic-link ancestor must be reviewed at its canonical location
+PASS trash safety: overlapping-layout fixture has an earlier clean Git classification and later verified Python dependency
+PASS trash safety: every applicable detector contributes hard blocks for descendants
+PASS trash safety: every applicable detector contributes hard blocks for the exact selected item
+PASS trash safety: a whole repository with only a local backup branch cannot establish external preservation
+PASS trash safety: clean whole-repository fixture requires observed remote-tracking coverage
+PASS trash safety: direct selection of Git objects metadata is hard blocked
+PASS trash safety: direct selection of Git refs metadata is hard blocked
+PASS trash safety: symlink into Git metadata is hard blocked
+PASS trash safety: verified bare Git metadata store is hard blocked regardless of folder name
+PASS trash safety: descendants of a bare metadata store are hard blocked
+PASS trash safety: ordinary ancestor containing a bare metadata store is hard blocked
+PASS trash safety: separate Git metadata store is protected without a dot-git name
+PASS trash safety: descendants of separate Git metadata are protected
+PASS trash safety: ordinary ancestor containing separate Git metadata is hard blocked
+PASS trash safety: repository fsmonitor hook is neutralized
+PASS trash safety: Git uncommitted changes are hard blocked
+PASS trash safety: Git state is checked again after confirmation
+PASS trash safety: Git potentially unmerged commits are hard blocked
+PASS trash safety: common repository cannot be removed while an external linked worktree is locked
+PASS trash safety: nested locked linked worktree blocks its ordinary ancestor
+PASS trash safety: common repository cannot orphan a dirty external linked worktree
+PASS trash safety: common repository cannot orphan staged external linked work
+PASS trash safety: nested linked worktree potentially unmerged commits block its ancestor
+PASS trash safety: nested linked worktree stashed work blocks its ancestor
+PASS trash safety: Git untracked files are hard blocked
+PASS trash safety: nested Git work cannot be bypassed by selecting an ancestor
+PASS trash safety: Git drains delayed final stdout and stderr to EOF after the process exits
+PASS trash safety: empty successful Git output cannot be classified as a clean worktree
+PASS trash safety: unreadable process ownership cannot be reported as complete
+PASS trash safety: zero libproc descriptor-size failure cannot establish complete active-use evidence
+PASS trash safety: usr/local exception never bypasses credential checks
+PASS trash safety: usr/local exception never bypasses application-data protection
+PASS trash safety: usr/local exception respects path component boundaries
+PASS trash safety: Git plaintext credential store is protected
+PASS trash safety: Kubernetes authentication config is protected
+PASS trash safety: Kubernetes authentication directory is protected
+NATIVE QA + EXISTING TRASH SAFETY: 211 assertions passed, 0 failed

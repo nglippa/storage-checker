@@ -1,0 +1,39 @@
+[
+  {
+    "command": [
+      "/usr/bin/codesign",
+      "--verify",
+      "--deep",
+      "--strict",
+      "build/Storage Monitor.app"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "command": [
+      "/usr/bin/plutil",
+      "-extract",
+      "CFBundleIdentifier",
+      "raw",
+      "-o",
+      "-",
+      "build/Storage Monitor.app/Contents/Info.plist"
+    ],
+    "exit": 0,
+    "output": "local.macbook.storage-monitor.viewer.dev"
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit": 0,
+    "output": ""
+  },
+  {
+    "executable": "build/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer",
+    "sha256": "7dc009576c9ae5af659dabf43c7d9182bb9a0c94a5e7986839b642ff26fdaa80"
+  }
+]

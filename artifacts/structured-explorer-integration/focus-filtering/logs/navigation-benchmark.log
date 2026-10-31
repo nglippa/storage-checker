@@ -1,0 +1,25 @@
+/Users/nicholaslippa/storage-checker/SourcesGUI/CleanupInspectorView.swift:184:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+181 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+182 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+183 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+184 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+185 |         }
+186 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+focus-filtering: pending reconcile rows 1; tree without change journal true; throttled same-folder rebuilds 16; failures 0; renderer-switch tree builds 0
+focus-filtering folder enter (cold)    n=6 p50   305.2 p95       — max   358.1 ms
+focus-filtering folder enter (warm)    n=8 p50    82.6 p95       — max   106.9 ms
+focus-filtering folder revisit         n=8 p50    81.1 p95       — max   103.0 ms
+focus-filtering parent (Up)            n=22 p50   102.5 p95   112.6 max   113.9 ms
+focus-filtering tree read wait         n=22 p50    86.0 p95   312.0 max   312.2 ms
+focus-filtering layout+labels frame    n=22 p50     1.4 p95     2.4 max     5.5 ms
+focus-filtering selection              n=24 p50     0.3 p95     0.4 max     0.4 ms
+focus-filtering depth change           n=12 p50     1.2 p95     1.8 max     2.1 ms
+focus-filtering mount classic          n=6 p50    72.5 p95       — max   151.3 ms
+focus-filtering mount structured       n=6 p50    39.3 p95       — max    70.8 ms
+focus-filtering memory footprint 7.4 → 111.9 MiB

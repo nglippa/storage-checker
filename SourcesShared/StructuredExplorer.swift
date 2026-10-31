@@ -157,19 +157,27 @@ public struct StructuredExplorerLayout: Sendable {
     ///   - depth: levels shown below the centre (clamped to `depthRange`).
     ///   - keep: an element that must be shown (the selection): its whole chain is kept past the per-folder limit,
     ///     and when it is deeper than `depth` it is shown on a spur from its deepest shown ancestor.
-    public init(model: LivingTreeModel, depth: Int = defaultDepth, keep: LivingTreeKey? = nil, perFolder: Int = perFolder) {
-        rootKey = model.rootKey
+    public init(model: LivingTreeModel, depth: Int = defaultDepth, keep: LivingTreeKey? = nil, perFolder: Int = perFolder,
+                root: LivingTreeKey? = nil, keepFullAncestry: Bool = false) {
+        let requestedRoot = root.flatMap { key -> LivingTreeKey? in
+            guard key.nodeID != nil, model[key]?.isFolder == true else { return nil }
+            return model.ancestry(of: key).contains(model.rootKey) ? key : nil
+        }
+        rootKey = requestedRoot ?? model.rootKey
         self.depth = min(Self.depthRange.upperBound, max(Self.depthRange.lowerBound, depth))
+        let rootSubtree = Set(model.subtree(of: rootKey))
         var seen = [String: Int]()
-        for key in model.order where key.nodeID != nil { seen[model[key]!.name, default: 0] += 1 }
+        for key in model.order where key.nodeID != nil && rootSubtree.contains(key) { seen[model[key]!.name, default: 0] += 1 }
         repeatedNames = Set(seen.filter { $0.value > 1 }.keys)
-        let rootDepth = model[model.rootKey]?.depth ?? 0
-        let chain = keep.map { model.ancestry(of: $0) } ?? []
+        let rootDepth = model[rootKey]?.depth ?? 0
+        let candidateChain = keep.map { model.ancestry(of: $0) } ?? []
+        let chain = candidateChain.firstIndex(of: rootKey).map { Array(candidateChain[$0...]) } ?? []
         let keepSet = Set(chain)
-        let keepRing = keep.flatMap { model[$0] }.map { $0.depth - rootDepth } ?? 0
+        let retained = chain.last == keep ? keep : nil
+        let keepRing = retained.flatMap { model[$0] }.map { $0.depth - rootDepth } ?? 0
 
         // Visible set, breadth-first: each folder's largest `perFolder` children (and the selection's chain).
-        var order = [model.rootKey], parentOf = [-1], elided = [0], hidden = [Int]()
+        var order = [rootKey], parentOf = [-1], elided = [0], hidden = [Int]()
         var kids = [[Int]()]
         var head = 0
         while head < order.count {
@@ -178,12 +186,17 @@ public struct StructuredExplorerLayout: Sendable {
             let ring = (model[key]?.depth ?? rootDepth) - rootDepth
             let all = Self.sortedChildren(of: key, in: model)
             if ring >= self.depth {
-                // Past the shown levels only the spur to a deeper selection continues.
                 var shown = 0
-                if let keep, keepRing > self.depth, keepSet.contains(key), ring == self.depth, keep != key {
+                if keepFullAncestry, let retained, keepSet.contains(key), retained != key,
+                   let direct = all.first(where: { keepSet.contains($0) }) {
                     let index = order.count
-                    order.append(keep); parentOf.append(v); kids.append([]); kids[v].append(index); elided.append(keepRing - ring - 1)
-                    shown = all.contains(keep) ? 1 : 0
+                    order.append(direct); parentOf.append(v); kids.append([]); kids[v].append(index); elided.append(0)
+                    shown = 1
+                } else if let retained, keepRing > self.depth, keepSet.contains(key), ring == self.depth, retained != key {
+                    // Default behavior preserves the compact dashed selection spur.
+                    let index = order.count
+                    order.append(retained); parentOf.append(v); kids.append([]); kids[v].append(index); elided.append(keepRing - ring - 1)
+                    shown = all.contains(retained) ? 1 : 0
                 }
                 hidden.append(all.count - shown)
                 continue
@@ -262,7 +275,7 @@ public struct StructuredExplorerLayout: Sendable {
         let left = (0..<n).min { x[$0] < x[$1] } ?? 0, right = (0..<n).max { x[$0] < x[$1] } ?? 0
         let sep = left == right ? 1 : separation(left, right) / 2, tx = sep - x[left], kx = 2 * CGFloat.pi / max(x[right] + sep + tx, 0.0001)
 
-        let total = model[model.rootKey]?.bytes
+        let total = model[rootKey]?.bytes
         for v in 0..<n {
             let key = order[v], ring = ringOf(v)
             let angle = n == 1 ? 0 : (x[v] + tx) * kx
@@ -319,15 +332,23 @@ public struct StructuredExplorerLayout: Sendable {
 
     /// Keyboard movement over what is shown: outward to the largest child, inward to the parent, around the ring.
     public enum Move: Sendable { case outward, inward, previousSibling, nextSibling }
-    public func move(_ move: Move, from key: LivingTreeKey?) -> LivingTreeKey? {
-        guard let key, let i = index[key] else { return nodes.first?.key }
+    public func move(_ move: Move, from key: LivingTreeKey?, allowed: Set<LivingTreeKey>? = nil) -> LivingTreeKey? {
+        func permits(_ key: LivingTreeKey) -> Bool { allowed?.contains(key) ?? true }
+        guard let key, let i = index[key], permits(key) else { return nodes.first(where: { permits($0.key) })?.key }
         let node = nodes[i]
         switch move {
-        case .outward: return children[i].first.map { nodes[$0].key }
-        case .inward: return node.parent >= 0 ? nodes[node.parent].key : nil
+        case .outward: return children[i].map { nodes[$0].key }.first(where: permits)
+        case .inward:
+            var parent = node.parent
+            while parent >= 0 {
+                let candidate = nodes[parent].key
+                if permits(candidate) { return candidate }
+                parent = nodes[parent].parent
+            }
+            return nil
         case .previousSibling, .nextSibling:
             guard node.parent >= 0 else { return nil }
-            let siblings = children[node.parent]
+            let siblings = children[node.parent].filter { permits(nodes[$0].key) }
             guard let k = siblings.firstIndex(of: i), siblings.count > 1 else { return nil }
             let next = move == .nextSibling ? (k + 1) % siblings.count : (k - 1 + siblings.count) % siblings.count
             return nodes[siblings[next]].key
@@ -338,10 +359,12 @@ public struct StructuredExplorerLayout: Sendable {
 
     /// Labels first, then the disc whose centre is nearest relative to its size, with at least 6 pt of reach so small
     /// discs stay clickable; ties go to the smaller disc. Empty space selects nothing.
-    public func hit(_ p: CGPoint, transform t: StructuredExplorerTransform, labels: [StructuredExplorerLabel]) -> LivingTreeKey? {
-        if let label = labels.last(where: { $0.contains(p) }) { return label.key }
+    public func hit(_ p: CGPoint, transform t: StructuredExplorerTransform, labels: [StructuredExplorerLabel],
+                    allowed: Set<LivingTreeKey>? = nil) -> LivingTreeKey? {
+        func permits(_ key: LivingTreeKey) -> Bool { allowed?.contains(key) ?? true }
+        if let label = labels.last(where: { permits($0.key) && $0.contains(p) }) { return label.key }
         var best: (score: CGFloat, radius: CGFloat, key: LivingTreeKey)?
-        for node in nodes {
+        for node in nodes where permits(node.key) {
             let r = screenRadius(node, t), reach = max(r, 6)
             let c = t.apply(node.point), d = hypot(c.x - p.x, c.y - p.y)
             guard d <= reach else { continue }
@@ -361,7 +384,9 @@ public struct StructuredExplorerLayout: Sendable {
     /// Outer-ring labels need a clear slot along their ring (so they appear as zooming opens space), and the budget
     /// grows with zoom. `measure` gives a label's size for its title and detail.
     public func labels(model: LivingTreeModel, transform t: StructuredExplorerTransform, size: CGSize, selected: LivingTreeKey?, hovered: LivingTreeKey?,
-                       detail: (LivingTreeElement) -> String, measure: (String, String) -> CGSize) -> [StructuredExplorerLabel] {
+                       detail: (LivingTreeElement) -> String, measure: (String, String) -> CGSize,
+                       allowed: Set<LivingTreeKey>? = nil, preferred: Set<LivingTreeKey>? = nil) -> [StructuredExplorerLabel] {
+        func permits(_ key: LivingTreeKey) -> Bool { allowed?.contains(key) ?? true }
         let view = CGRect(origin: .zero, size: size).insetBy(dx: 4, dy: 4)
         let fit = StructuredExplorerCamera.fitScale(bounds, in: size), zoom = t.scale / max(fit, 0.0001)
         // Secondary labels scale with the canvas area (a compact window names fewer), and grow with zoom. The selection,
@@ -370,13 +395,14 @@ public struct StructuredExplorerLayout: Sendable {
         let budget = max(6, Int((22 * room).rounded())) + Int(14 * log2(max(1, zoom)))
         var placed = [StructuredExplorerLabel]()
         var blocked: [CGRect] = nodes.compactMap { n -> CGRect? in
+            guard permits(n.key) else { return nil }
             let r = screenRadius(n, t); guard r >= 3 else { return nil }
             let c = t.apply(n.point); return CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)
         }
         // Heavy links (≥ 3 pt on screen) block labels along their length.
         let total = model[rootKey]?.bytes
         var heavy = [CGRect]()
-        for (i, n) in nodes.enumerated() where n.parent >= 0 {
+        for (i, n) in nodes.enumerated() where n.parent >= 0 && permits(n.key) && permits(nodes[n.parent].key) {
             let width = StructuredExplorerScale.linkWidth(model[n.key]?.bytes, of: total) * min(1.6, max(0.6, t.scale))
             guard width >= 3 else { continue }
             let curve = link(i, t), clearance = max(3, width / 2 + 2)
@@ -456,12 +482,12 @@ public struct StructuredExplorerLayout: Sendable {
                 }
             }
         }
-        if let selected, let i = index[selected] { priority(i, emphasized: true) }
-        if let hovered, hovered != selected, let i = index[hovered] { priority(i, emphasized: false) }
-        if !nodes.isEmpty, selected != rootKey { placeAnywhere(0) }
+        if let selected, permits(selected), let i = index[selected] { priority(i, emphasized: true) }
+        if let hovered, hovered != selected, permits(hovered), let i = index[hovered] { priority(i, emphasized: false) }
+        if !nodes.isEmpty, permits(rootKey), selected != rootKey { placeAnywhere(0) }
         // Room along the ring: the angular gap to the nearest neighbour on the same ring, on screen.
         var ringAngles = [Int: [CGFloat]]()
-        for n in nodes where n.ring > 0 { ringAngles[n.ring, default: []].append(n.angle) }
+        for n in nodes where n.ring > 0 && permits(n.key) { ringAngles[n.ring, default: []].append(n.angle) }
         for k in ringAngles.keys { ringAngles[k]!.sort() }
         func slot(_ n: Node) -> CGFloat {
             guard let angles = ringAngles[n.ring], angles.count > 1, let k = angles.firstIndex(of: n.angle) else { return .infinity }
@@ -471,9 +497,12 @@ public struct StructuredExplorerLayout: Sendable {
         }
         let candidates = nodes.indices.dropFirst().filter { i in
             let n = nodes[i]
-            return n.key != selected && n.key != hovered && view.contains(t.apply(n.point)) && (n.ring <= 1 || slot(n) >= 15)
+            return permits(n.key) && n.key != selected && n.key != hovered
+                && view.contains(t.apply(n.point)) && (n.ring <= 1 || slot(n) >= 15)
         }.sorted { a, b in
             let x = nodes[a], y = nodes[b]
+            let px = preferred?.contains(x.key) ?? false, py = preferred?.contains(y.key) ?? false
+            if px != py { return px }
             if (x.ring <= 1) != (y.ring <= 1) { return x.ring <= 1 }
             let bx = model[x.key]?.bytes ?? -1, by = model[y.key]?.bytes ?? -1
             return bx != by ? bx > by : x.key < y.key

@@ -1240,9 +1240,10 @@ extension EnvironmentValues {
 /// The canvas's pointer, scroll and pinch input in canvas coordinates (top-left origin). Transparent: it draws
 /// nothing and is not an accessibility element; the SwiftUI container keeps focus, keys and the accessible elements.
 struct LivingTreeInputLayer: NSViewRepresentable {
+    var contextMenu: ((CGPoint) -> NSMenu?)? = nil
     let handle: (LivingTreeInputView.Event) -> Void
-    func makeNSView(context: Context) -> LivingTreeInputView { let view = LivingTreeInputView(); view.handle = handle; return view }
-    func updateNSView(_ view: LivingTreeInputView, context: Context) { view.handle = handle }
+    func makeNSView(context: Context) -> LivingTreeInputView { let view = LivingTreeInputView(); view.handle = handle; view.contextMenu = contextMenu; return view }
+    func updateNSView(_ view: LivingTreeInputView, context: Context) { view.handle = handle; view.contextMenu = contextMenu }
 }
 
 final class LivingTreeInputView: NSView {
@@ -1262,6 +1263,7 @@ final class LivingTreeInputView: NSView {
     }
 
     var handle: ((Event) -> Void)?
+    var contextMenu: ((CGPoint) -> NSMenu?)?
     private var tracking: NSTrackingArea?
     private var grabbing = false
 
@@ -1304,6 +1306,7 @@ final class LivingTreeInputView: NSView {
     override func rotate(with event: NSEvent) { handle?(.rotate(Double(event.rotation))) }
 
     override func menu(for event: NSEvent) -> NSMenu? {
+        if let contextMenu { return contextMenu(point(event)) }
         let menu = NSMenu(title: "Living Tree")
         for (title, command) in [("Zoom In", Command.zoomIn), ("Zoom Out", .zoomOut), ("Fit Tree", .fit), ("Focus Selection", .focusSelection), ("Reset View", .reset)] {
             if command == .reset { menu.addItem(.separator()) }

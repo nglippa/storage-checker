@@ -1,0 +1,3 @@
+FAIL: entry limit checkpoints a partial listing without pruning (outcome=interrupted, entries=0, pending=1, needs=true)
+PASS inventory invalidation keys normalize missing /tmp and /var entries without matching same-prefix siblings
+PASS inventory scoped refresh aliases resolve the same missing leaf for either mount spelling

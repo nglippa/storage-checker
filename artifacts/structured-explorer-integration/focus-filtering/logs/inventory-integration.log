@@ -1,0 +1,352 @@
+PASS inventory invalidation keys normalize missing /tmp and /var entries without matching same-prefix siblings
+PASS inventory scoped refresh aliases resolve the same missing leaf for either mount spelling
+PASS entry limit checkpoints a partial listing without pruning (outcome=interrupted, entries=11, pending=4, needs=true)
+PASS resumed inventory reaches a terminal complete generation
+PASS symlink metadata is recorded without following it; nested files keep their true kind
+PASS hard-link aliases remain navigable while allocation is counted globally once
+PASS large directory streams through bounded batches and resumes without losing siblings
+PASS directory move preserves directory and descendant identity when the old parent is listed first
+PASS deleting a hard-link owner transfers accounting to a remaining alias
+PASS event gap durably invalidates descendants and cursor advances with the invalidation transaction
+PASS inventory migration is additive and preserves unrelated production tables
+PASS permission-denied directory stays unknown, never a complete zero-byte folder
+PASS terminal inaccessible child propagates uncertainty without endless pending work
+PASS explicit refresh recovers accessible subtree with exact file-content totals
+PASS cleanup authority fixture has a completed real directory listing
+PASS obsolete root cleanup token cannot delete the 20 currently observed children (retained 20)
+PASS concurrent newer listing holds authority through its commit; cleanup cannot write through the lock (completed after the lock, 20 of 20 retained)
+PASS cleanup revalidates the committed newer token after contention and retains current records
+PASS cleanup discovery can be paused after one durable claim page
+PASS recursive cleanup expansion can be paused before deletion
+PASS a newer listing supersedes expanded cleanup claims without deleting the reobserved branch
+PASS superseded recursive cleanup claims retire in bounded maintenance steps
+PASS inner descendant moves survive expanded obsolete-root cleanup while the truly absent root is deleted
+PASS overlapping cleanup epochs converge without stranded claims or repeated-step deletion loops
+PASS moving the obsolete root itself invalidates all expanded descendant deletion claims
+PASS a delayed older request boundary cannot erase a newer gap sequence, endpoint, or reason
+PASS directory listings after a durable refresh boundary certify and drain overlapping reconciliation
+PASS newer descendant evidence during replacement cleanup queues the containing directory and preserves uncertainty
+PASS replacement repair reacquires object authority, prunes old descendants and restores exact parent totals
+PASS the running worker consumes a newly queued refresh through its existing bounded service points
+PASS live request service repeats only the earlier root attempt and retains post-request child listings
+PASS manual refresh queued during initialization is visible to readers before application
+PASS post-request child listings satisfy a late-consumed refresh without repeat enumeration
+PASS request-time endpoint excludes new discoveries; only the already-running root listing needs revisiting
+PASS repeated execution after a satisfied refresh performs no filesystem listings
+PASS later refresh cannot use earlier listings and resumes without duplicate completed child work
+PASS legacy migration bounds requests without certifying historical listings
+PASS lifecycle migration is idempotent and preserves the adopted request boundary
+PASS resumed migrated inventory preserves history and SQLite integrity
+PASS interrupted migration rolls back its clock and preserves unadopted work
+PASS migration retries successfully after interrupted adoption
+PASS an invalidation received during enumeration requires a newer listing and retains changed file metadata
+PASS reader reports durable pending jobs even when directory-state counters have no pending bucket
+PASS a selected-folder refresh receives enumeration ahead of ordinary background directory jobs
+PASS rapid navigation cancels obsolete queued read work before opening SQLite
+PASS unindexed path opens its known ancestor without filesystem traversal
+PASS unindexed navigation through either /tmp spelling returns the same indexed ancestor
+PASS stable alias navigation does not admit a same-prefix sibling outside the indexed root
+PASS path navigation refuses symbolic links instead of starting another tree
+PASS partial discovery can be browsed before initial indexing finishes
+PASS newly discovered directory has no fabricated zero-byte aggregate
+PASS growing discovery denominator never produces a completion percentage
+PASS existing history is available and unchanged during initial discovery
+PASS out-of-order navigation publication cannot replace newer focus with an obsolete selection
+PASS repeated navigation coalesces to one focus mailbox instead of UUID refresh jobs
+PASS old focus mailbox cannot acquire a new priority lease after pause
+PASS malformed claimed focus is retired without wedging newer navigation or the worker
+PASS crashed focus claim is idempotently recovered without duplicating directory jobs
+PASS rapid navigation keeps at most sixteen durable focus intents
+PASS priority rejects paths outside the inventory volume scope
+PASS focus never resets job authority or creates a refresh invalidation
+PASS interactive work exposes qualified useful file sizes while the wider index remains incomplete (outcome=interrupted, reason=entry limit, children=25, size=188416, counts=["listings_retried_changed": 0, "transactions_committed": 27, "entries_pruned_committed": 0, "interactive_quanta": 9, "prefix_names_replayed": 0, "job_quanta": 12, "journal_rows_pruned": 0, "listings_completed": 0, "sequence_blocks_reserved": 1, "checkpoint_quanta": 8, "aggregate_calls": 4, "background_quanta": 3, "lock_failures": 0, "new_entries_committed": 350, "jobs_retried_event_gap": 0, "listings_repeated": 0, "sql_write_statements": 1139, "entries_remeasured_committed": 0, "listings_attempted": 4, "sql_read_statements": 840, "jobs_skipped_satisfied": 0, "listings_unavailable": 1, "jobs_retried_event": 0])
+PASS large partially indexed directories retain correct lazy pagination
+PASS interactive enumeration reserves background turns instead of starving ordinary discovery
+PASS foreground quantum budget remains bounded at three turns per background turn
+PASS interrupted prioritized jobs retain focus intent and committed listing checkpoint
+PASS priority resolves necessary discovered ancestors for a deep unindexed path
+PASS index can finish accessible work while a protected directory remains a coverage gap
+PASS navigation alone does not repeatedly retry inaccessible directories
+PASS opening a measured directory causes no duplicate filesystem enumeration
+PASS reader sees newer invalidation immediately despite interactive priority
+PASS priority during FSEvents invalidation performs exactly the required newer listing
+PASS focus and refresh share one authoritative listing without duplicate jobs
+PASS interactive focus does not weaken obsolete cleanup protection
+PASS legitimate prioritized cleanup preserves hard-link ownership and byte attribution
+PASS directory deleted during navigation disappears from committed reader results
+PASS progressive priority leaves database integrity and monitoring history intact
+PASS fresh schema has the milestone columns and reports not started before any generation
+PASS a new generation is recorded in progress while first listings are pending
+PASS newly discovered descendant folders awaiting their first listing keep completion unrecorded
+PASS a running first listing with committed partial entries keeps completion unrecorded
+PASS pausing the first pass never records completion
+PASS completion is recorded once every first listing has finished
+PASS an interrupted running first listing resumes and then records completion
+PASS accessible first pass completes while the inaccessible folder stays explicitly unknown
+PASS thousands of new never-listed folders after completion do not reset the milestone
+PASS a viewer launched during a large later update shows an ordinary update, not a first pass
+PASS a restarted viewer reads the same recorded completion
+PASS worker restarts preserve the original completion record (idempotent)
+PASS a manual full refresh reconciles without resetting completion or claiming missed file events, and says it is refreshing (Refreshing the entire inventory · about 25% rechecked)
+PASS an event-history gap queues a broader recheck without resetting completion
+PASS the broad recheck drains with the original completion record intact
+PASS deferred cleanup (prune jobs and tombstones) does not block completion
+PASS unrelated incremental relisting and reconciliation work do not block completion
+PASS a folder awaiting its first listing blocks completion
+PASS an unapplied invalidation (in-flight discovery input) blocks completion
+PASS a traversable folder with no job to list it blocks completion
+PASS a folder marked pending without unfinished listing work blocks completion
+PASS with every clause satisfied completion is recorded
+PASS recording is idempotent and later never-listed work never clears it
+PASS a completion write interrupted before commit leaves the generation in progress
+PASS completion cannot be recorded through another writer's uncommitted discovery
+PASS after concurrent discovery commits, its first listing blocks completion
+PASS completion is recorded once the concurrent discovery is resolved
+PASS a scope change begins a new in-progress generation; the superseded scope keeps its own record
+PASS a new root identity starts a new generation whose first pass is in progress
+PASS the new generation records its own completion
+PASS a viewer reading a catalog without the milestone reports it unsupported, never in progress or complete
+PASS migration marks an existing generation unknown, not in progress
+PASS ambiguous legacy pending work cannot establish completion
+PASS the worker confirms legacy completion after relisting only its two queued folders (relisted 2)
+PASS a legacy catalog with no outstanding first-listing work is confirmed complete with zero listings
+PASS milestone migration preserves monitoring history
+PASS an interrupted milestone migration leaves no partial schema
+PASS rerunning the migration recovers idempotently and preserves nodes and job state
+PASS an interrupted legacy first pass is confirmed when its first listings drain
+PASS migrated fixture passes SQLite integrity and foreign-key checks
+PASS a folder replaced by a new directory object needs its own first listing before completion is recorded (job ["state": "pending", "completed_token": "0"])
+PASS the replacement is listed, its new contents are discovered, and completion is then recorded
+PASS an unapplied change notice for an unlisted folder blocks recording until it is applied
+PASS after the notice is applied and the folder is retried, completion is recorded with the folder still unavailable
+PASS explorer lists a folder's children largest first (["big", "nested", "empty", "locked"])
+PASS a protected folder is shown as access restricted, never as a measured or empty folder
+PASS an empty folder expands to no rows and no further page
+PASS an explorer page holds at most 200 entries
+PASS an explorer page holds at most 200 entries
+PASS an explorer page holds at most 200 entries
+PASS an explorer page holds at most 200 entries
+PASS an explorer page holds at most 200 entries
+PASS an explorer page holds at most 200 entries
+PASS an explorer page holds at most 200 entries
+PASS paging a 1,234-entry folder returns every entry exactly once in 7 pages
+PASS pages are ordered by allocated size, then name, then id, with no reordering across page boundaries
+PASS explorer pages match the existing reader's order and paths entry for entry
+PASS each explorer page of the large folder reads in under 100 ms (worst 0 ms)
+PASS storage map of a 1,234-entry folder: drawn regions plus Other items equal the indexed total exactly (121 regions)
+PASS nested map read: one 60-entry page and the exact remainder of a 1,234-entry folder add up to its indexed total
+PASS storage map: the protected folder is counted as unmeasured, not drawn with a size
+PASS storage map after an index update during navigation: totals follow the new entries exactly
+PASS entries committed between pages cause no duplicate and no missing pre-existing row
+PASS a nested folder's entry carries its real path and measured size (/System/Volumes/Data/private/tmp/storage-monitor-explorer-CD6CF14B-AC78-41D4-A5D5-823C11CA2375/nested/a/b)
+PASS a folder that kept changing is labelled as an earlier size, not as current
+PASS a deleted folder leaves its parent's listing, and expanding it again reports that it is gone
+PASS storage map reads tiles and Other items from one snapshot: 44 reads during 5136 concurrent commits, 0 inconsistent (separate reads: 21 of 42 inconsistent)
+PASS during a pending refresh, explorer rows carry the same previous-measurement state as the existing reader
+PASS the first read resynchronizes and keeps the latest sequence
+PASS listing and subtree changes are planned separately
+PASS a backlog beyond one read resynchronizes and continues from the latest sequence
+PASS a generation-wide staleness change re-reads everything visible
+PASS folders whose read failed are retried, only while still loaded, without moving the cursor when the feed is unreadable
+PASS the retry set is bounded
+PASS a bounded read never splits one sequence across two reads
+PASS a refresh does not overwrite a folder whose loaded span changed while it was read; the folder is refreshed again
+PASS dropping a collapsed folder's pages releases their cached rows
+PASS a signal is signed and qualified by its least certain measurement
+PASS a reader without a cursor is told to resynchronize and receives the latest committed sequence (61)
+PASS the first pass emits no growth or reduction signals: nothing had a previous measurement
+PASS a recorded file event alone changes nothing in the feed; the generation is only qualified as stale until the worker commits
+PASS relisting an unchanged folder records only its own stale-to-current transition ([1, 7])
+PASS an unchanged remeasurement is recorded as unchanged, never as growth or reduction
+PASS file creation reports its folder and every ancestor, and no unrelated branch ([1, 5, 11])
+PASS creation is measured growth equal to the new file's allocation along the whole ancestor chain; the root, with a protected folder, is an observed lower bound
+PASS file growth is a signed allocation delta on the file and each ancestor (+1040384 bytes)
+PASS file shrinkage is a reduction from the previous measured allocation
+PASS the signal feed returns each changed node once, in sequence order
+PASS a deleted file stays observable through its folder after its row disappears; its own signal is removed and the folder records a reduction
+PASS a renamed directory keeps its identity; its parent's listing and its own subtree (paths) are reported
+PASS a cross-directory move invalidates the old and the new parent, keeps the moved identity, and is growth at the destination and reduction at the source
+PASS changes committed together are all reported once each (3 directories)
+PASS a deleted directory is reported itself and through its parent after its whole subtree is removed
+PASS a protected folder never receives a size signal: it has no measured value to compare
+PASS re-listing unchanged hard links records no growth or reduction for either name or folder
+PASS a shared object's change is reported for the folder of every name that shows it, including a hard-link alias
+PASS a folder whose remeasurement has started keeps its baseline without re-publishing its last comparison
+PASS journal rows are written in the catalog's own transaction and disappear with its rollback
+PASS a viewer reconnecting after missed updates catches up in bounded pages with no change lost or repeated (2 pages, 13 directories)
+PASS a reader polling during twelve worker runs never misses or repeats a change and its cursor never moves back (100 reads, 0 busy, 3 directories)
+PASS a change in one expanded branch re-reads only that folder and the root; other expanded branches, expansion and the selection are untouched ([1, 8])
+PASS with no committed change, no folder is re-read
+PASS a deleted selection moves to its folder instead of lingering or vanishing
+PASS a deleted expanded folder leaves the outline with everything beneath it; a selection inside it moves to the nearest remaining folder
+PASS a collapsed folder keeps its pages until its own branch changes, then reloads when reopened
+PASS after retention overflow a reader behind the floor is told to resynchronize its visible branches; a current reader continues (19 rows pruned, 3 kept)
+PASS a catalog without the journal is reported as such, and a viewer falls back to re-reading what it shows
+PASS migration adds the journal without rewriting catalog rows (8 new pages) and starts a new journal readers resynchronize with
+PASS a cursor from another journal is never continued
+PASS living tree catalog: built from one read snapshot within its budget (12 elements, 4 folder reads, 0.8 ms), positioned in the change journal at that moment
+PASS living tree catalog: every drawn entry hangs from its catalog parent under its catalog name
+PASS living tree catalog: each expanded folder's drawn entries and grouped remainder match the catalog's sums exactly (4 folders)
+PASS living tree catalog: an unreadable folder is shown or counted as having no measured size, never as zero
+PASS living tree catalog: a 100-byte file is grouped, not drawn, in a bounded tree
+PASS living tree catalog: revealing the 100-byte file draws it with its folders, from the same snapshot, and its folder's total stays exact
+PASS living tree catalog: a folder no longer in the catalog is reported, not drawn empty
+PASS living tree catalog: the first signal read only positions the viewer; nothing lights up
+PASS living tree catalog: a file written into a drawn folder rebuilds the tree and lights the folder and its ancestors amber (root: partial, compared as observedLowerBound)
+PASS living tree catalog: the light carries the measured previous size and the signed change
+PASS living tree catalog: deleting a file lights the folder cool blue (a change in indexed allocation)
+PASS living tree catalog: relisting an unchanged folder outside the drawn branches does not rebuild the tree (2 journal rows)
+PASS living tree catalog: after the journal is pruned past the viewer, it resynchronizes: the tree is rebuilt and no growth or reduction is invented
+PASS living tree catalog: a tree drawn while file events were pending records that in its snapshot, and is rebuilt once they are applied
+PASS dropped events, wrapped IDs and a root-level rescan request are genuine loss of event coverage
+PASS a subtree rescan request is scoped to that subtree, not whole-volume loss
+PASS coverage classification: 10,000 ordinary events, or a drop after the replay window, are not loss (inventory replay treats any drop as loss)
+PASS 4,500 changed folders (over the old 4,096 limit) become targeted relistings, not a full-volume reconciliation (applied, 4500 paths)
+PASS the cursor is acknowledged only after every changed folder is durably queued
+PASS the high-volume interval relists only the changed folders (4500 listings for 4,500 changes in 5,000 folders) and captures every change
+PASS a retry leaves the acknowledgement time unchanged, so the next replay budget grows with cursor age
+PASS a replay that misses its deadline keeps the cursor and schedules no full reconciliation
+PASS the next replay continues from the same cursor and every change is captured
+PASS genuine event loss schedules one reconciliation, and an overlapping loss coalesces into the same durable pass
+PASS the reconciliation finishes and the inventory returns to idle
+PASS high volume, retries and genuine gaps leave the first-pass completion record unchanged
+PASS the correction adds no schema: existing catalogs need no migration
+PASS events outside the inventory root queue no work
+PASS observing an event at the marker ID is not proof that earlier events were delivered
+PASS only HistoryDone plus a completed synchronous flush is a replay boundary
+PASS repeated retries get 30 s growing to 300 s by five hours, before the six-hour expiry forces reconciliation
+PASS a spill failure at the memory limit aborts without advancing the cursor
+PASS after the failure the same history is replayed: all 120 changes spilled in batches of 25 are applied, then acknowledged
+PASS an inventory replay still delivering after its 30 s budget keeps running; a 30 s stall or the 30-minute guard ends it
+PASS a quiet interval is acknowledged rather than retried, so its cursor never expires into a full reconciliation
+PASS deletions, a replacement, a permission change and a new mount are applied without a full reconciliation
+PASS a deleted folder is pruned through generation-safe cleanup
+PASS a replaced folder is relisted with its new contents and none of the old
+PASS a folder that became unreadable is recorded unavailable and does not loop
+PASS a volume mounted inside the root stays outside the measured scope; its file events queue no work
+PASS the structural fixture reaches a terminal state (partial)
+PASS no full-volume traversal without cause: 4,500 changes in 12,000 folders cost 4500 listings
+PASS a slow replay starts no full reconciliation and still captures its 50 changes
+PASS sustained activity (6 × 4,200 changed folders) makes forward progress and reaches idle once activity settles (11 slices)
+PASS genuine loss reconciles durably across slice and process boundaries; a second genuine loss restarts the frontier and still finishes
+PASS changes behind and ahead of the reconciliation frontier are both captured
+PASS a directory that changes during every listing is retried 3 times, then deferred instead of relisted until the budget expires (3 retries, 0.0 s of a 60 s budget, reason deferred: a directory kept changing during listing)
+PASS the deferred directory stays durably pending and stale; nothing is reported complete
+PASS a stable directory changed in the same interval is still listed while the unstable one is deferred
+PASS C: the deferral is durable; the viewer reports 1 changing folder (Up to date except 1 folder that keeps changing), no active listings, and values stay qualified as stale
+PASS a deferred-only run exits 0, so launchd leaves the worker idle until the next scheduled wake
+PASS the viewer's 'Show folder' list names the deferred folder (["/System/Volumes/Data/private/tmp/storage-monitor-reconcile-hot-9C927CCE-A04E-4B2B-A2A9-318D0B25BF45/hot"])
+PASS a later run retries the deferred folder 3 more times, then defers it again (3 retries)
+PASS once the directory is quiet the next run lists it completely and the catalog matches disk (complete)
+PASS C to B: once listed, the folder is no longer counted and the inventory reads as current
+PASS the cleanup-authority check walks the ancestor chain and probes jobs by key, never scanning every job (CO-ROUTINE chain; SETUP; SEARCH inventory_nodes USING INTEGER PRIMARY KEY (rowid=?); RECURSIVE STEP; SCAN c; SEARCH n USING INTEGER PRIMARY KEY (rowid=?); SCAN chain; SEARCH j USING INTEGER PRIMARY KEY (rowid=?))
+PASS the reordered query returns exactly the original counts (180 comparisons, 60 non-zero, 0 mismatches)
+PASS D2: a first pass stopped at its budget with runnable listings exits 75, so launchd continues it
+PASS D2: resumed slices finish the first pass (4 slices, all 601 entries), and the finishing run exits 0
+PASS a second worker reports busy without touching the catalog and exits 0 (the active worker owns the work); a second inventory command cannot take the command lock
+PASS an acknowledged cursor records this boot session and its sleep-excluding uptime
+PASS sleep/wake: 9 h asleep with 10 min awake replays the retained event history; no full-volume reconciliation (applied)
+PASS reboot: a cursor from the previous boot within 6 h of wall time is replayed
+PASS reboot: a cursor from the previous boot older than 6 h of wall time expires and schedules one safe reconciliation (gap)
+PASS the expiry reconciliation drains and the catalog matches disk
+PASS 7 h awake without an acknowledgement still expires the cursor
+PASS a cursor written before awake time was stored keeps the wall-clock rule
+PASS an ordinary event after the replay marker is left to the next replay, not treated as loss
+PASS a user drop reported after the replay marker still schedules reconciliation (gap)
+PASS a kernel drop reported after the replay marker still schedules reconciliation (gap)
+PASS A to C: a first pass whose only unlisted folder keeps changing records the first-pass milestone; the folder stays durably unlisted and deferred (reason deferred: a directory kept changing during listing, milestone complete, token 0, job reason deferred: a directory kept changing during listing)
+PASS one unstable cache does not make the whole inventory look like a first scan; it is reported as 1 affected folder (Up to date except 1 folder that keeps changing)
+PASS C to B: when the folder stops changing the next run lists all 4,000 entries and the inventory reads as current
+PASS D1: a readable folder with entries whose metadata is refused is listed; those entries are recorded as unreadable and the folder is a lower bound (partial), not an inaccessible folder
+PASS D1: a folder re-queued by filesystem activity before every slice never moves back in the queue and is listed while other work remains (positions 299,239,179,119,59,42, listed after 6 slices, 332 still queued)
+PASS D1: activity inside a consent-protected folder re-runs its job but keeps it reported as protected, never as previously measured; the run exits 0
+PASS low-space threshold is 1% of the volume, at least 2 GB and at most 5 GB
+PASS below the free-space threshold indexing pauses before writing the catalog, exits 0 (no relaunch loop) and reports the pause
+PASS once space is available the next run resumes and completes; progress samples from both runs persist for the viewer (2 samples)
+PASS D2: work queued by the closing replay leaves the final pass 'interrupted' (as on the Air), but the worker exits 0 and waits for its next wake
+PASS D2: four launchd invocations under continuous filesystem activity request no relaunch (0); the next wake applies the queued changes and the catalog matches disk
+PASS accounting: a partially indexed tree's root equals the sum of every indexed file (2007040 bytes); no directory total omits an indexed child
+PASS accounting: the root total equals an independent walk of unique readable files (2826240 allocated, 102800001 logical bytes)
+PASS accounting: a hard-linked file is counted once, at one of its names
+PASS accounting: a protected folder contributes no bytes and marks every ancestor as a lower bound (partial)
+PASS accounting: a sparse file reports its logical size (100 MB) separately from its small allocation (12288 bytes)
+PASS accounting summary reads the root total, the unavailable folder and the worker's own Full Disk Access state
+PASS accounting limits from the indexed kind scan equal a full scan of the generation ((excluded: 0, unreadable: 0, protected: 0, unavailable: 1))
+PASS accounting: an APFS clone is counted in full for each file (st_blocks is per file), so indexed allocation can exceed the volume's physical use
+PASS D9: a worker run that meets the check's 2.5 s write lock waits and completes instead of ending 'busy' (complete, 2.6 s)
+PASS D10: worker startup (history open and schema initialization) waits for a concurrent writer instead of failing with 'database is locked'
+PASS D12: each worker log line states completed, deferred, continuing, paused, skipped or failed; a normal maintenance run is never described as interrupted
+PASS additive migration preserves every existing monitor and coverage table without backfill claims
+PASS inventory stats trigger upgrades once without changing existing counters
+PASS unchanged kind and status update only the node row, not inventory stats
+PASS real directory status transition updates exactly one inventory stats bucket row
+PASS reconcile horizon migration retains an interrupted legacy pass and captures a finite conservative boundary
+PASS an older reconciliation pass does not queue a directory discovered beyond its durable horizon
+PASS a newer gap replaces the horizon, resets the old prefix, and includes directories beyond the older pass
+PASS event-identity fixture establishes a complete inventory
+PASS repeated unavailable event identity queues exactly one full reconciliation
+PASS unavailable identity drains once into a terminal stale generation without queued work
+PASS later unavailable wakes remain terminal without restarting traversal
+PASS explicit refresh remains available while event identity is unavailable
+PASS event identity recovery reconciles once and restores incremental operation
+PASS queued invalidations make bounded progress while directory work remains pending
+PASS failed grouped listing commit rolls back observations and preserves durable jobs
+PASS entry-budget interruption commits completed sibling listings before returning partial results
+PASS resumed grouped listings produce exact aggregates after a rolled-back commit and interruption
+PASS bounded container commits persist child jobs before descendant discovery resumes
+PASS resumed container listings preserve exact parent and descendant totals
+PASS directory moves commit before stale sibling jobs read their previous paths
+PASS stale sibling aggregates preserve current values in unaffected branches
+PASS destination-only move refresh repairs both parents without changing total usage
+PASS move preserves subtree identity and its actual measurement timestamp
+PASS committed invalidation is visible before a worker applies it, including after interruption
+PASS a newer event gap restarts an existing reconciliation frontier before certifying its old prefix
+PASS legacy history opens as an uninitialized inventory without SQL errors or migrations
+PASS cancel boundary persists resumable directory state
+PASS reopened worker resumes without persistent telldir cookies
+PASS sparse files preserve logical size separately from file allocation
+PASS APFS clones remain distinct objects without claiming shared blocks are reclaimable
+PASS root totals match independent lstat oracle with hard links counted once (inventory logical=8586087 allocated=3608576 files=839 directories=310; oracle logical=8586087 allocated=3608576 files=839 directories=310)
+PASS descendant entry count includes symlinks and hard-link names without duplicating allocated bytes
+PASS direct totals include file and symlink metadata but exclude directory inode overhead
+PASS empty directory is a complete zero with parent-child integrity
+PASS direct refresh of an absent directory relists its parent and prunes the durable entry
+PASS hard-link names retain actual file metadata independently of their zero duplicate storage contribution
+PASS mutating a non-owner hard link refreshes owner-directory and root aggregates
+PASS deleting a cross-directory hard-link owner transfers accounting and reaches a terminal state
+PASS create, modify, and delete regular files reconcile exactly
+PASS replacement directory discards old checkpoints and prunes more than 256 obsolete children
+PASS directory-to-file replacement removes stale descendants without replacing file size with old directory totals
+PASS same-parent rename preserves directory and descendant IDs
+PASS old-parent-first cross-parent move preserves subtree identity
+PASS parent relist preserves unchanged child aggregates and measurement time
+PASS stale gap ancestry hides prior byte totals before reconciliation
+PASS reopened committed prefix cannot exhaust every new-work budget without progress
+PASS directory mutation between bounded batches remains resumable and incomplete
+PASS resume after reopened handle captures between-batch mutation
+PASS permission and metadata failures are unknown rather than complete zeroes; a readable folder with refused entry metadata is listed as a lower bound
+PASS explicit refresh recovers both permission fixtures
+PASS interruption before pruning never publishes deleted subtree totals as complete
+PASS large subtree deletion drains bounded prune queues
+PASS volume UUID, inode and birth time preserve the public identity key across device-number changes
+PASS large-folder pagination and prefix limits are stable
+PASS relative path search and global/scoped largest queries respect scope
+PASS reader returns absolute paths and stable offsStorage Monitor: walk of synthetic blocked inventory I/O did not return; marked blocked
+et pagination
+PASS reader supports path search, indexed global largest files, and O(1) status counters
+PASS pause and resume use distinct durable requests and resume clears cancellation
+PASS concurrent monitor and inventory work finishes within bounded wait
+PASS concurrent capacity rows are preserved while inventory readers and writer run
+PASS canonical and display path forms map to one inventory namespace
+PASS generation replacement hides superseded nodes and ignores their unfinished jobs
+PASS productive enumeration refreshes the inactivity limit during long prefix replay
+PASS blocked filesystem I/O watchdog persists an explicit unknown region without zero-byte totals
+PASS resumed worker skips the blocked job and preserves ancestor uncertainty
+PASS explicit refresh can recover a previously blocked inventory region
+PASS an identity-mismatched child retires its retry while parent repair remains durably queued
+PASS a replaced queued directory repairs its parent instead of retrying its old identity forever
+PASS identity replacement recovery removes obsolete children and derives exact parent totals
+PASS a queued directory replaced by a file repairs its parent and prunes obsolete descendants
+PASS root identity replacement remains unfinished instead of completing the old root as unknown
+PASS root replacement resumes in a new generation with exact new-root totals
+350 inventory tests passed

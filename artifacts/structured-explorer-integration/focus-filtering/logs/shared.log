@@ -1,0 +1,26 @@
+work: /private/tmp/storage-monitor-structured-filtering.id2Bx4
+PASS structured filtering: presets and units use decimal bytes
+PASS structured filtering: custom decimals floor exact decimal products at the one-byte boundary
+PASS structured filtering: invalid, nonpositive, scientific and overflowing custom values are rejected
+PASS structured filtering: All, Dim and focus off preserve the original visible appearance
+PASS structured filtering: All includes unknown nodes and retains grouped remainder geometry
+PASS structured filtering: selecting grouped context under All never claims it is below a filter
+PASS structured filtering: 500 MB boundary delta -1 uses exact inclusive integer comparison
+PASS structured filtering: 500 MB boundary delta 0 uses exact inclusive integer comparison
+PASS structured filtering: 500 MB boundary delta 1 uses exact inclusive integer comparison
+PASS structured filtering: threshold matches real allocated sizes exactly, including files, but not unknown or grouped sums
+PASS structured filtering: dim retains geometry, strengthens necessary context and selection, and fades unrelated nodes
+PASS structured filtering: counts include current real folder nodes only and separate matches from context
+PASS structured filtering: hide removes nonmatches before focus while preserving actual match and selection ancestor chains
+PASS structured filtering: hide precedes subtree focus, and duplicate folder names retain separate identities
+PASS structured filtering: an empty threshold result retains only navigation root and reports no matches
+PASS structured filtering: subtree and path focus use real descendants and ancestors and recede unrelated branches
+PASS structured filtering: isolation validates a real folder, uses its own total and excludes outside paths
+PASS structured filtering: full-ancestry selection retention keeps every actual direct parent beyond Levels
+PASS structured filtering: deep retained selection chains never fabricate shortcut parents
+PASS structured filtering: filtering and isolation leave model IDs and accounting totals unchanged
+PASS structured filtering: hidden discs cannot steal pointer hits
+PASS structured filtering: keyboard movement visits only allowed direct hierarchy targets
+PASS structured filtering: minimum-window labels exclude hidden geometry and prioritize preferred candidates without collisions
+exit: 0
+log: /private/tmp/storage-monitor-structured-filtering.id2Bx4/test.log

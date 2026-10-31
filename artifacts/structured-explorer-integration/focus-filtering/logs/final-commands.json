@@ -1,0 +1,112 @@
+[
+  {
+    "label": "shared",
+    "command": [
+      "scripts/test-structured-filtering.sh"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T11:52:00.825658+00:00",
+    "end": "2026-10-31T11:52:48.719526+00:00"
+  },
+  {
+    "label": "gui",
+    "command": [
+      "scripts/test-gui.sh"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T11:52:48.719773+00:00",
+    "end": "2026-10-31T11:55:25.725680+00:00"
+  },
+  {
+    "label": "viewer-build",
+    "command": [
+      "scripts/build-gui.sh"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T11:55:25.725929+00:00",
+    "end": "2026-10-31T11:56:37.322165+00:00"
+  },
+  {
+    "label": "inventory-model",
+    "command": [
+      "scripts/test-inventory-model.sh"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T11:56:37.322406+00:00",
+    "end": "2026-10-31T11:58:06.056576+00:00"
+  },
+  {
+    "label": "cleanup-scroll",
+    "command": [
+      "scripts/test-cleanup-inspector-scroll.sh"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T11:58:06.056817+00:00",
+    "end": "2026-10-31T11:58:38.009859+00:00"
+  },
+  {
+    "command": [
+      "scripts/build.sh"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "build/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+      "self-test",
+      "--data-dir",
+      "/private/tmp/structured-filter-final-monitor-data.gyttMl"
+    ],
+    "exit": 0
+  },
+  {
+    "command": [
+      "build/InventoryIntegrationTests"
+    ],
+    "exit": 0,
+    "log": "inventory-integration.log",
+    "note": "Fresh binary built by scripts/test-inventory.sh; first worker runtime failed; unrestricted root rerun passed350."
+  },
+  {
+    "command": [
+      "/bin/sh",
+      "scripts/test-native-qa.sh"
+    ],
+    "exit": 0,
+    "log": "native-runtime.log"
+  },
+  {
+    "command": [
+      "scripts/test-chart-geometry.sh"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "log": "chart-input.log"
+  },
+  {
+    "command": [
+      "scripts/benchmark-structured-filtering.sh",
+      "/private/tmp/structured-filtering-baseline-20261031T111033Z/catalog.sqlite3",
+      "artifacts/structured-explorer-integration/focus-filtering"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "log": "focus-filter-benchmark.log"
+  },
+  {
+    "command": [
+      "scripts/benchmark-navigation.sh",
+      "/private/tmp/structured-filtering-baseline-20261031T111033Z/catalog.sqlite3",
+      "artifacts/structured-explorer-integration/focus-filtering/navigation.json",
+      "focus-filtering"
+    ],
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "log": "navigation-benchmark.log"
+  }
+]

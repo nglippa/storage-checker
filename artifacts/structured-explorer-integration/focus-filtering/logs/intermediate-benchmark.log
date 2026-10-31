@@ -1,0 +1,93 @@
+work: /private/tmp/storage-monitor-filter-bench.whr9fl
+/Users/nicholaslippa/storage-checker/SourcesGUI/CleanupInspectorView.swift:184:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+181 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+182 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+183 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+184 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+185 |         }
+186 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+REAL CATALOG nodes=2959505, bounded model=2717, placed=101, target=/System/Volumes/Data/Users
+PASS offscreen PNG 01-all-nodes (2880×1800)
+PASS offscreen PNG explorer-01-all-nodes (2200×1440)
+PASS offscreen PNG 02-at-least-500-MB-dim (2880×1800)
+PASS offscreen PNG explorer-02-at-least-500-MB-dim (2200×1440)
+PASS offscreen PNG 03-at-least-1-GB-dim (2880×1800)
+PASS offscreen PNG explorer-03-at-least-1-GB-dim (2200×1440)
+PASS offscreen PNG 04-at-least-1-GB-hide (2880×1800)
+PASS offscreen PNG explorer-04-at-least-1-GB-hide (2200×1440)
+PASS offscreen PNG 05-selected-below-filter (2880×1800)
+PASS offscreen PNG explorer-05-selected-below-filter (2200×1440)
+PASS offscreen PNG 06-isolated-folder (2880×1800)
+PASS offscreen PNG explorer-06-isolated-folder (2200×1440)
+PASS offscreen PNG 07-path-to-root (2880×1800)
+PASS offscreen PNG explorer-07-path-to-root (2200×1440)
+PASS offscreen PNG 08-focus-subtree (2880×1800)
+PASS offscreen PNG explorer-08-focus-subtree (2200×1440)
+PASS offscreen PNG 09-minimum-window-dark (2000×1280)
+PASS offscreen PNG explorer-09-minimum-window-dark (1300×860)
+PASS offscreen PNG 10-minimum-window-light (2000×1280)
+PASS offscreen PNG explorer-10-minimum-window-light (1300×860)
+PASS offscreen PNG 11-minimum-window-hide-light (2000×1280)
+PASS offscreen PNG explorer-11-minimum-window-hide-light (1300×860)
+PASS offscreen PNG 12-classic-fallback (2880×1800)
+PASS offscreen PNG explorer-12-classic-fallback (2200×1440)
+PASS filtered canvas click shares exact selection/path with Inspector and Navigator
+PASS raising threshold retains selected node in real rendered hierarchy
+PASS hosted threshold, Dim and Focus changes cause no tree catalog rebuild/read poll or radial rebuild
+PASS production context menu path action invokes in process
+PASS context menu highlights real ancestor path
+PASS production context menu isolation action invokes in process
+PASS isolated root keeps exact identity, true size and Inspector subject
+PASS double-click in isolation nests the visual root without browser navigation
+PASS clear isolation context action invokes
+PASS clear isolation restores original shared selection and Navigator context
+PASS isolate another folder while a deep entry is selected
+PASS exit isolation after the entry chain collapsed
+PASS exit restores deep entry selection, actual ancestor expansions, visible Navigator row and scroll routing
+PASS selection after filtering keeps true Inspector path
+PASS ordinary browser navigation remains available during filtering
+PASS browser root change clears stale isolation while preserving size setting
+MEASURE real-standard exit p50=2.42 p95=2.75 max=3.03 ms
+MEASURE real-standard focus p50=1.48 p95=1.86 max=2.05 ms
+MEASURE real-standard isolate p50=1.88 p95=2.23 max=2.40 ms
+MEASURE real-standard presentation p50=1.27 p95=1.41 max=1.67 ms
+MEASURE real-standard reset p50=1.28 p95=1.40 max=1.61 ms
+MEASURE real-standard selection p50=1.29 p95=1.36 max=1.40 ms
+MEASURE real-standard threshold p50=1.24 p95=1.30 max=1.73 ms
+PASS real-standard: repeated filtering leaves all original totals and catalog controller statistics unchanged
+MEMORY real-standard MiB samples=[293.7823715209961, 293.7823715209961, 293.7823715209961, 291.4073715209961, 291.4229965209961]
+MEASURE real-minimum exit p50=1.93 p95=2.17 max=2.36 ms
+MEASURE real-minimum focus p50=0.99 p95=1.15 max=1.31 ms
+MEASURE real-minimum isolate p50=2.05 p95=2.38 max=2.49 ms
+MEASURE real-minimum presentation p50=0.88 p95=1.07 max=1.33 ms
+MEASURE real-minimum reset p50=1.00 p95=1.18 max=1.21 ms
+MEASURE real-minimum selection p50=1.02 p95=1.22 max=1.29 ms
+MEASURE real-minimum threshold p50=0.97 p95=1.09 max=1.43 ms
+PASS real-minimum: repeated filtering leaves all original totals and catalog controller statistics unchanged
+MEMORY real-minimum MiB samples=[294.2354965209961, 294.2354965209961, 294.2354965209961, 294.2511215209961, 289.5011215209961]
+MEASURE dense-QA exit p50=22.89 p95=23.90 max=26.11 ms
+MEASURE dense-QA focus p50=18.11 p95=19.15 max=20.45 ms
+MEASURE dense-QA isolate p50=2.90 p95=3.03 max=3.16 ms
+MEASURE dense-QA presentation p50=16.29 p95=17.80 max=18.05 ms
+MEASURE dense-QA reset p50=19.14 p95=21.33 max=22.28 ms
+MEASURE dense-QA selection p50=19.28 p95=21.20 max=21.99 ms
+MEASURE dense-QA threshold p50=18.40 p95=19.03 max=19.67 ms
+PASS dense-QA: repeated filtering leaves all original totals and catalog controller statistics unchanged
+MEMORY dense-QA MiB samples=[297.7042465209961, 298.8136215209961, 296.1261215209961, 296.1417465209961, 296.2667465209961]
+MEASURE deep-QA exit p50=9.30 p95=9.55 max=9.69 ms
+MEASURE deep-QA focus p50=2.28 p95=2.34 max=2.51 ms
+MEASURE deep-QA isolate p50=2.43 p95=2.59 max=2.72 ms
+MEASURE deep-QA presentation p50=2.11 p95=2.33 max=2.46 ms
+MEASURE deep-QA reset p50=5.33 p95=5.57 max=6.07 ms
+MEASURE deep-QA selection p50=1.31 p95=1.43 max=1.51 ms
+MEASURE deep-QA threshold p50=5.94 p95=6.12 max=6.29 ms
+PASS deep-QA: repeated filtering leaves all original totals and catalog controller statistics unchanged
+MEMORY deep-QA MiB samples=[299.2667922973633, 302.0636672973633, 302.0636672973633, 302.0636672973633, 302.0636672973633]
+PASS 40-level selected exception keeps every true direct parent with stable IDs
+RESULT 45/45 checks; native physical input/VoiceOver NOT VERIFIED
