@@ -1,0 +1,961 @@
+PASS read-only GUI load leaves database byte-identical
+PASS GUI creates no journal/WAL
+PASS one event per measurement; attached records do not duplicate rows; orphans retained
+PASS SQLite REAL timestamps retain stored subsecond precision
+PASS critical alert and diagnostic attach to exact reading
+PASS comparable swap evidence flags event without causal attribution
+PASS partial directory totals never produce growth estimates
+PASS swap changes use binary MiB units
+PASS complete directory pairs use KiB and matching path
+PASS per-reading predecessor retained for volume UUID comparison
+PASS unknown recorded severity preserved visibly
+PASS sysctl G means GiB
+PASS sysctl M means MiB
+PASS missing swap remains unknown
+PASS nonzero small changes never render as zero GB
+PASS chart selection maps an exact reading to its unique event
+PASS chart selection does not select an event hidden by filters
+PASS chart selection leaves an orphan reading unmatched
+PASS chart selection rejects same-time events with a different reading ID or container
+PASS chart selection rejects duplicate ambiguous event matches
+PASS chart selection leaves measurement data unchanged
+PASS event list focus: nothing is restored before the list has had focus
+PASS event list focus: a loss without a deliberate move (inspector rebuild, however slow) returns focus to the list
+PASS event list focus: a click elsewhere, Tab or Find keeps the person's new focus
+PASS event list focus: focusing the list again restores ownership
+PASS event list focus: Tab and Command-F are deliberate moves
+PASS event list focus: arrows, Option-Command-I and Escape are not focus moves
+PASS empty list: the default 24-hour range offers the last 7 days, not Clear Filters
+PASS empty list: the narrowest preset range holding the latest event is offered
+PASS empty list: events older than every preset offer a range from the first event through now
+PASS empty list: events in range hidden by other filters offer Clear Filters
+PASS empty list: other filters and an empty range offer both steps
+PASS empty list: no guidance when events are shown or none are recorded
+PASS empty list: the offered range Last 7 Days reveals events
+PASS empty list: the offered range Last 7 Days reveals events
+PASS living tree: a click on a drawn label selects its element
+PASS living tree: a click beside a label falls through to the branches
+PASS living tree: overlapping labels resolve to the one drawn on top
+PASS living tree: a label's share of the folder is a rounded whole percent, never finer
+PASS inventory presentation distinguishes initial discovery
+PASS inventory presentation distinguishes broad reconciliation
+PASS inventory presentation distinguishes changed-folder updates
+PASS inventory presentation distinguishes terminal idle state
+PASS partial rankings are explicitly qualified
+PASS first render shows indexing progress before database results without inventing counts or duration
+PASS status check does not describe a long first pass before the database confirms one
+PASS first-pass panel survives overlapping reconciliation and uses persisted start time
+PASS growing discovery queue is reported as counts without a completion percentage or ETA
+PASS paused first pass is not described as running
+PASS ordinary incremental updates do not show first-pass guidance
+PASS recorded first-pass completion removes the progress panel
+PASS clock correction cannot display negative indexing duration
+PASS start request displays progress immediately while genuinely unstarted inventory remains idle
+PASS first-pass guidance appears as soon as initialization is requested
+PASS A: never-started inventory keeps the empty explanation without a progress panel
+PASS B: recorded in-progress first pass shows progress, counts and browse-while-indexing guidance
+PASS C: paused first pass keeps counts, elapsed time and guidance
+PASS D: recorded completion shows ordinary browsing
+PASS E: thousands of never-listed new folders after completion are an ordinary update, never a first pass
+PASS F: event-history recheck is described as a broader check without resetting completion
+PASS F: deletion cleanup without an event gap keeps the reconciliation wording
+PASS G: legacy unknown completion shows a neutral note, neither first-pass nor completed
+PASS G: a catalog from a milestone-unaware worker never promises automatic confirmation
+PASS recorded states carry no legacy note
+PASS A: an unstarted or unfinished first pass is reported as such
+PASS B: a finished first pass with nothing waiting is current
+PASS C: one continuously changing folder is counted and its stale size disclosed, without first-pass wording or an active queue
+PASS C: when only a deferred folder remains, the first-pass panel is not shown even before the milestone is written
+PASS C: the count of affected folders is stated
+PASS C: active listings exclude deferred folders
+PASS C: stale folders are counted, not hidden
+PASS D: event-gap recheck and cleanup are reported as reconciliation
+PASS E: unavailable file-event history is reported instead of 'up to date'
+PASS D over E: while history recovers, the reconciliation in progress is reported
+PASS transitions: first pass (A) → one changing folder (C) → current (B)
+PASS with no inventory the results area shows one stable state across reloads (no empty-state flicker)
+PASS explorer: a new root shows a loading row and requests only its first page
+PASS explorer: the root's children appear in the order the page gave (largest first) with nothing else loaded
+PASS explorer: expanding a folder inserts a loading row beneath it and asks for its first page
+PASS explorer: loaded children are indented under their folder
+PASS explorer: expanding an already loaded folder does not reload it
+PASS explorer: collapsing hides children and moves a selection inside it to the folder (Finder behavior)
+PASS explorer: re-expanding shows the cached children without a new query
+PASS explorer keys: down moves to the next visible row
+PASS explorer keys: left on a child moves to its folder
+PASS explorer keys: left on an expanded folder collapses it
+PASS explorer keys: right expands a collapsed folder
+PASS explorer keys: right on an expanded folder moves into its first child
+PASS explorer keys: right on a file and down on the last row do nothing
+PASS explorer keys: up moves to the previous visible row
+PASS explorer: a partly loaded folder ends with a more row counting the loaded entries
+PASS explorer: overlapping pages never duplicate rows, and the folder ends with no more row
+PASS explorer: selection survives a reload of the folder it is in
+PASS explorer: a deleted entry disappears from the outline
+PASS explorer: a folder stops loading at its per-folder limit and says how to reach the rest
+PASS explorer memory: after visiting 8,000 entries the cache holds at most its budget (840 rows), keeping the root and recent folders
+PASS explorer: returning to a parent selects the folder you came from and reuses its loaded page
+PASS explorer: a failed page shows a failure row instead of an empty folder
+PASS explorer: an empty folder shows an empty row
+PASS explorer: a protected folder with no indexed children reads 'Contents not available · Access restricted', never 'Empty folder'
+PASS map: each region's area is proportional to its indexed allocated size
+PASS map: regions fill the map without leaving it or overlapping
+PASS map: tiles keep the explorer's order and the same input always gives the same layout
+PASS map: Other items is the exact sum and count of every omitted entry, including those beyond the loaded pages
+PASS map: a 200,000-entry folder draws a bounded number of regions (121) and groups the rest
+PASS map: opening Other items shows the next largest entries and can continue
+PASS map: a protected entry gets no area (no implied size) and is counted as unmeasured; partial and earlier sizes keep their values
+PASS map: entries measured at zero are reported as using no space, not as unmeasured, and offer no empty drill-down
+PASS map: an empty folder has no regions and no group
+PASS map/outline: a file selected on the map is the selected outline row
+PASS map/outline: a row selected inside an expanded folder outlines that folder's tile
+PASS map: an index update reorders tiles by the new sizes and keeps totals exact
+PASS nested map: children, exact Other items and the folder residual divide the folder tile in proportion to its total
+PASS nested map: unmeasured entries inside a nested folder are counted, not drawn, and the group opens the folder instead of drilling
+PASS presentation: the compact size drops 'Previously' while the full size keeps it for hover
+PASS presentation: a partial value keeps 'Partial' (a lower bound) even in compact form
+PASS presentation: a stale entry with no earlier value (a protected folder queued by a refresh) is not called previously measured
+PASS atlas palette: neighbouring top-level regions take distinct restrained hues, repeating in a fixed order
+PASS atlas palette (dark): contents keep their region's hue a step brighter; earlier sizes keep the hue, quieter; files are near-neutral
+PASS atlas palette (light): contents keep their region's hue a step brighter; earlier sizes keep the hue, quieter; files are near-neutral
+PASS atlas palette: partial and earlier sizes map to their own treatments
+PASS atlas zoom: entering a folder starts with the whole view centred inside the plate it occupied (uniform scale)
+PASS atlas zoom: leaving a folder starts enlarged with the folder you left centred in the view
+PASS atlas zoom: transitions settle exactly on the proportional layout, and Reduce Motion turns spatial zoom off
+PASS atlas hit testing: a point resolves to the nested plate inside a region, the top-level plate elsewhere, and nothing outside the map
+PASS inspector: a measured entry shows its size and its exact share of the enclosing folder
+PASS inspector: a protected entry has no share and explains that its size is unknown, not zero
+PASS navigator: measured rows carry no glyph; protected, earlier and waiting states each have their own
+PASS atlas labels: middle truncation keeps the start and end of a name within the visible budget, and leaves short names whole
+PASS atlas cache: the nested cache keeps at most its capacity, dropping the least recently used folders
+PASS atlas → navigator: selecting a file inside a region expands that folder in the Navigator (its page is requested)
+PASS atlas → navigator: the selected nested file is a visible row, and ← from it moves to its folder
+PASS presentation: an earlier-size state shared by most entries is stated once; exceptions such as access restricted keep their own note
+PASS a requested full refresh shows that it is running and how far its recheck has got (fixed endpoint, never a growing denominator)
+PASS ETA is withheld with too few samples, while the queue is still growing, or when the worker has stopped sampling
+PASS a steadily draining queue yields an estimate within 25% of the true remaining time (598 s vs 600 s) and the current item rate
+PASS the estimate moves smoothly between 10 s refreshes (largest change 3.7%) and its coarse wording changed 3 times over 15 minutes
+PASS persisted samples carry the estimate across a 60 s gap between worker slices
+PASS an early rough estimate appears from the volume's object count before the queue drains (Rough estimate: about 5 minutes remaining)
+PASS without a volume count (root is not a mount point) no early figure is invented
+PASS the volume count is used only when the inventory root is the volume's mount point
+PASS after discovery peaks, the estimate appears once 2 minutes of draining are observed, and not before (342 s)
+PASS a low-space pause is shown explicitly, with no rate or countdown
+PASS accounting compares indexed files with the Data volume they index (decimal units), and shows other volumes separately: Files found: 120.3 GB · 87.2 GB of your files' space not matched to a file yet
+PASS the unattributed space is explained by its possible causes, never labelled System Data or reclaimable; protected folders point to Full Disk Access
+PASS when indexed sizes exceed the Data volume (clones counted per file) the excess is shown as such, not as negative free space
+PASS without an inventory only the macOS figures are shown
+PASS Full Disk Access guidance names the background monitor in ~/Applications, not the viewer
+PASS VoiceOver labels distinguish active and paused first-pass states without an estimate
+PASS monitoring setup reports off with no LaunchAgents and uses the bundled helper
+PASS a partial installation is reported for repair, not as on
+PASS an app update with an older installed background monitor offers an explicit update
+PASS matching versions with all agents present report monitoring on
+PASS an agent pointing at a missing program (for example an ejected disk image) is reported for repair
+PASS a build without the bundled helper can still disable using the installed monitor
+PASS setup actions run only the background monitor's own install, uninstall and authorize commands
+PASS consent text states what is installed, where data lives, and that disabling keeps history
+PASS permission guidance explains optional Full Disk Access, inaccessible areas and the manual grant path
+PASS launchctl list and print-disabled output are parsed into loaded and disabled labels
+PASS monitoring is reported on only when every agent file exists and launchd has loaded it
+PASS agents whose files exist but that launchd has not loaded are reported for repair, not as on
+PASS a task macOS has disabled is reported with where to look
+PASS when launchd cannot be queried, Settings says so instead of implying the tasks run
+PASS a task still loaded in launchd after its file was removed is not reported as off
+PASS no files and nothing loaded is off
+PASS an agent running a different copy of the monitor (for example an old build) is reported for repair
+PASS a duplicate agent file for one of this monitor's labels is reported for repair
+PASS an interrupted update is reported for repair until the helper finishes or reverts it
+PASS after repair conditions clear, monitoring reads on again
+PASS install and uninstall run to completion with no fixed time limit
+PASS a helper writing more than a pipe buffer completes instead of stalling
+PASS missing history on first launch explains how to turn monitoring on in Settings, without exposing a database path
+PASS discovered empty directory never presents zero as a measured size
+PASS D11: a folder whose total includes a deferred subfolder's earlier size reads as approximate, not wholly previous; current and stale folders are unchanged
+PASS D7: Settings reflects existing notification permission (including one granted to an earlier version) and offers the prompt only while macOS can still show it
+PASS incomplete directory zero is presented as no size yet
+PASS pending observed directory is qualified without a physical lower-bound symbol
+PASS stale measurements keep precedence over current activity
+PASS restricted access is distinct from unavailable I/O
+PASS excluded entries explain that they are outside measured scope
+PASS type filter All Events
+PASS type filter Storage Loss
+PASS type filter Storage Recovery
+PASS type filter Warnings
+PASS type filter Critical Events
+PASS type filter Recorded Scans
+PASS type filter Swap Changes
+PASS type filter Diagnostic Events
+PASS time filter Last Hour
+PASS time filter Last 24 Hours
+PASS time filter Last 7 Days
+PASS time filter Last 30 Days
+PASS custom date endpoints inclusive and composable
+PASS invalid custom date range is explicit
+PASS size filter All Changes
+PASS size filter Greater Than 100 MB
+PASS size filter Greater Than 500 MB
+PASS size filter Greater Than 1 GB
+PASS size filter Greater Than 3 GB
+PASS size filter Greater Than 5 GB
+PASS custom threshold strict greater; unknown deltas excluded
+PASS invalid custom threshold nan
+PASS invalid custom threshold inf
+PASS invalid custom threshold -1
+PASS invalid custom threshold invalid
+PASS unsupported custom unit rejected
+PASS severity filter Normal
+PASS severity filter Information
+PASS severity filter Warning
+PASS severity filter Critical
+PASS Storage Loss >1 GB in last24h combines filters
+PASS type/time/size/severity combination
+PASS search composes with all filters and searches recorded alert evidence
+PASS search includes stored diagnostic information
+PASS largest loss sort
+PASS largest recovery sort
+PASS largest absolute change sort
+PASS newest and oldest timestamp sorts
+PASS filter preferences roundtrip persistently
+PASS hour comparison uses actual predecessor at/before target within cadence tolerance
+PASS day comparison uses actual24h20m baseline
+PASS long gaps never masquerade as one-hour or24-hour changes
+PASS valid empty history
+PASS safe error for missing.sqlite3
+PASS safe error for corrupt.sqlite3
+PASS safe error for zero.sqlite3
+PASS acceptance: legacy history loads; alert and 4:00 AM snapshot attach to reading #12
+PASS acceptance: physical free-space change is -2,178,781,184 bytes
+PASS acceptance: Data +1,103,945,728, VM +1,073,782,784, Update +1,052,672 bytes
+PASS acceptance: other volumes unchanged
+PASS acceptance: volume changes reconcile exactly with the recorded loss
+PASS acceptance: reconciliation sentence
+PASS acceptance: causes ranked Data, VM, Update by measured size
+PASS acceptance: cause amounts are measured allocation changes
+PASS acceptance: displayed as +1.10 GB, +1.07 GB, +1.05 MB
+PASS acceptance: allocation confirmed, responsible application unknown
+PASS acceptance: no unsupported application attribution in causes
+PASS acceptance: plain-language headline
+PASS mismatched diagnostic interval shown with its own interval
+PASS mismatched swap change is not attached to VM growth as its cause
+PASS swap allocation parsed separately (6144 MiB, +2048 MiB)
+PASS swap usage parsed separately from allocation
+PASS swap evidence shows allocated and used
+PASS partial and timed-out directory totals are not shown as evidence
+PASS unchanged Chrome clone measurement hidden by default
+PASS permission refusals summarised in plain language
+PASS repeated permission refusals de-duplicated by path (78 unique of 151 lines)
+PASS timed-out legacy measurements reported as incomplete
+PASS truncated APFS XML identified and not parsed
+PASS identical legacy diagnostic records collapsed; distinct ones kept
+PASS collection summary avoids exit codes and long paths
+PASS provenance (reading IDs, UUIDs, exact bytes) kept in copied details
+PASS raw output remains available, unabridged
+PASS displayed raw output folds repeated refusals
+PASS technical details collapsed by default, organised by source
+PASS mixed changes: only growth ranks as a cause; VM decrease is offsetting
+PASS mixed positive/negative volume changes reconcile by net sum
+PASS material mismatch reported as unaccounted
+PASS never forces three candidates when one is supported
+PASS recovery events rank released allocation
+PASS first reading: likely cause unavailable
+PASS event without an earlier reading in history: cause unavailable
+PASS no recorded volumes: insufficient evidence, no reconciliation
+PASS alert-only record without readings gets no fabricated causes
+PASS plain summary: states the measured loss with its interval
+PASS plain summary: explains virtual memory where the term first appears
+PASS plain summary: an exactly reconciled volume change is measured, and the app stays unknown
+PASS plain summary: virtual memory growth offers the memory action
+PASS plain summary: an unaccounted remainder is stated as partly measured
+PASS plain summary: no evidence says the cause is unknown and offers no explanation
+PASS plain summary: a first reading claims no change and no cause
+PASS plain summary: unattributed Data growth says folders were not recorded and points to Storage
+PASS plain summary: a larger growth offset by a reduction names the offset and the measured net loss
+PASS plain summary: offsetting volume changes that reconcile remain measured, not more certain about the cause
+PASS plain summary: Data growth offset by virtual memory shrinking states both and the net
+PASS plain summary: a recovery offset by growth names the growth and the net gain
+PASS plain summary: no offset sentence when nothing moved the other way
+PASS plain summary: a negligible offset (1 KB beside a 3 GB loss) stays in the breakdown, not the explanation
+PASS latest change: the most recent change of 1 GB or more within a day
+PASS latest change: falls back to the newest change when nothing large is recent
+PASS latest change: none without recorded changes
+PASS same-interval swap growth marked as likely mechanism; application still unknown
+PASS swap change over a longer interval is not attached as a mechanism
+PASS directory growth without volume data is only a possible contributor
+PASS partial directory measurement produces no delta and no evidence row
+PASS schema 2 swap allocation/usage parsed as exact bytes
+PASS schema 2 directories keep logical/allocated sizes and incompleteness
+PASS schema 2 collector status and VM counters parsed
+PASS schema 2 timeouts and refusals summarised
+PASS timed-out schema 2 measurement never yields a growth delta
+PASS legacy du and schema 2 directory totals are never compared with each other
+PASS historical event without folder evidence states that explicitly
+PASS folder evidence loads and attaches to the reading with the matching interval
+PASS APFS allocation stays the confirmed cause; application stays unknown even with a correlated process
+PASS measured folder growth supports the Data cause
+PASS process correlation shown only with its limits
+PASS shrinking folders are not offered as causes of growth
+PASS folder evidence is not attached to virtual memory
+PASS unattributed remainder labelled as an estimate, never an exact reconciliation
+PASS no application blamed in cause titles
+PASS supporting evidence shows folder growth, changed files and process correlation
+PASS clone activity qualifies folder growth
+PASS FSEvents evidence never claims a writer
+PASS folder evidence from a different interval is never used
+PASS Data growth with no folder growth is explicitly unattributed
+PASS file-event gap reported
+PASS baseline-only interval shows no folder growth
+PASS reading:1: causes keep application Unknown
+PASS reading:1: process mentions are correlation with their limit
+PASS reading:1: process evidence rows carry the disclaimer
+PASS reading:1: no confirmed-process or caused-by wording
+PASS reading:2: causes keep application Unknown
+PASS reading:2: process mentions are correlation with their limit
+PASS reading:2: process evidence rows carry the disclaimer
+PASS reading:2: no confirmed-process or caused-by wording
+PASS reading:3: causes keep application Unknown
+PASS reading:3: process mentions are correlation with their limit
+PASS reading:3: process evidence rows carry the disclaimer
+PASS reading:3: no confirmed-process or caused-by wording
+PASS reading:4: causes keep application Unknown
+PASS reading:4: process mentions are correlation with their limit
+PASS reading:4: process evidence rows carry the disclaimer
+PASS reading:4: no confirmed-process or caused-by wording
+PASS reading:5: causes keep application Unknown
+PASS reading:5: process mentions are correlation with their limit
+PASS reading:5: process evidence rows carry the disclaimer
+PASS reading:5: no confirmed-process or caused-by wording
+PASS reading:11: causes keep application Unknown
+PASS reading:11: process mentions are correlation with their limit
+PASS reading:11: process evidence rows carry the disclaimer
+PASS reading:11: no confirmed-process or caused-by wording
+PASS reading:12: causes keep application Unknown
+PASS reading:12: process mentions are correlation with their limit
+PASS reading:12: process evidence rows carry the disclaimer
+PASS reading:12: no confirmed-process or caused-by wording
+PASS diagnostic:2: causes keep application Unknown
+PASS diagnostic:2: process mentions are correlation with their limit
+PASS diagnostic:2: process evidence rows carry the disclaimer
+PASS diagnostic:2: no confirmed-process or caused-by wording
+PASS reading:1: causes keep application Unknown
+PASS reading:1: process mentions are correlation with their limit
+PASS reading:1: process evidence rows carry the disclaimer
+PASS reading:1: no confirmed-process or caused-by wording
+PASS reading:2: causes keep application Unknown
+PASS reading:2: process mentions are correlation with their limit
+PASS reading:2: process evidence rows carry the disclaimer
+PASS reading:2: no confirmed-process or caused-by wording
+PASS reading:14: causes keep application Unknown
+PASS reading:14: process mentions are correlation with their limit
+PASS reading:14: process evidence rows carry the disclaimer
+PASS reading:14: no confirmed-process or caused-by wording
+PASS reading:3: causes keep application Unknown
+PASS reading:3: process mentions are correlation with their limit
+PASS reading:3: process evidence rows carry the disclaimer
+PASS reading:3: no confirmed-process or caused-by wording
+PASS reading:4: causes keep application Unknown
+PASS reading:4: process mentions are correlation with their limit
+PASS reading:4: process evidence rows carry the disclaimer
+PASS reading:4: no confirmed-process or caused-by wording
+PASS reading:5: causes keep application Unknown
+PASS reading:5: process mentions are correlation with their limit
+PASS reading:5: process evidence rows carry the disclaimer
+PASS reading:5: no confirmed-process or caused-by wording
+PASS reading:6: causes keep application Unknown
+PASS reading:6: process mentions are correlation with their limit
+PASS reading:6: process evidence rows carry the disclaimer
+PASS reading:6: no confirmed-process or caused-by wording
+PASS reading:7: causes keep application Unknown
+PASS reading:7: process mentions are correlation with their limit
+PASS reading:7: process evidence rows carry the disclaimer
+PASS reading:7: no confirmed-process or caused-by wording
+PASS reading:8: causes keep application Unknown
+PASS reading:8: process mentions are correlation with their limit
+PASS reading:8: process evidence rows carry the disclaimer
+PASS reading:8: no confirmed-process or caused-by wording
+PASS reading:9: causes keep application Unknown
+PASS reading:9: process mentions are correlation with their limit
+PASS reading:9: process evidence rows carry the disclaimer
+PASS reading:9: no confirmed-process or caused-by wording
+PASS reading:10: causes keep application Unknown
+PASS reading:10: process mentions are correlation with their limit
+PASS reading:10: process evidence rows carry the disclaimer
+PASS reading:10: no confirmed-process or caused-by wording
+PASS reading:11: causes keep application Unknown
+PASS reading:11: process mentions are correlation with their limit
+PASS reading:11: process evidence rows carry the disclaimer
+PASS reading:11: no confirmed-process or caused-by wording
+PASS reading:12: causes keep application Unknown
+PASS reading:12: process mentions are correlation with their limit
+PASS reading:12: process evidence rows carry the disclaimer
+PASS reading:12: no confirmed-process or caused-by wording
+PASS reading:13: causes keep application Unknown
+PASS reading:13: process mentions are correlation with their limit
+PASS reading:13: process evidence rows carry the disclaimer
+PASS reading:13: no confirmed-process or caused-by wording
+PASS alert:3: causes keep application Unknown
+PASS alert:3: process mentions are correlation with their limit
+PASS alert:3: process evidence rows carry the disclaimer
+PASS alert:3: no confirmed-process or caused-by wording
+PASS diagnostic:3: causes keep application Unknown
+PASS diagnostic:3: process mentions are correlation with their limit
+PASS diagnostic:3: process evidence rows carry the disclaimer
+PASS diagnostic:3: no confirmed-process or caused-by wording
+PASS first baseline is not reported as incomplete measurements
+PASS copied details include folder evidence with exact bytes
+PASS raw output includes the stored folder evidence
+PASS coverage while initializing: 242 of 348 folders baselined
+PASS coverage when ready: Active · 348 folders tracked
+PASS partial coverage names unavailable and incomplete separately
+PASS degraded coverage stated
+PASS no percentage combines coverage with comparability
+PASS detail separates discovered, baselined, pending, incomplete, unavailable and next-interval comparability
+PASS coverage read from the monitor database
+PASS databases without coverage data load unchanged (no status shown)
+PASS interval evidence keeps first measurements and deferred folders separate
+PASS first measurements explained per interval and not counted as incomplete
+PASS interval headline speaks of comparability, not completeness
+PASS evidence row without coverage parses as scope folders
+PASS folder-scope row without coverage block keeps the exact legacy attribution text
+PASS comprehensive coverage block parses (scope, level, FDA, inaccessible activity, concentration, open-deleted)
+PASS comprehensive row with concentration states where the measured growth occurred
+PASS comprehensive coverage line names unreadable areas
+PASS open-but-deleted files >= 1 MB shown as a supporting line without blaming an application
+PASS file events in unmeasurable areas are reported
+PASS comprehensive row with no changes says the evidence does not explain the change
+PASS moved, moved_in and moved_out are excluded from driving areas
+PASS moves are reported and not counted in measured growth
+PASS busy comprehensive row skips evidence with an explanation
+PASS baseline_only comprehensive row says comparison starts next reading
+PASS partial comprehensive row states what could not be compared
+PASS folder-scope coverage block keeps its reason
+PASS coverage lifecycle: initializing summary
+PASS coverage lifecycle: ready summary
+PASS coverage lifecycle: partial summary with and without pending work
+PASS coverage lifecycle: degraded summary
+PASS coverage detail explains measured sizes, Full Disk Access guidance and inaccessible regions
+PASS coverage_lifecycle read from the database; absent in older databases
+PASS before the first live reading: unavailable and due
+PASS live refresh stores the reading in memory and marks it live
+PASS visible refresh cadence is 60 s (conservative)
+PASS live reading becomes stale after 3 minutes
+PASS failed refresh keeps the last good reading and marks it stale
+PASS overlapping refresh requests are dropped, not queued
+PASS successful refresh clears the stale state
+PASS live-versus-recorded difference is an observation comparison
+PASS different or unknown container is never compared
+PASS events and chart points are unchanged by live refreshes
+PASS live readings never become events
+PASS real live probe reads container free/total and the Data volume UUID
+PASS real live probes leave isolated history, log and lock fixtures unchanged (11 files; production monitoring data not opened)
+PASS appearance defaults to System
+PASS appearance choice persists
+PASS launch override applies without being persisted
+PASS unknown stored appearance falls back to System
+PASS appearance choices are System, Light, Dark
+PASS refresh while idle reloads at once
+PASS refresh during a load does not start a second load
+PASS a refresh requested during a load is replayed when it ends
+PASS a replayed refresh is consumed exactly once
+PASS prioritize names the requested folder
+PASS the index root reads as Startup Data
+PASS living tree: every element hangs from its actual parent folder, one level deeper, listed once, parents before children (294 elements)
+PASS living tree: the current folder is the trunk, folders are branches and files are terminal elements, keyed by inventory node id
+PASS living tree: in every expanded folder, drawn entries plus the grouped remainder equal the folder's indexed children exactly (bytes, items, unmeasured; 19 folders)
+PASS living tree: small files are grouped into one terminal element per folder that keeps their exact total
+PASS living tree: a protected folder is a marked stub with an unknown size, never a zero-sized branch, and is not opened
+PASS living tree: an unknown size has no width from size (a marked hairline), distinct from a measured zero
+PASS living tree: earlier and partial measurement states are kept on their elements and drawn quieter than complete ones
+PASS living tree: a trunk without a measured size is not read into or drawn by size
+PASS living tree: branch cross-section is proportional to indexed allocated size, and a folder's children together are never thicker than it (94 branches)
+PASS living tree: the same catalog always gives the same tree, arrangement and geometry
+PASS living tree: each branch grows inside its parent's sector, siblings take separate sectors (no shared directions), and every tip stays on the canvas
+PASS living tree: drawn top-level subtrees occupy separate ranges of direction from the crown (no interleaving) within the crown's fan
+PASS living tree: a small measurement change moves nothing (thickness still follows the new size)
+PASS living tree: a larger change re-shapes only the folder that changed; the rest of the tree keeps its place
+PASS living tree: sibling order is remembered: folders that swap size ranks keep their places
+PASS living tree: an element drawn last time stays drawn when it slips just past the limit (hysteresis), while a fresh tree would group it
+PASS living tree keyboard: ↑ moves toward the tips (largest child), ↓ toward the trunk, and nothing selected starts at the trunk
+PASS living tree keyboard: ← and → move between siblings in their drawn order and stop at the ends
+PASS living tree selection: a drawn entry shows itself; a grouped small file shows its folder's grouped element
+PASS living tree selection: an entry beneath an unopened branch shows its nearest drawn folder; an unknown entry shows nothing
+PASS living tree → navigator: a deep selection carries the folders between the trunk and it, to open in the Navigator
+PASS living tree → navigator: opening that chain makes the selected file a visible Navigator row
+PASS living tree hit testing: a tip selects its element, the trunk its folder, empty ground nothing
+PASS living tree reveal: a small entry found elsewhere (a search result) is drawn with its folders, and its folder's grouped total stays exact
+PASS living tree: a 200,000-entry folder costs one bounded read and draws at most 24 entries plus one exact group
+PASS living tree: a catalog of billions of entries stays within 3000 elements (3000 drawn), with bounded layout memory (12238 entries) over repeated updates; build, arrangement and layout took 8 ms each
+PASS living tree light: the first read only takes the journal position; history is never replayed as new changes
+PASS living tree light: measured growth and reduction light their branches; an unchanged remeasurement lights nothing
+PASS living tree light: growth is amber, reduction cool blue, unchanged structure neutral white
+PASS living tree light: illumination fades over 36 s and then stops; nothing animates once it is gone
+PASS living tree light: with Reduce Motion the light holds still and steps down in thirds instead of fading continuously
+PASS living tree light: lower-bound comparisons are softened, and a change too small to matter (4 KB of 500 GB) lights nothing
+PASS living tree light: comparisons measured long ago, or at or before the cursor, are not shown as new
+PASS living tree light: a cursor outside the retained history resynchronizes without inventing growth or reduction
+PASS living tree light: a recreated journal clears the light and resynchronizes (node ids may now mean other entries)
+PASS living tree light: a backlog beyond one read is skipped (not replayed later); no journal clears the light; a failed read changes nothing
+PASS living tree light: at most 2048 glows are kept, however many signals arrive
+PASS living tree light: light on entries outside the drawn tree does not keep the view animating
+PASS living tree updates: only committed changes to drawn folders, the trunk itself (even an empty one) or above it rebuild the tree; resynchronization and staleness that differs from the drawn snapshot rebuild it
+PASS living tree camera: the transform round-trips points and rects; stretch widens positions only; stroke widths scale with the square root of the zoom
+PASS living tree camera: projection moves every tip through the transform and multiplies every width by the same factor (thickness keeps encoding size)
+PASS living tree camera: the fit frames every tip and its light inside the margins, reaches the limiting side, and covers more of the canvas than the fixed crown did (52% vs 32%, 86% vs 29%, 30% vs 18%, 39% vs 13%)
+PASS living tree camera: wide canvases widen the crown sideways (at most 1.3 times); narrow ones never stretch
+PASS living tree camera: the fit keeps the trunk at least as close to the middle as the crown's extent (balanced framing)
+PASS living tree camera: zooming keeps the point under the pointer exactly where it was, step after step (zoom 7.200000000000001)
+PASS living tree camera: zoom stays between half the fit and 32 times it
+PASS living tree camera: panning moves the tree with the pointer, and however far it goes part of the tree stays on screen (at half, full and 8x zoom)
+PASS living tree camera: focusing frames a branch and everything drawn beneath it, centred and as large as fits (zoom 3.07)
+PASS living tree camera: focusing a single small tip stops at the focus limit
+PASS living tree camera: bringing an element that is already visible into view moves nothing
+PASS living tree camera: an element off screen is brought into view by panning only, keeping the zoom
+PASS living tree camera: resizing keeps a chosen zoom and the place at the centre of the view; an untouched view refits to the new size
+PASS living tree camera: under every zoom, the point of each drawn tip selects that element (or one whose tip is within 1.5 pt of it) (403/403)
+PASS living tree camera: hit tolerance is in screen points, so zooming in makes targets precise (a point 2 layout units beside a hairline is on it at the fit, beside it at 8x)
+PASS living tree camera: elements too small to draw at a scale cannot be hit there (level of detail)
+PASS living tree camera: empty canvas hits nothing
+PASS living tree camera: an animated wheel zoom glides to its target in 48 frames (about a third of a second) with the point under the pointer still throughout
+PASS living tree camera: fitting from a zoomed view eases out smoothly and ends exactly at the fit (61 frames)
+PASS living tree camera: a jump (Reduce Motion, direct manipulation) lands at once and nothing keeps stepping
+PASS living tree camera: after a small measured change the rebuilt tree keeps its fit and, under a 4x camera, every tip stays exactly where it was on screen
+PASS living tree camera: a tree that really grows wider refits
+PASS living tree labels: labels never overlap each other, stay inside the view, sit clear of other branches, stay within the zoom's budget and never present grouped items as one file ([10, 12, 4])
+PASS living tree labels: zooming in names smaller branches and allows more labels, never more than 90
+PASS living tree labels: the selection is always named (emphasized), however small
+PASS living tree labels: a folder that is nearly all of its labelled parent (Users › home) is named once
+PASS living tree input: a click (moving less than 3 points) selects on release
+PASS living tree input: a drag pans by exactly the pointer's movement and never selects
+PASS living tree input: double-click opens a folder (subtree navigation as before), focuses a file, and Option-double-click focuses any branch
+PASS living tree input: a double-click opens the folder its first click selected even if the second press lands on a neighbour's re-placed label; a triple-click navigates once (first [GUIModelTests.LivingTreeGesture.Action.select(node(132))], second [GUIModelTests.LivingTreeGesture.Action.open(node(132))], third [], elsewhere [GUIModelTests.LivingTreeGesture.Action.open(node(33))])
+PASS living tree input: vertical scrolling zooms about the pointer from any device (wheel lines animated, pixel deltas direct); Shift/Option-scroll and sideways swipes pan; momentum does not zoom; pinch zooms
+PASS living tree input regression: a precise (smooth-scrolling mouse) vertical scroll zooms; no scroll input in 2D or 3D orbits or selects (80 combinations)
+PASS living tree 3d: every element is in the dome exactly once, and the same catalog always gives the same dome
+PASS living tree 3d: every branch has the same width as in 2D (thickness still follows indexed size; unknown sizes stay marked hairlines)
+PASS living tree 3d: the trunk rises straight to the crown and every tip grows up and out (never below the ground, never more than about 66° from vertical)
+PASS living tree 3d: each top-level subtree keeps its own range of directions around the trunk (no interleaving)
+PASS living tree 3d: projection keeps the picture-plane position at the pivot's depth, enlarges what is nearer, and yaw turns the tree about its trunk
+PASS living tree 3d: branches are drawn far to near, dimmer with distance, and stay findable by key
+PASS living tree 3d: turning to an element brings it to the front of the tree
+PASS living tree 3d: focusing turns a branch side-on (seen at full length, slightly toward the viewer) by the smaller turn
+PASS living tree 3d: the fit frames the tree over a full turn, so turning never changes the zoom or clips the tree (3 pitches × 36 yaws)
+PASS living tree 3d: pitch stays between just below the horizon and nearly overhead; yaw wraps and turns the short way round
+PASS living tree 3d: an animated turn glides to its target and stops (56 frames); a jump (Reduce Motion, dragging) lands at once
+PASS living tree 3d: under several orbits at 3x, each drawn tip selects its own element (156/156)
+PASS living tree 3d: where branches overlap on screen, the one nearer the viewer is selected
+PASS living tree 3d input: dragging turns the tree, Shift-drag and Shift-scroll pan, a trackpad rotation turns it, scrolling zooms
+PASS living tree 3d labels: in every orientation labels stay inside the view and never overlap (16 over 3 orbits)
+PASS living tree 3d: after a small measured change every branch of the dome stays exactly where it was
+PASS living tree color: files take their kind from the extension (case-insensitive); files without a known extension have none
+PASS living tree color: well-known folders and packages are colored by what they are; other folders by their contents
+PASS living tree color: a folder takes the kind that dominates its drawn contents, as strongly as it dominates; a mixed folder stays nearly neutral; unrecognized contents give no color
+PASS living tree color: grouped small items take their folder's color, quieter
+PASS living tree color: the color key lists the kinds present, largest first
+PASS structured explorer: every shown element hangs off its parent, on the ring of its level (88 shown)
+PASS structured explorer: shown and +N hidden children add up to each folder's children
+PASS structured explorer scale: disc area ∝ bytes (¼ vs 1/16 → 4× area), centre = reference, tiny and unknown at the 3.5 pt minimum, never above the centre
+PASS structured explorer scale: link widths conserve area — a folder's children never carry more width² than it does
+PASS structured explorer: siblings run clockwise from 12 o'clock, largest first, grouped and unmeasured last
+PASS structured explorer: the same tree always lays out identically
+PASS structured explorer: after a size change the grown folder moves first in its folder
+PASS structured explorer: Levels 1 shows one ring; more levels show more (clamped to 6)
+PASS structured explorer: exploring a folder centres it and lays out its own contents
+PASS structured explorer: an empty folder lays out as a lone centre that can still be selected
+PASS structured explorer: a selection beyond the 14 largest is kept on screen, and +N counts the rest
+PASS structured explorer: a selection deeper than the shown levels hangs on a spur from its deepest shown folder (levels skipped counted)
+PASS structured explorer: repeated folder names are titled with their folder (ComfyUI › models vs .ollama › models)
+PASS structured explorer camera: zoom keeps the point under the pointer exactly; zoom is limited to 40%–2400%; panning stays over the hierarchy
+PASS structured explorer: every shown disc is hit at its centre at 1×, 4× and 12× (264/264); empty space selects nothing
+PASS structured explorer labels: the selection is always named first; other labels never overlap and stay inside the view (19 at the fit)
+PASS structured explorer labels: zooming into an unlabelled branch reveals further labels; horizontal and rotated label interiors hit their own element (fit=19, zoom=2, revealed=true, hits=true, rotated=13)
+PASS structured explorer labels: selection, hover and centre stay inside and never overlap in edge/zoom/window cases (108/108)
+PASS structured explorer labels: ordinary labels clear sampled heavy links at 40% zoom using the drawn width
+PASS structured explorer labels: the largest top-level folder stays named at every Levels setting
+PASS structured explorer ring captions: inside the view, clear of labels, discs and each other, and absent when rings are too close (72/72 cases, 111 captions; legacy placement collided or clipped 57 times) []
+PASS structured explorer labels: a compact canvas names fewer secondary labels than a typical one (7 incl. selection vs 16); the selection stays named and no plate is shrunk
+PASS structured explorer keyboard: up goes to the largest item inside, down to the enclosing folder, left and right around the ring
+PASS living tree renderer: Structured Explorer by default; the classic tree only when the QA preference says classic
+PASS structured filtering: presets and units use decimal bytes
+PASS structured filtering: custom decimals floor exact decimal products at the one-byte boundary
+PASS structured filtering: invalid, nonpositive, scientific and overflowing custom values are rejected
+PASS structured filtering: All, Dim and focus off preserve the original visible appearance
+PASS structured filtering: All includes unknown nodes and retains grouped remainder geometry
+PASS structured filtering: selecting grouped context under All never claims it is below a filter
+PASS structured filtering: 500 MB boundary delta -1 uses exact inclusive integer comparison
+PASS structured filtering: 500 MB boundary delta 0 uses exact inclusive integer comparison
+PASS structured filtering: 500 MB boundary delta 1 uses exact inclusive integer comparison
+PASS structured filtering: threshold matches real allocated sizes exactly, including files, but not unknown or grouped sums
+PASS structured filtering: dim retains geometry, strengthens necessary context and selection, and fades unrelated nodes
+PASS structured filtering: counts include current real folder nodes only and separate matches from context
+PASS structured filtering: hide removes nonmatches before focus while preserving actual match and selection ancestor chains
+PASS structured filtering: hide precedes subtree focus, and duplicate folder names retain separate identities
+PASS structured filtering: an empty threshold result retains only navigation root and reports no matches
+PASS structured filtering: subtree and path focus use real descendants and ancestors and recede unrelated branches
+PASS structured filtering: isolation validates a real folder, uses its own total and excludes outside paths
+PASS structured filtering: full-ancestry selection retention keeps every actual direct parent beyond Levels
+PASS structured filtering: deep retained selection chains never fabricate shortcut parents
+PASS structured filtering: filtering and isolation leave model IDs and accounting totals unchanged
+PASS structured filtering: hidden discs cannot steal pointer hits
+PASS structured filtering: keyboard movement visits only allowed direct hierarchy targets
+PASS structured filtering: minimum-window labels exclude hidden geometry and prioritize preferred candidates without collisions
+PASS cleanup claude: the version the claude command resolves to is identified (confirmed) and preserved
+PASS cleanup claude: an older version with another version resolved is a historical review candidate, and the active version is listed as one to preserve
+PASS cleanup claude: a version a running process executes is preserved even though another is resolved
+PASS cleanup claude: a launcher script that names one version resolves it (only the version reference is used)
+PASS cleanup claude: missing version metadata leaves the classification tentative and the evidence insufficient
+PASS cleanup claude: with no version established as active, no version becomes a review candidate
+PASS cleanup claude: the versions folder (holding the active version) is preserved
+PASS cleanup codex: the current release is preserved
+PASS cleanup codex: a downloaded release that is not current, resolved or running is a historical review candidate
+PASS cleanup codex: each account's current release is judged within that account (another account's releases are not assumed unused)
+PASS cleanup codex: a release a running process executes is preserved
+PASS cleanup codex: a release whose binary links to a shared location says so (the link is not followed)
+PASS cleanup codex: an unrecognized release structure stays unclassified
+PASS cleanup node: node_modules of a project with a lockfile and install record is a reinstallable review candidate
+PASS cleanup node: dependencies of a project a running process works in are preserved
+PASS cleanup node: output the project ignores (dist) or its framework writes (.next) is generated output
+PASS cleanup node: a folder named build is not generated output on its name alone
+PASS cleanup node: a dist folder that is itself a project is not treated as output
+PASS cleanup node: nested dependency folders are not judged on their own
+PASS cleanup node: the npm package cache is recognized as a reinstallable cache
+PASS cleanup python: a project's virtual environment with a lockfile is a review candidate associated with its project
+PASS cleanup python: a virtual environment without a project or lockfile is insufficient evidence
+PASS cleanup python: a tool environment with a command on PATH is preserved; one without is not assumed unused
+PASS cleanup python: bytecode caches are generated; one holding other files is not
+PASS cleanup python: the pip cache is recognized
+PASS cleanup git: a registered worktree with no uncommitted, untracked or unmerged work is a review candidate
+PASS cleanup git: a relative registry back-pointer resolves from its own directory
+PASS cleanup git: uncommitted changes preserve a worktree
+PASS cleanup git: untracked files preserve a worktree
+PASS cleanup git: commits in no other branch or remote preserve a worktree
+PASS cleanup git: a locked worktree is preserved
+PASS cleanup git: a worktree a running process works in is preserved
+PASS cleanup git: inspection leaves the repository byte-for-byte unchanged (no index refresh, no locks)
+PASS cleanup git: a worktree whose registration is gone is insufficient evidence
+PASS cleanup git: a submodule's .git file is not a worktree
+PASS cleanup sessions: Claude Code session records with no observed use and no recent writes are historical review candidates
+PASS cleanup sessions: records written in the last minutes are preserved (a session may be active)
+PASS cleanup sessions: records a running process holds open are preserved
+PASS cleanup sessions: Codex dated and archived session records are recognized
+PASS cleanup sessions: a tool's state database is preserved
+PASS cleanup protected: credentials and system locations are protected
+PASS cleanup protected: Storage Monitor's own data is protected
+PASS cleanup protected: a tool's settings folder itself is protected
+PASS cleanup unknown: an ordinary old file is not classified and is never assessed
+PASS cleanup safety: no inspected executable (or package script) was run
+PASS cleanup safety: inspection changes nothing in the fixture (sizes, times, modes, identities)
+PASS cleanup safety: only allowlisted manifest files were read (69 reads); credentials, session records and databases were not
+PASS cleanup safety: no secret or conversation content appears in any classification, evidence or assessment
+PASS cleanup safety: every allowlisted read resolves inside the fixture, including /tmp aliases
+PASS cleanup safety: a symlink loop and a link to / do not extend the bounded walk
+PASS cleanup paths: redundant components and Unicode retain exact component-aware ancestry
+PASS cleanup paths: parent and final symlinks resolve to the same existing object
+PASS cleanup paths: a same-prefix sibling is not a descendant
+PASS cleanup paths: broken links and symlink loops fail closed
+PASS cleanup paths: a benignly named link into credentials stays protected
+PASS cleanup paths: relative and absolute names resolve to the same file
+PASS cleanup paths: macOS /tmp and /private/tmp aliases resolve to the same directory
+PASS cleanup safety: a folder macOS does not let us read is reported as incomplete evidence, never as empty
+PASS cleanup safety: an old modification date never makes an item a review candidate
+PASS cleanup safety: when running processes cannot be inspected, a historical release is not a review candidate
+PASS cleanup safety: a partly readable process table is reported as such: no observation is presented as proof of disuse
+PASS cleanup freshness: a path that now holds a different filesystem object invalidates the earlier evidence
+PASS cleanup freshness: an item no longer on disk keeps no recommendation and says it is gone
+PASS cleanup policy: positive use preserves; review needs established facts (another active version, process table read, confident classification, worktree state known); identity changes void it
+PASS cleanup policy: no status says safe to delete
+PASS cleanup presentation: a review candidate says it is not a deletion recommendation, shows a few observations and expands to all of them
+PASS cleanup presentation: ordinary items get no cleanup section (the Inspector is unchanged)
+PASS cleanup presentation: no preview is offered for preserved items
+PASS cleanup presentation: a folder's recovery is unknown until measured, never shown as zero
+PASS cleanup accounting: clones and hard links are not counted as recoverable (APFS private size, links excluded)
+PASS cleanup preview: an incomplete listing and walk are presented as incomplete, with accounting limitations
+PASS cleanup preview: the preview names the exact target, the versions that must be preserved and the risks
+PASS cleanup trash: a review candidate retains advisory plain-confirmation semantics
+PASS cleanup trash: a verified active executable is a hard block, including after acknowledgment
+PASS cleanup trash: protected items cannot be moved; unrecognized items need an override; nothing can be moved while its review is running
+PASS cleanup trash: the home folder, its main folders, folders containing it and system roots can never be moved
+PASS cleanup trash: nothing moves when the override was not accepted, when the path now holds a different item, or when it is protected (re-checked at the moment of the move)
+PASS cleanup trash: legacy advisory review cannot replace a displayed explicit confirmation
+PASS cleanup trash: explicitly confirmed native failure is reported with outcome uncertainty
+PASS trash safety: ordinary files require an explicit uncertainty warning
+PASS trash safety: cancelling invalidates the confirmation
+PASS trash safety: ordinary-file warning must be acknowledged
+PASS trash safety: confirmed ordinary file moves only its verified object through the retained adapter
+PASS trash safety: a confirmation is one-use
+PASS trash safety: ordinary directory acknowledgment explicitly includes all contents
+PASS trash safety: confirmed ordinary directory moves with contents retained
+PASS trash safety: permission API failure is reported without claiming an unchanged outcome
+PASS trash safety: nil result fails verification and never falls through to native Trash
+PASS trash safety: unreadable returned destination fails verification
+PASS trash safety: mismatched returned identity reports uncertainty without touching unrelated objects
+PASS trash safety: adapter error after a retained move reports uncertainty and requires reconciliation, never a false no-move claim
+PASS trash execution boundary: unchanged explicitly confirmed target reaches exactly one retained adapter
+PASS trash execution boundary: leaf-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: directory-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: parent-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: ancestor-replaced preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: leaf-symlink preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: symlink-to-file preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: parent-symlink preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: descendant-added preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: protected-child-added preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: protected-child-added independently blocks advisory validation
+PASS trash execution boundary: protected-substitute preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: protected-substitute independently blocks advisory validation
+PASS trash execution boundary: in-place-edit preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: permission-change preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: moved-target preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: missing-target preserves reviewed, substitute and unrelated identities; zero adapter calls
+PASS trash execution boundary: forged legacy permission cannot bypass independently prepared warning or reach adapter
+PASS trash execution boundary: raw systemTrash refuses before URL resolution (direct.txt)
+PASS trash execution boundary: raw systemTrash refuses before URL resolution (nonexistent)
+PASS trash execution boundary: injected mount/device identity mismatch independently fails advisory prepare
+PASS trash execution boundary: separate confirmations retain their own immutable path, indexed ID and identity
+PASS trash execution boundary: concurrent requests consume exactly one shared token and invoke one adapter
+PASS trash execution boundary: distinct concurrent tokens fail without waiting, consume authorization and never retry
+PASS trash execution boundary: acknowledged concurrent cancellation precedes execution without sleeps
+PASS trash execution boundary: acknowledged concurrent replacement during revalidation retains both objects and independently invalidates evidence
+PASS trash execution boundary: pre-cancelled validation task independently fails closed without mutation
+PASS trash execution boundary: validated adapter is reached once; nil result fails without native fallback
+PASS trash safety: a direct child of /tmp resolves its exact alias parent without following unexpected ancestors
+PASS trash safety: protected credential target is blocked
+PASS trash safety: directory containing protected descendants is blocked
+PASS trash safety: active application data cannot be moved
+PASS trash safety: a broken protection-root link fails closed instead of falling back to a lexical path
+PASS trash safety: /tmp home alias cannot bypass protected credentials
+PASS trash safety: absent protected descendants inherit the canonical existing ancestor
+PASS trash safety: home root is blocked
+PASS trash safety: unrecognized artifact remains advisory and eligible
+PASS trash safety: insufficient evidence never becomes a review candidate through Trash eligibility
+PASS trash safety: verified review candidate retains its assessment
+PASS trash safety: review candidate plain confirmation executes its exact validated target
+PASS trash safety: current-dependency fixture establishes positive current use without process or PATH
+PASS trash safety: ordinary parent containing a verified current dependency is blocked
+PASS trash safety: completely assessed clean ordinary parent remains eligible
+PASS trash safety: expired confirmation refuses before any adapter
+PASS trash safety: a confirmation that expires during the final check refuses before any adapter (refused("The confirmation expired during the final check. Review the item again."))
+PASS trash safety: running executable is a hard block
+PASS trash safety: running executable hard-link alias is blocked by object identity
+PASS trash safety: ancestor containing a running executable is blocked
+PASS trash safety: PATH symlink reference to an otherwise unrecognized executable is hard blocked
+PASS trash safety: completely unavailable initial active-use provider blocks even an ordinary file
+PASS trash safety: a provider becoming unavailable at final observation blocks before any adapter
+PASS trash safety: partially observed program requires the program-use warning and an unaccepted warning moves nothing
+PASS trash safety: a completely observed program still requires the program-use warning
+PASS trash safety: an ordinary file without programs has no program-use warning
+PASS trash safety: partial observations require acknowledgment even for a review candidate before any adapter
+PASS trash safety: ordinary partial scoped observations require an explicit non-use uncertainty warning
+PASS trash safety: a nonprotected inactive database remains eligible with an uncertainty warning
+PASS trash safety: database classification alone is advisory when active-use checks are reliable
+PASS trash safety: conservative database Preserve reasons remain explicit in the warning
+PASS trash safety: verified open SQLite WAL blocks its database
+PASS trash safety: an observed active database hard-blocks its -wal companion
+PASS trash safety: incomplete database-use evidence requires the program-use warning for a -wal companion
+PASS trash safety: active database alias blocks its -wal companion
+PASS trash safety: base becoming active at the final observation blocks its -wal companion before any adapter
+PASS trash safety: an observed active database hard-blocks its -shm companion
+PASS trash safety: incomplete database-use evidence requires the program-use warning for a -shm companion
+PASS trash safety: active database alias blocks its -shm companion
+PASS trash safety: base becoming active at the final observation blocks its -shm companion before any adapter
+PASS trash safety: an observed active database hard-blocks its -journal companion
+PASS trash safety: incomplete database-use evidence requires the program-use warning for a -journal companion
+PASS trash safety: active database alias blocks its -journal companion
+PASS trash safety: base becoming active at the final observation blocks its -journal companion before any adapter
+PASS trash safety: incomplete database-use check requires the program-use warning
+PASS trash safety fixture: the unrelated open file is genuinely unresolvable
+PASS trash safety: an unresolvable file named like the database's companion fails closed in any folder
+PASS trash safety: an unresolvable open file in an unrelated folder does not block a database
+PASS trash safety: unrelated unresolvable open file is not a database companion
+PASS trash safety: resolvable companion still matches its database
+PASS trash safety: an unresolvable open file beside the database fails closed
+PASS trash safety: a nested open file (observed through an alias) blocks its ancestor
+PASS trash safety: a working directory nested in the target blocks it
+PASS trash safety: a working directory inside a contained link's target blocks the item
+PASS trash safety: a 5,050-entry folder exceeds the Inspector's quick budget
+PASS trash safety: the Trash preflight budget assesses an ordinary 5,050-entry folder
+PASS trash safety: preflight reports items checked while it walks a large folder (5000)
+PASS trash guidance: inUse for “A running process uses the target or a descendan”
+PASS trash guidance: tooLarge for “The directory cannot be assessed within the safe”
+PASS trash guidance: neverMoved for “This folder is too broad to move to the Trash as”
+PASS trash guidance: neverMoved for “Protected: credential store.”
+PASS trash guidance: notYours for “A descendant is not owned by the current user.”
+PASS trash guidance: unsavedWork for “A Git worktree contains uncommitted, untracked, ”
+PASS trash guidance: needsReview for “The confirmation expired. Review the item again.”
+PASS trash guidance: needsReview for “Active-use observations are stale; review the it”
+PASS trash guidance: qaCopy for “Not available in QA builds: the catalog is a cop”
+PASS trash guidance: needsReview for “Move to Trash requires the current explicit conf”
+PASS trash guidance: neverMoved for “Protected: credential store. (/Users/x/Projects/”
+PASS trash guidance: inUse for “A running process uses the target or a descendan”
+PASS trash guidance: unsavedWork for “A Git worktree contains uncommitted, untracked, ”
+PASS trash guidance: neverMoved for “A command on the current PATH resolves to this e”
+PASS trash guidance: neverMoved for “This executable is directly available through a ”
+PASS trash guidance: needsReview for “The path now refers to a different item; nothing”
+PASS trash guidance: needsReview for “Git state could not be reliably assessed.”
+PASS trash guidance: needsReview for “An open file beside this database could not be r”
+PASS trash guidance: notYours for “Required descendant evidence could not be comple”
+PASS trash guidance: tooLarge for “The directory cannot be assessed within the safe”
+PASS trash guidance: needsReview for “The confirmation expired during the final check.”
+PASS trash guidance: a permanent restriction offers no misleading next step
+PASS trash sheet: the generic not-established sentence is stated once by the sheet and every specific risk is kept in order
+PASS trash safety: stale active-use evidence cannot authorize Trash
+PASS trash safety: active-use evidence is collected again after confirmation
+PASS trash safety: process use starting after traversal is rejected by the final observation
+PASS trash safety: replacement before confirmation rejects indexed identity
+PASS trash safety: replacement after confirmation is rejected before execution
+PASS trash safety: target replacement during final execution checks is rejected
+PASS trash safety: in-place content changes invalidate confirmation
+PASS trash safety: added descendant invalidates confirmation
+PASS trash safety: permission changes are rechecked before execution
+PASS trash safety: bounded descendant budget fails closed
+PASS trash safety: confirmed symbolic-link operation moves only link and preserves referent
+PASS trash safety: symbolic link into protected content is blocked
+PASS trash safety: symbolic-link ancestor must be reviewed at its canonical location
+PASS trash safety: overlapping-layout fixture has an earlier clean Git classification and later verified Python dependency
+PASS trash safety: every applicable detector contributes hard blocks for descendants
+PASS trash safety: every applicable detector contributes hard blocks for the exact selected item
+PASS trash safety: a whole repository with only a local backup branch cannot establish external preservation
+PASS trash safety: clean whole-repository fixture requires observed remote-tracking coverage
+PASS trash safety: direct selection of Git objects metadata is hard blocked
+PASS trash safety: direct selection of Git refs metadata is hard blocked
+PASS trash safety: symlink into Git metadata is hard blocked
+PASS trash safety: verified bare Git metadata store is hard blocked regardless of folder name
+PASS trash safety: descendants of a bare metadata store are hard blocked
+PASS trash safety: ordinary ancestor containing a bare metadata store is hard blocked
+PASS trash safety: separate Git metadata store is protected without a dot-git name
+PASS trash safety: descendants of separate Git metadata are protected
+PASS trash safety: ordinary ancestor containing separate Git metadata is hard blocked
+PASS trash safety: repository fsmonitor hook is neutralized
+PASS trash safety: Git uncommitted changes are hard blocked
+PASS trash safety: Git state is checked again after confirmation
+PASS trash safety: Git potentially unmerged commits are hard blocked
+PASS trash safety: common repository cannot be removed while an external linked worktree is locked
+PASS trash safety: nested locked linked worktree blocks its ordinary ancestor
+PASS trash safety: common repository cannot orphan a dirty external linked worktree
+PASS trash safety: common repository cannot orphan staged external linked work
+PASS trash safety: nested linked worktree potentially unmerged commits block its ancestor
+PASS trash safety: nested linked worktree stashed work blocks its ancestor
+PASS trash safety: Git untracked files are hard blocked
+PASS trash safety: nested Git work cannot be bypassed by selecting an ancestor
+PASS trash safety: Git drains delayed final stdout and stderr to EOF after the process exits
+PASS trash safety: empty successful Git output cannot be classified as a clean worktree
+PASS trash safety: unreadable process ownership cannot be reported as complete
+PASS trash safety: zero libproc descriptor-size failure cannot establish complete active-use evidence
+PASS trash safety: usr/local exception never bypasses credential checks
+PASS trash safety: usr/local exception never bypasses application-data protection
+PASS trash safety: usr/local exception respects path component boundaries
+PASS trash safety: Git plaintext credential store is protected
+PASS trash safety: Kubernetes authentication config is protected
+PASS trash safety: Kubernetes authentication directory is protected
+PASS QA tooling activation: release, production database, no arguments → log false, script false
+PASS QA tooling activation: release, production database, QA flags → log false, script false
+PASS QA tooling activation: release, QA database, QA flags → log false, script false
+PASS QA tooling activation: release, QA database, no flags → log false, script false
+PASS QA tooling activation: development, production database, QA flags → log false, script false
+PASS QA tooling activation: development, QA database, no flags → log false, script false
+PASS QA tooling activation: development, QA database, relative log path → log false, script false
+PASS QA tooling activation: development, QA database, script without a log → log false, script false
+PASS QA tooling activation: authorized QA: QA database with explicit flags → log true, script true
+PASS QA tooling is compiled into development and test builds
+PASS distribution builds compile the timing log, its file output and the stall monitor out
+PASS distribution builds keep only an inert scripted-navigation shell
+PASS distribution builds compile the QA argument handling out
+PASS release builds compile both binaries as distribution builds
+PASS a QA database keeps view preferences in the QA suite; production uses the app's own domain
+PASS production, development and QA preference domains are distinct; production keeps its identifier
+PASS development builds use their own bundle and signing identifier
+PASS release builds keep the production bundle and signing identifier
+PASS install-gui.sh installs only a bundle with the production identifier
+PASS every @AppStorage preference uses the launch's preference domain ([])
+PASS view code writes no preference directly to the app's standard domain ([])
+PASS QA windows save no frame or restoration state in the app's domain
+PASS window titles mark QA and native QA databases and never mark production
+PASS the QA title is set once for both sections and for the window itself
+PASS the release is 2.2.0 with a build number above every earlier build (2.1.0 was 9)
+PASS scripts/build.sh stamps the version from scripts/version.env
+PASS scripts/build-gui.sh stamps the version from scripts/version.env
+PASS scripts/build-dmg.sh stamps the version from scripts/version.env
+PASS queue discovery pages bound examined indexed rows
+PASS queue keyset cursor progresses without OFFSET
+PASS queue paginated discovery examines every catalog row exactly once
+PASS queue discovery includes bytecode cache and marker-named environment parent
+PASS queue Git marker discovery targets its indexed worktree parent
+PASS ordinary names do not become discovery opportunities
+PASS queue discovery includes all existing package-cache leaf layouts
+PASS queue discovery reports complete indexed coverage for bounded fixture
+PASS queue reuses existing inspector to verify review candidate
+PASS queue does not promote false-positive build name to verified artifact
+PASS queue retains insufficient-evidence classification separately
+PASS queue deduplicates retained artifacts by filesystem identity
+PASS queue default filter shows review candidates only
+PASS queue associated-tool filter
+PASS queue artifact-type filter
+PASS queue Estimated recoverable storage sorting retains every matching row
+PASS queue Indexed allocated size sorting retains every matching row
+PASS queue Artifact type sorting retains every matching row
+PASS queue Evidence confidence sorting retains every matching row
+PASS queue Last verification sorting retains every matching row
+PASS queue retains generation and journal provenance
+PASS queue tracks separate evidence assessment and measurement timestamps
+PASS queue retains process snapshot and classification confidence
+PASS queue process observations expire without filesystem events
+PASS queue candidate eligibility expires with process evidence at the explicit TTL boundary
+PASS default queue filter excludes process-expired candidates without journal events
+PASS idle freshness publication expires candidate count and filtering without evidence collection
+PASS actor snapshots derive current eligibility without discovery or process polling
+PASS missing process evidence cannot remain eligible for queue or plan
+PASS future-dated process evidence cannot authorize candidate eligibility
+PASS expired process evidence removes a formerly available recovery estimate
+PASS opening expired retained evidence cannot show a fresher assessment or estimate in the shared Inspector
+PASS journal-invalidated Inspector evidence also discards its historical recovery estimate
+PASS journal resynchronization invalidates every retained recommendation
+PASS selected row remains invalid when journal cannot verify freshness
+PASS shared Inspector receives the queue freshness uncertainty and conservative assessment
+PASS opening candidate revalidates classification and current process evidence
+PASS opening review collects one fresh process observation shared by the detectors
+PASS idle expiry filtering sorting planning and Inspector presentation never recollect process evidence
+PASS opening candidate observes process changes that the journal cannot track
+PASS queue row and memory budgets report incomplete coverage
+PASS continued queue page remains within artifact memory bound
+PASS continued queue page remains within artifact memory bound
+PASS continued queue page remains within artifact memory bound
+PASS continued queue page remains within artifact memory bound
+PASS continued queue page remains within artifact memory bound
+PASS continued queue page remains within artifact memory bound
+PASS continued queue page remains within artifact memory bound
+PASS continued queue page remains within artifact memory bound
+PASS explicit continuation advances beyond row budget without restarting first tranche
+PASS artifact pagination explicitly counts released earlier pages
+PASS queue explicit cancellation records cancellation
+PASS queue SQL discovery respects task cancellation
+PASS read-only plan deduplicates selected filesystem identities
+PASS queue /tmp and /private/tmp aliases name one candidate and one filesystem identity
+PASS read-only plan excludes process-expired selections from candidate items and totals
+PASS APFS multi-item plan never sums uncertain sharing
+PASS read-only plan retains consequences and exact target paths
+PASS read-only plan excludes Preserve entries
+PASS review plan excludes nested child paths before indexed accounting
+PASS relevant parent journal changes invalidate retained evidence
+PASS queue discovery inspection and planning leave catalog byte-identical
+PASS queue replacement identity invalidates prior evidence
+PASS queue moved filesystem target loses its earlier assessment
+PASS queue drops candidates deleted from inventory
+PASS queue generation change resets keyset discovery safely
+PASS queue never enables WAL or writes catalog schema
+PASS initial discovery can complete with no candidates
+PASS new committed directory change schedules bounded incremental discovery
+PASS journal-driven listing discovers newly indexed candidate after completion
+PASS incremental discovery reads changed listing only instead of restarting catalog
+PASS changed-listing name keyset pagination is bounded and exhaustive
+PASS changed listing has a pending name cursor before a second event
+PASS second listing event rewinds its cursor and discovers a newly inserted earlier name
+PASS journal backlog stops incremental coverage until explicit indexed resynchronization
+PASS newly discovered candidates inherit missing-journal invalidation
+PASS selected refresh never promotes unavailable journal to fresh evidence
+PASS unknown allocated size never substitutes known logical bytes
+PASS between-page fixture starts with verified candidate and unconsumed journal baseline
+PASS later discovery page preserves consumed cursor and invalidates earlier evidence when writer commits
+PASS journal change between discovery pages remains consumable
+PASS resynchronization during awaited page discards old result without advancing discovery or clearing stop
+PASS suspended page cannot overwrite newly applied journal identity
+PASS journal invalidation during awaited page preserves cursor and invalidation reasons
+960 GUI model/read-only tests passed; isolated fixtures: /private/tmp/storage-monitor-viewer-fixtures.5JgYK6

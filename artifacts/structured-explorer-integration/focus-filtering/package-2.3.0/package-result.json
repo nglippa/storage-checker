@@ -1,0 +1,20 @@
+{
+  "command": [
+    "scripts/build-dmg.sh"
+  ],
+  "cwd": "/private/tmp/storage-monitor-focus-package.eyneIj/source",
+  "environment": {
+    "STORAGE_MONITOR_VERSION": "2.3.0",
+    "STORAGE_MONITOR_BUILD": "11",
+    "STORAGE_MONITOR_DMG_NAME": "Storage-Monitor-2.3.0-focus-filtering-candidate.dmg",
+    "STORAGE_MONITOR_SDK_PATH": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "STORAGE_MONITOR_ARCHS": "arm64 x86_64",
+    "STORAGE_MONITOR_SIGN_IDENTITY": "-",
+    "SOURCE_DATE_EPOCH": "1793459522"
+  },
+  "sourceCommit": "a98fa0f487df0bcbf4501ea4b9fbfc2e2069c479",
+  "sourceTree": "73fd16a37e57a05c136bc194429d234892ca8eb3",
+  "exit": 0,
+  "start": "2026-10-31T15:12:09.797366+00:00",
+  "end": "2026-10-31T15:18:49.110519+00:00"
+}

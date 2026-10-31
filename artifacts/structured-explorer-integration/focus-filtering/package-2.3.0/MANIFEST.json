@@ -1,0 +1,50 @@
+{
+  "PACKAGING-RESULTS.md": {
+    "sha256": "33bdc025bb07f86fbaf08287bc0efc4786dc89beb5e78d280ed4e85ee7663910",
+    "size": 4570
+  },
+  "build-monitor.log": {
+    "sha256": "e74490dfa945354e90c93e7c834e1e6f47dbe26e7b884418bcd846d11ddf2a50",
+    "size": 218
+  },
+  "chart-input.log": {
+    "sha256": "fa87d8015623cf901d74d2c15afd51377bb57441a991caa79c132dcf3cecf3d6",
+    "size": 8236
+  },
+  "clean-source-test-results.json": {
+    "sha256": "bc263076a57a1fedf3560e1795c752416c81cb2464295ddfda701feebf2e0347",
+    "size": 1736
+  },
+  "gui.log": {
+    "sha256": "cda3e7dcb33cf513ce398459ade53b574bc2d15c8925d5f869e295a0d1bb2201",
+    "size": 79054
+  },
+  "inventory-integration.log": {
+    "sha256": "ec8fa684d12dc5f50b0bd1362ecaec692081a4c0be6e6cddf5c2fae2bc56ddaa",
+    "size": 34262
+  },
+  "inventory-model.log": {
+    "sha256": "22322738bd32dd805221eaa18950a9da8839e1141cb22060152cc216937a4c17",
+    "size": 8019
+  },
+  "package-result.json": {
+    "sha256": "7ce26d86fcae3af899c45e982b5d440398b5a3b11bb766351725089c4bf040e1",
+    "size": 747
+  },
+  "package.log": {
+    "sha256": "4a91f22495f9538a68bf28c8d6162862707f1e1ae9ee2d165be8e342cd468335",
+    "size": 5485
+  },
+  "receipt.json": {
+    "sha256": "c8a71099182fc532557a231825ff623da4731538dafadc259da547ec37fa1c36",
+    "size": 1294
+  },
+  "source-scope.json": {
+    "sha256": "2ec93b8ab23f4c646b09520557a83c6dbde3e6d3b6383d35a2bd5c6b6a67f49c",
+    "size": 687
+  },
+  "viewer-libraries.log": {
+    "sha256": "674f89d503fde32a30bc8e1bd8c71186bc0949223825383246890485d268ca33",
+    "size": 6335
+  }
+}

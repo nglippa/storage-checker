@@ -1,0 +1,57 @@
+[
+  {
+    "label": "build-monitor",
+    "command": [
+      "scripts/build.sh"
+    ],
+    "cwd": "/private/tmp/storage-monitor-focus-package.eyneIj/source",
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T15:02:17.758083+00:00",
+    "end": "2026-10-31T15:03:47.186749+00:00"
+  },
+  {
+    "label": "inventory-model",
+    "command": [
+      "scripts/test-inventory-model.sh"
+    ],
+    "cwd": "/private/tmp/storage-monitor-focus-package.eyneIj/source",
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T15:03:47.187129+00:00",
+    "end": "2026-10-31T15:05:48.176598+00:00"
+  },
+  {
+    "label": "inventory-integration",
+    "command": [
+      "scripts/test-inventory.sh"
+    ],
+    "cwd": "/private/tmp/storage-monitor-focus-package.eyneIj/source",
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T15:05:48.176897+00:00",
+    "end": "2026-10-31T15:11:06.196548+00:00"
+  },
+  {
+    "label": "gui",
+    "command": [
+      "scripts/test-gui.sh"
+    ],
+    "cwd": "/private/tmp/storage-monitor-focus-package.eyneIj/source",
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T15:02:18.937243+00:00",
+    "end": "2026-10-31T15:04:53.347896+00:00"
+  },
+  {
+    "label": "chart-input",
+    "command": [
+      "scripts/test-chart-geometry.sh"
+    ],
+    "cwd": "/private/tmp/storage-monitor-focus-package.eyneIj/source",
+    "SDK": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "exit": 0,
+    "start": "2026-10-31T15:04:53.348233+00:00",
+    "end": "2026-10-31T15:07:58.125183+00:00"
+  }
+]

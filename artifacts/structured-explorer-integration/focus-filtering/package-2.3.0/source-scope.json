@@ -1,0 +1,18 @@
+{
+  "CLEANUP-INSPECTOR.md": {
+    "candidateUsesCommittedBaseline": true,
+    "uncommittedEditPreserved": true,
+    "workingTreeSHA256": "a56813609db3dfb545ee5933d9a936b4dea11629d049b6f307e9288cfa2bfe8b"
+  },
+  "SourcesGUI/CleanupInspectorView.swift": {
+    "candidateUsesCommittedBaseline": true,
+    "uncommittedEditPreserved": true,
+    "workingTreeSHA256": "48036bb8857fa06873a16d5ac5d469031123505dfbd9c2f2a3e7dad9715ead17"
+  },
+  "tests/InventoryModelTests.swift": {
+    "candidateUsesCommittedBaseline": true,
+    "uncommittedEditPreserved": true,
+    "workingTreeSHA256": "6021277a598657f6bb1efc489313408e4c39e82fa888c8b065d5ee519b4cfe61"
+  },
+  "stagedTreeMatchesArchive": true
+}

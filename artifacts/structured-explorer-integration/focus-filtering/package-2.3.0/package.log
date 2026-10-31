@@ -1,0 +1,66 @@
+==> Icon (Assets/AppIcon.png)
+==> Compile background monitor (arm64, macOS 14.0+)
+==> Compile desktop app (arm64, macOS 14.0+)
+/private/tmp/storage-monitor-focus-package.eyneIj/source/SourcesGUI/CleanupInspectorView.swift:174:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+171 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+172 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+173 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+174 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+175 |         }
+176 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+==> Compile background monitor (x86_64, macOS 14.0+)
+==> Compile desktop app (x86_64, macOS 14.0+)
+/private/tmp/storage-monitor-focus-package.eyneIj/source/SourcesGUI/CleanupInspectorView.swift:174:37: warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+171 |         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+172 |         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+173 |         let report: @Sendable (Int) -> Void = { checked in
+    |                                               |- note: 'self' implicitly strongly captured here
+    |                                               `- note: add 'self' as a capture list item to silence
+174 |             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
+    |                                     |- warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope [#ImplicitStrongCapture]
+    |                                     `- note: explicitly assign the capture list item to silence
+175 |         }
+176 |         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+
+[#ImplicitStrongCapture]: <https://docs.swift.org/compiler/documentation/diagnostics/implicit-strong-capture>
+==> Normalize permissions, attributes and timestamps
+==> Sign (identity: -)
+/private/tmp/storage-monitor-focus-package.eyneIj/source/build/dist/work/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app: replacing existing signature
+/private/tmp/storage-monitor-focus-package.eyneIj/source/build/dist/work/Storage Monitor.app: replacing existing signature
+==> Disk image
+Built /private/tmp/storage-monitor-focus-package.eyneIj/source/build/dist/Storage-Monitor-2.3.0-focus-filtering-candidate.dmg ( 15M)
+PASS image checksum verifies
+PASS image mounts read-only without Finder (-nobrowse, -noautoopen)
+PASS volume contains exactly Storage Monitor.app and Applications (Applications|Storage Monitor.app|)
+PASS Applications shortcut is a symlink to /Applications
+PASS app bundle identifier is local.macbook.storage-monitor.viewer
+PASS app display name is Storage Monitor
+PASS bundled helper is local.macbook.storage-monitor and background-only
+PASS app and helper version 2.3.0 (11)
+PASS both bundles declare minimum macOS 14.0
+PASS StorageMonitorViewer is executable
+PASS StorageMonitorViewer is universal (arm64 x86_64 )
+PASS StorageMonitorViewer deployment target is macOS 14.0 for every architecture
+PASS StorageMonitorViewer links only system libraries
+PASS StorageMonitorViewer searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain
+PASS StorageMonitorViewer embeds no build-machine home or repository path
+PASS StorageMonitor is executable
+PASS StorageMonitor is universal (arm64 x86_64 )
+PASS StorageMonitor deployment target is macOS 14.0 for every architecture
+PASS StorageMonitor links only system libraries
+PASS StorageMonitor searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain
+PASS StorageMonitor embeds no build-machine home or repository path
+PASS both bundles carry the approved icon
+PASS Info.plists are valid
+PASS code signature verifies (deep, strict)
+INFO app signature: Signature=adhoc
+INFO helper signature: Signature=adhoc
+INFO Gatekeeper assessment (informational): /private/tmp/storage-monitor-dmg-verify.vUJMo3/Storage Monitor.app: rejected
+PASS bundled background monitor runs from the image (235 tests passed)
+DMG verification passed: /private/tmp/storage-monitor-focus-package.eyneIj/source/build/dist/Storage-Monitor-2.3.0-focus-filtering-candidate.dmg
