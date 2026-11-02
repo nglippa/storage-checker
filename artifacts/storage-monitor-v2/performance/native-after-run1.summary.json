@@ -1,0 +1,460 @@
+[
+ {
+  "name": "storage_to_monitoring",
+  "active": true,
+  "first_frame_ms": 181.99999999999994,
+  "ready_ms": 0.0,
+  "blocked_ms": 182.0,
+  "longest_stall_ms": 182.0,
+  "work": []
+ },
+ {
+  "name": "monitoring_to_storage",
+  "active": true,
+  "first_frame_ms": 125.90000000000057,
+  "ready_ms": 0.0,
+  "blocked_ms": 180.0,
+  "longest_stall_ms": 126.0,
+  "work": [
+   "inventory.load 100.0ms",
+   "inventory.load 68.0ms"
+  ]
+ },
+ {
+  "name": "storage_to_monitoring",
+  "active": true,
+  "first_frame_ms": 66.10000000000049,
+  "ready_ms": 0.0,
+  "blocked_ms": 145.0,
+  "longest_stall_ms": 79.0,
+  "work": []
+ },
+ {
+  "name": "monitoring_to_storage",
+  "active": true,
+  "first_frame_ms": 130.90000000000046,
+  "ready_ms": 0.0,
+  "blocked_ms": 187.0,
+  "longest_stall_ms": 131.0,
+  "work": [
+   "inventory.load 104.0ms",
+   "inventory.load 63.6ms"
+  ]
+ },
+ {
+  "name": "storage_to_monitoring",
+  "active": true,
+  "first_frame_ms": 138.89999999999958,
+  "ready_ms": 0.0,
+  "blocked_ms": 139.0,
+  "longest_stall_ms": 139.0,
+  "work": []
+ },
+ {
+  "name": "monitoring_to_storage",
+  "active": true,
+  "first_frame_ms": 129.50000000000017,
+  "ready_ms": 0.0,
+  "blocked_ms": 182.0,
+  "longest_stall_ms": 129.0,
+  "work": [
+   "inventory.load 106.8ms",
+   "inventory.load 58.0ms"
+  ]
+ },
+ {
+  "name": "storage_to_monitoring",
+  "active": true,
+  "first_frame_ms": 142.29999999999876,
+  "ready_ms": 0.0,
+  "blocked_ms": 142.0,
+  "longest_stall_ms": 142.0,
+  "work": []
+ },
+ {
+  "name": "monitoring_to_storage",
+  "active": true,
+  "first_frame_ms": 128.5000000000025,
+  "ready_ms": 0.0,
+  "blocked_ms": 245.0,
+  "longest_stall_ms": 129.0,
+  "work": [
+   "inventory.load 99.2ms",
+   "inventory.load 94.6ms"
+  ]
+ },
+ {
+  "name": "storage_to_monitoring",
+  "active": true,
+  "first_frame_ms": 152.49999999999986,
+  "ready_ms": 0.0,
+  "blocked_ms": 152.0,
+  "longest_stall_ms": 152.0,
+  "work": []
+ },
+ {
+  "name": "monitoring_to_storage",
+  "active": true,
+  "first_frame_ms": 124.49999999999761,
+  "ready_ms": 0.0,
+  "blocked_ms": 181.0,
+  "longest_stall_ms": 125.0,
+  "work": [
+   "inventory.load 100.7ms",
+   "inventory.load 65.0ms"
+  ]
+ },
+ {
+  "name": "open_folder",
+  "active": true,
+  "first_frame_ms": 46.90000000000083,
+  "ready_ms": 129.0,
+  "blocked_ms": 51.0,
+  "longest_stall_ms": 51.0,
+  "work": [
+   "inventory.load 64.1ms",
+   "explorer.children 0.5ms",
+   "inventory.load 57.3ms"
+  ]
+ },
+ {
+  "name": "parent_folder",
+  "active": true,
+  "first_frame_ms": 46.90000000000083,
+  "ready_ms": 104.0,
+  "blocked_ms": 113.0,
+  "longest_stall_ms": 62.0,
+  "work": [
+   "inventory.load 61.8ms",
+   "inventory.load 59.5ms"
+  ]
+ },
+ {
+  "name": "open_folder",
+  "active": true,
+  "first_frame_ms": 46.30000000000223,
+  "ready_ms": 113.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "inventory.load 62.9ms",
+   "explorer.children 0.6ms",
+   "inventory.load 61.0ms"
+  ]
+ },
+ {
+  "name": "parent_folder",
+  "active": true,
+  "first_frame_ms": 46.100000000002694,
+  "ready_ms": 106.0,
+  "blocked_ms": 67.0,
+  "longest_stall_ms": 67.0,
+  "work": [
+   "inventory.load 58.1ms",
+   "history.load 6.8ms",
+   "inventory.load 70.9ms"
+  ]
+ },
+ {
+  "name": "open_folder",
+  "active": true,
+  "first_frame_ms": 45.49999999999699,
+  "ready_ms": 109.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "inventory.load 67.2ms",
+   "inventory.load 65.1ms"
+  ]
+ },
+ {
+  "name": "parent_folder",
+  "active": true,
+  "first_frame_ms": 45.000000000001705,
+  "ready_ms": 111.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "inventory.load 62.5ms",
+   "explorer.children 0.6ms",
+   "inventory.load 48.9ms"
+  ]
+ },
+ {
+  "name": "open_folder",
+  "active": true,
+  "first_frame_ms": 55.19999999999925,
+  "ready_ms": 146.0,
+  "blocked_ms": 55.0,
+  "longest_stall_ms": 55.0,
+  "work": [
+   "inventory.load 72.3ms",
+   "inventory.load 48.4ms"
+  ]
+ },
+ {
+  "name": "parent_folder",
+  "active": true,
+  "first_frame_ms": 53.300000000000125,
+  "ready_ms": 124.0,
+  "blocked_ms": 54.0,
+  "longest_stall_ms": 54.0,
+  "work": [
+   "inventory.load 64.3ms",
+   "explorer.children 0.6ms"
+  ]
+ },
+ {
+  "name": "open_folder",
+  "active": true,
+  "first_frame_ms": 11.20000000000232,
+  "ready_ms": 87.0,
+  "blocked_ms": 58.0,
+  "longest_stall_ms": 58.0,
+  "work": [
+   "inventory.load 37.9ms",
+   "inventory.load 58.5ms"
+  ]
+ },
+ {
+  "name": "parent_folder",
+  "active": true,
+  "first_frame_ms": 22.89999999999992,
+  "ready_ms": 73.0,
+  "blocked_ms": 57.0,
+  "longest_stall_ms": 57.0,
+  "work": [
+   "inventory.load 32.6ms",
+   "inventory.load 49.9ms",
+   "inventory.load 85.3ms"
+  ]
+ },
+ {
+  "name": "select_nested_tile",
+  "active": true,
+  "first_frame_ms": 29.49999999999875,
+  "ready_ms": 0.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "explorer.children 0.9ms",
+   "explorer.children 15.4ms"
+  ]
+ },
+ {
+  "name": "select_nested_tile",
+  "active": true,
+  "first_frame_ms": 27.29999999999677,
+  "ready_ms": 0.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "explorer.children 19.3ms",
+   "explorer.children 19.4ms",
+   "explorer.children 19.4ms",
+   "explorer.children 19.5ms",
+   "explorer.children 19.5ms",
+   "inventory.load 117.7ms"
+  ]
+ },
+ {
+  "name": "select_nested_tile",
+  "active": true,
+  "first_frame_ms": 61.79999999999808,
+  "ready_ms": 0.0,
+  "blocked_ms": 117.0,
+  "longest_stall_ms": 62.0,
+  "work": [
+   "explorer.children 22.0ms",
+   "inventory.load 118.1ms"
+  ]
+ },
+ {
+  "name": "select_folder_inspector_open",
+  "active": true,
+  "first_frame_ms": 74.80000000000331,
+  "ready_ms": 0.0,
+  "blocked_ms": 75.0,
+  "longest_stall_ms": 75.0,
+  "work": [
+   "inventory.load 80.4ms"
+  ]
+ },
+ {
+  "name": "select_folder_inspector_open",
+  "active": true,
+  "first_frame_ms": 67.39999999999924,
+  "ready_ms": 0.0,
+  "blocked_ms": 152.0,
+  "longest_stall_ms": 84.0,
+  "work": [
+   "inventory.load 95.8ms"
+  ]
+ },
+ {
+  "name": "select_folder_inspector_open",
+  "active": true,
+  "first_frame_ms": 62.10000000000093,
+  "ready_ms": 0.0,
+  "blocked_ms": 62.0,
+  "longest_stall_ms": 62.0,
+  "work": [
+   "inventory.load 67.4ms"
+  ]
+ },
+ {
+  "name": "select_folder_inspector_open",
+  "active": true,
+  "first_frame_ms": 75.49999999999812,
+  "ready_ms": 0.0,
+  "blocked_ms": 75.0,
+  "longest_stall_ms": 75.0,
+  "work": [
+   "inventory.load 67.7ms"
+  ]
+ },
+ {
+  "name": "atlas_to_living_tree",
+  "active": true,
+  "first_frame_ms": 89.09999999999485,
+  "ready_ms": 406.0,
+  "blocked_ms": 163.0,
+  "longest_stall_ms": 89.0,
+  "work": [
+   "inventory.load 46.6ms",
+   "livingTree.read 312.5ms",
+   "livingTree.layout 8.1ms",
+   "history.load 19.3ms",
+   "inventory.load 112.1ms"
+  ]
+ },
+ {
+  "name": "living_tree_to_atlas",
+  "active": true,
+  "first_frame_ms": 49.70000000000141,
+  "ready_ms": 0.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "inventory.load 63.5ms"
+  ]
+ },
+ {
+  "name": "atlas_to_living_tree",
+  "active": true,
+  "first_frame_ms": 61.500000000009436,
+  "ready_ms": 0.0,
+  "blocked_ms": 112.0,
+  "longest_stall_ms": 62.0,
+  "work": [
+   "livingTree.read 128.9ms",
+   "livingTree.layout 9.0ms",
+   "inventory.load 96.1ms"
+  ]
+ },
+ {
+  "name": "living_tree_to_atlas",
+  "active": true,
+  "first_frame_ms": 48.10000000000514,
+  "ready_ms": 0.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "inventory.load 65.0ms"
+  ]
+ },
+ {
+  "name": "atlas_to_living_tree",
+  "active": true,
+  "first_frame_ms": 55.70000000000164,
+  "ready_ms": 0.0,
+  "blocked_ms": 56.0,
+  "longest_stall_ms": 56.0,
+  "work": [
+   "livingTree.read 100.0ms",
+   "livingTree.layout 9.4ms",
+   "inventory.load 93.9ms"
+  ]
+ },
+ {
+  "name": "living_tree_to_atlas",
+  "active": true,
+  "first_frame_ms": 44.399999999996,
+  "ready_ms": 0.0,
+  "blocked_ms": 0,
+  "longest_stall_ms": 0,
+  "work": [
+   "inventory.load 66.4ms"
+  ]
+ },
+ {
+  "name": "storage_to_monitoring_tree",
+  "active": true,
+  "first_frame_ms": 132.80000000000314,
+  "ready_ms": 0.0,
+  "blocked_ms": 176.0,
+  "longest_stall_ms": 176.0,
+  "work": [
+   "inventory.load 211.6ms",
+   "livingTree.read 99.6ms",
+   "livingTree.layout 9.0ms"
+  ]
+ },
+ {
+  "name": "monitoring_to_storage_tree",
+  "active": true,
+  "first_frame_ms": 163.4999999999991,
+  "ready_ms": 0.0,
+  "blocked_ms": 260.0,
+  "longest_stall_ms": 163.0,
+  "work": [
+   "inventory.load 168.1ms"
+  ]
+ },
+ {
+  "name": "storage_to_monitoring_tree",
+  "active": true,
+  "first_frame_ms": 174.6000000000123,
+  "ready_ms": 0.0,
+  "blocked_ms": 175.0,
+  "longest_stall_ms": 175.0,
+  "work": [
+   "livingTree.read 102.1ms",
+   "livingTree.layout 8.9ms"
+  ]
+ },
+ {
+  "name": "monitoring_to_storage_tree",
+  "active": true,
+  "first_frame_ms": 108.10000000000741,
+  "ready_ms": 0.0,
+  "blocked_ms": 175.0,
+  "longest_stall_ms": 108.0,
+  "work": [
+   "inventory.load 132.5ms"
+  ]
+ },
+ {
+  "name": "storage_to_monitoring_tree",
+  "active": true,
+  "first_frame_ms": 179.59999999999354,
+  "ready_ms": 0.0,
+  "blocked_ms": 180.0,
+  "longest_stall_ms": 180.0,
+  "work": []
+ },
+ {
+  "name": "monitoring_to_storage_tree",
+  "active": true,
+  "first_frame_ms": 173.4000000000009,
+  "ready_ms": 0.0,
+  "blocked_ms": 173.0,
+  "longest_stall_ms": 173.0,
+  "work": [
+   "inventory.load 140.6ms",
+   "livingTree.read 95.0ms",
+   "livingTree.layout 9.8ms",
+   "inventory.load 66.6ms"
+  ]
+ }
+]

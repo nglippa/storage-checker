@@ -1,0 +1,264 @@
+[
+  {
+    "title": "01  Storage Inventory & Cleanup",
+    "subtitle": "Discover \u2192 expand \u2192 visualize \u2192 compare \u2192 review",
+    "output": "storage-monitor-collage-1-inventory-cleanup.png",
+    "rows": [
+      {
+        "heading": "01 / Storage landing and compact layout",
+        "tiles": [
+          {
+            "file": "i01-storage-default-atlas-light.png",
+            "title": "01  Default Storage landing",
+            "note": "Light \u00b7 1440 \u00d7 840 pt content \u00b7 Atlas and Navigator"
+          },
+          {
+            "file": "i02-storage-minimum-atlas-dark.png",
+            "title": "02  Compact Storage",
+            "note": "Dark \u00b7 1000 \u00d7 640 pt content \u00b7 1000 \u00d7 700 window equivalent"
+          }
+        ]
+      },
+      {
+        "heading": "02 / Follow the folder hierarchy",
+        "tiles": [
+          {
+            "file": "i03-expanded-hierarchy-folder-details-light.png",
+            "title": "03  Expanded folder and Inspector",
+            "note": "Light \u00b7 expanded Users branch \u00b7 selection and folder details"
+          },
+          {
+            "file": "i09-atlas-open-home-light.png",
+            "title": "04  Atlas inside a folder",
+            "note": "Light \u00b7 nested treemap and breadcrumb navigation"
+          }
+        ]
+      },
+      {
+        "heading": "03 / Living Tree \u2014 overview, depth and selection",
+        "tiles": [
+          {
+            "file": "i04-living-tree-overview-dark.png",
+            "title": "05  Living Tree overview",
+            "note": "Dark \u00b7 2D \u00b7 controls, Navigator and Inspector"
+          },
+          {
+            "file": "i05-living-tree-3d-dark.png",
+            "title": "06  Living Tree in 3D",
+            "note": "Dark \u00b7 same indexed hierarchy \u00b7 depth mode"
+          }
+        ]
+      },
+      {
+        "heading": null,
+        "tiles": [
+          {
+            "file": "i06-living-tree-selected-folder-dark.png",
+            "title": "07  Selected folder in 3D",
+            "note": "Dark \u00b7 selection indicator and Inspector"
+          },
+          {
+            "file": "i07-living-tree-selection-light.png",
+            "title": "08  Selection in a light window",
+            "note": "Light window \u00b7 the Living Tree canvas intentionally remains dark"
+          }
+        ]
+      },
+      {
+        "heading": "04 / Ranked storage lists",
+        "tiles": [
+          {
+            "file": "i10-largest-files-dark.png",
+            "title": "09  Largest files",
+            "note": "Dark \u00b7 populated ranking with selected file details"
+          },
+          {
+            "file": "i11-largest-folders-light.png",
+            "title": "10  Largest folders",
+            "note": "Light \u00b7 folder ranking and indexed measurement qualifications"
+          }
+        ]
+      },
+      {
+        "heading": "05 / Cleanup review \u2014 candidates and evidence",
+        "tiles": [
+          {
+            "file": "i12-cleanup-review-candidates-dark.png",
+            "title": "11  Review-candidate filter, empty",
+            "note": "Dark \u00b7 actual empty state: this stale snapshot needs revalidation"
+          },
+          {
+            "file": "i13-cleanup-candidate-selected-dark.png",
+            "title": "12  Populated review list, item selected",
+            "note": "Dark \u00b7 all assessments \u00b7 current read-only evidence from real paths"
+          }
+        ]
+      },
+      {
+        "heading": "06 / Detail reading \u2014 no removal performed",
+        "tiles": [
+          {
+            "file": "i08-living-tree-navigation-help-component.png",
+            "title": "13  Living Tree help",
+            "note": "Component crop \u00b7 Standalone actual help content \u00b7 460 \u00d7 570 pt \u00b7 not a popover capture",
+            "crop": [
+              40,
+              230,
+              840,
+              680
+            ]
+          },
+          {
+            "file": "i14-cleanup-item-full-details-light.png",
+            "title": "14  Cleanup Inspector",
+            "note": "Component crop \u00b7 Light \u00b7 standalone Inspector \u00b7 eligibility and evidence \u00b7 QA removal disabled",
+            "crop": [
+              0,
+              0,
+              960,
+              1900
+            ]
+          },
+          {
+            "file": "i16-cleanup-other-item-details-dark.png",
+            "title": "15  Another item assessment",
+            "note": "Component crop \u00b7 Dark \u00b7 standalone Inspector \u00b7 actual current filesystem evidence",
+            "crop": [
+              0,
+              0,
+              960,
+              2000
+            ]
+          },
+          {
+            "file": "i15-cleanup-all-assessments-dark.png",
+            "title": "16  Informational review plan",
+            "note": "Dark \u00b7 standalone plan component \u00b7 excluded selections remain visible"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "02  Monitoring & Application Experience",
+    "subtitle": "Capacity \u2192 change \u2192 history \u2192 explanation \u2192 evidence",
+    "output": "storage-monitor-collage-2-monitoring-experience.png",
+    "rows": [
+      {
+        "heading": "01 / Monitoring overview and expanded event context",
+        "tiles": [
+          {
+            "file": "m01-monitoring-default-large-dark.png",
+            "title": "01  Default Monitoring overview",
+            "note": "Dark \u00b7 1440 \u00d7 840 pt content \u00b7 capacity, latest change, chart and events"
+          },
+          {
+            "file": "m04-monitoring-selected-event-large-light.png",
+            "title": "02  Event selected at desktop size",
+            "note": "Light \u00b7 1440 \u00d7 840 pt content \u00b7 explanation panel open"
+          }
+        ]
+      },
+      {
+        "heading": "02 / Minimum window \u2014 1000 \u00d7 700 equivalent",
+        "tiles": [
+          {
+            "file": "m02-monitoring-minimum-dark.png",
+            "title": "03  Minimum size, dark",
+            "note": "1000 \u00d7 640 pt content \u00b7 native title bar/toolbar allowance: 60 pt"
+          },
+          {
+            "file": "m03-monitoring-minimum-light.png",
+            "title": "04  Minimum size, light",
+            "note": "Same content size \u00b7 event list retains space below summary"
+          }
+        ]
+      },
+      {
+        "heading": null,
+        "tiles": [
+          {
+            "file": "m05-monitoring-selected-event-minimum-dark.png",
+            "title": "05  Minimum size with an event selected",
+            "note": "Dark \u00b7 offscreen inspector text is black; native appearance unverified (readable panel: 07)"
+          },
+          {
+            "file": "m10-monitoring-minimum-summary-scrolled-light.png",
+            "title": "06  Compact summary scrolled to the chart",
+            "note": "Light \u00b7 real scroll-view position \u00b7 event list remains visible"
+          }
+        ]
+      },
+      {
+        "heading": "03 / Read the explanations and application controls",
+        "tiles": [
+          {
+            "file": "m06-explanation-complete-dark.png",
+            "title": "07  Explanation panel",
+            "note": "Component crop \u00b7 Dark \u00b7 actual component, 440 \u00d7 1050 pt \u00b7 all plain-language sections",
+            "crop": [
+              0,
+              0,
+              880,
+              1000
+            ]
+          },
+          {
+            "file": "m08-latest-notable-explanation-light.png",
+            "title": "08  Latest notable change",
+            "note": "Component crop \u00b7 Light \u00b7 another recorded event and its explanation",
+            "crop": [
+              0,
+              0,
+              880,
+              1000
+            ]
+          },
+          {
+            "file": "m09-settings-dark.png",
+            "title": "09  Settings",
+            "note": "Dark \u00b7 actual Settings component \u00b7 QA actions disabled"
+          }
+        ]
+      },
+      {
+        "heading": "04 / Details and evidence \u2014 one expanded panel, three overlapping crops",
+        "tiles": [
+          {
+            "file": "m07-details-and-evidence-expanded-light.png",
+            "title": "10A  Explanation and measured changes",
+            "note": "Light \u00b7 expanded actual component \u00b7 top crop, pixels 0\u20131900",
+            "crop": [
+              0,
+              0,
+              1040,
+              1900
+            ]
+          },
+          {
+            "file": "m07-details-and-evidence-expanded-light.png",
+            "title": "10B  Supporting evidence",
+            "note": "Same panel continued \u00b7 pixels 1800\u20133600 \u00b7 overlap retains complete lines",
+            "crop": [
+              0,
+              1800,
+              1040,
+              1800
+            ]
+          },
+          {
+            "file": "m07-details-and-evidence-expanded-light.png",
+            "title": "10C  Technical details and copy controls",
+            "note": "Same panel continued \u00b7 pixels 3500\u20134700 \u00b7 full original supplied",
+            "crop": [
+              0,
+              3500,
+              1040,
+              1200
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

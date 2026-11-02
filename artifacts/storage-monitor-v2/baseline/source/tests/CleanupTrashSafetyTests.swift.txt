@@ -1,0 +1,685 @@
+import Foundation
+import Darwin
+
+func trashSafetyNode(_ path: String, id: Int64 = 900, deviceOverride: Int64? = nil) throws -> InventoryNode {
+    var st = stat(); guard lstat(path, &st) == 0 else { throw CocoaError(.fileReadNoSuchFile) }
+    let kind: InventoryNodeKind = st.st_mode & S_IFMT == S_IFDIR ? .directory : (st.st_mode & S_IFMT == S_IFLNK ? .symlink : .file)
+    return InventoryNode(id: id, parentID: 1, identity: .init(device: deviceOverride ?? Int64(st.st_dev), inode: UInt64(st.st_ino), birthNanoseconds: Int64(st.st_birthtimespec.tv_sec) * 1_000_000_000 + Int64(st.st_birthtimespec.tv_nsec)),
+                         path: path, name: (path as NSString).lastPathComponent, kind: kind, logicalBytes: Int64(st.st_size), allocatedBytes: Int64(st.st_blocks) * 512,
+                         previousLogicalBytes: nil, previousAllocatedBytes: nil, objectLogicalBytes: nil, objectAllocatedBytes: nil, directLogicalBytes: 0, directAllocatedBytes: 0,
+                         childCount: 0, descendantFiles: 0, descendantDirectories: 0, status: .complete, coverageState: "complete", listingState: nil, statusReason: nil,
+                         measuredAt: Date(), modifiedAt: nil, generation: 1, isHardlinkAlias: false, historicalGrowthBytes: nil)
+}
+
+func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Void) throws {
+    let fm = FileManager.default, root = folder.appendingPathComponent(UUID().uuidString)
+    let home = root.appendingPathComponent("home")
+    try fm.createDirectory(at: home, withIntermediateDirectories: true)
+    func file(_ name: String, text: String = "disposable QA fixture") throws -> String {
+        let p = home.appendingPathComponent(name)
+        try fm.createDirectory(at: p.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(text.utf8).write(to: p); return p.path
+    }
+    let observed = ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 0)
+    let env = ArtifactEnvironment(home: home.path, pathDirectories: [], processes: { observed }, git: GitInspector.available())
+    func token(_ path: String, environment: ArtifactEnvironment? = nil) throws -> CleanupTrashConfirmationToken {
+        switch CleanupTrashPolicy.prepare(node: try trashSafetyNode(path), environment: environment ?? env) {
+        case .ready(let token): return token
+        case .blocked(let why): throw NSError(domain: "TrashSafetyFixture", code: 1, userInfo: [NSLocalizedDescriptionKey: why])
+        }
+    }
+    func blocked(_ path: String, environment: ArtifactEnvironment? = nil, budget: ArtifactProbe.Budget = .standard) throws -> Bool {
+        if case .blocked = CleanupTrashPolicy.prepare(node: try trashSafetyNode(path), environment: environment ?? env, budget: budget) { return true }; return false
+    }
+    // Negative cases must independently reject their consent/evidence check before any adapter invocation.
+    func refused(_ outcome: CleanupTrashOutcome) -> Bool {
+        if case .refused(let reason) = outcome { return reason != CleanupTrashPolicy.unavailableReason }
+        return false
+    }
+    // The adapter only renames an owned fixture to a retained sibling; it never invokes real Trash.
+    func retainedMove(_ confirmation: CleanupTrashConfirmationToken, accepted: Bool = true) throws -> Bool {
+        var calls = 0
+        let source = URL(fileURLWithPath: confirmation.node.path)
+        let destination = root.appendingPathComponent("retained-" + UUID().uuidString)
+        let before = try trashSafetyNode(source.path).identity
+        let outcome = CleanupTrashPolicy.perform(confirmation: confirmation, overrideAccepted: accepted, environment: env, trash: { url in
+            calls += 1; try fm.moveItem(at: url, to: destination); return destination
+        })
+        let moved = outcome == .moved(trashPath: destination.path) && calls == 1 && !fm.fileExists(atPath: source.path)
+            && (try? trashSafetyNode(destination.path).identity) == before
+        if fm.fileExists(atPath: destination.path) { try fm.moveItem(at: destination, to: source) }
+        return moved
+    }
+    let ordinary = try file("files/note.txt"), ordinaryNode = try trashSafetyNode(home.appendingPathComponent("files").path)
+    let first = try token(ordinary)
+    if case .allowed(true, let warnings) = first.decision { try test(!warnings.isEmpty, "trash safety: ordinary files require an explicit uncertainty warning") } else { try test(false, "trash safety: ordinary file is eligible with warning") }
+    let cancel = try token(ordinary); CleanupTrashPolicy.cancel(cancel)
+    try test(refused(CleanupTrashPolicy.perform(confirmation: cancel, overrideAccepted: true, environment: env, trash: { _ in nil })), "trash safety: cancelling invalidates the confirmation")
+    try test(refused(CleanupTrashPolicy.perform(confirmation: first, overrideAccepted: false, environment: env, trash: { _ in nil })), "trash safety: ordinary-file warning must be acknowledged")
+    let confirmed = try token(ordinary)
+    try test(try retainedMove(confirmed), "trash safety: confirmed ordinary file moves only its verified object through the retained adapter")
+    try test(refused(CleanupTrashPolicy.perform(confirmation: confirmed, overrideAccepted: true, environment: env, trash: { _ in nil })), "trash safety: a confirmation is one-use")
+    let directory = try token(ordinaryNode.path)
+    if case .allowed(true, let warnings) = directory.decision { try test(warnings.contains { $0.contains("entire directory") }, "trash safety: ordinary directory acknowledgment explicitly includes all contents") }
+    else { try test(false, "trash safety: ordinary directory warning") }
+    try test(try retainedMove(directory), "trash safety: confirmed ordinary directory moves with contents retained")
+    let failing = try token(ordinary)
+    if case .failed(let reason) = CleanupTrashPolicy.perform(confirmation: failing, overrideAccepted: true, environment: env, trash: { _ in throw CocoaError(.fileWriteNoPermission) }) { try test(reason.contains("not confirmed") && fm.fileExists(atPath: ordinary), "trash safety: permission API failure is reported without claiming an unchanged outcome") } else { try test(false, "trash safety: failed API") }
+    let noURL = try token(ordinary)
+    if case .failed = CleanupTrashPolicy.perform(confirmation: noURL, overrideAccepted: true, environment: env, trash: { _ in nil }) { try test(fm.fileExists(atPath: ordinary), "trash safety: nil result fails verification and never falls through to native Trash") } else { try test(false, "trash safety: nil resulting URL must fail verification") }
+    let mismatch = try token(ordinary)
+    if case .failed = CleanupTrashPolicy.perform(confirmation: mismatch, overrideAccepted: true, environment: env, trash: { _ in URL(fileURLWithPath: "/unavailable-trash-fixture") }) { try test(true, "trash safety: unreadable returned destination fails verification") } else { try test(false, "trash safety: returned identity verification") }
+
+    let differentDestination = try file("result-verification/unrelated.txt")
+    let differentToken = try token(ordinary)
+    let different = CleanupTrashPolicy.perform(confirmation: differentToken, overrideAccepted: true, environment: env, trash: { _ in URL(fileURLWithPath: differentDestination) })
+    let differentFailed: Bool = { if case .failed(let reason) = different { return reason.contains("different filesystem identity") }; return false }()
+    try test(differentFailed && fm.fileExists(atPath: ordinary) && fm.fileExists(atPath: differentDestination), "trash safety: mismatched returned identity reports uncertainty without touching unrelated objects")
+    let partialSource = try file("result-verification/partial-move.txt")
+    let partialToken = try token(partialSource), retainedPartial = root.appendingPathComponent("partial-move-retained")
+    let partialOutcome = CleanupTrashPolicy.perform(confirmation: partialToken, overrideAccepted: true, environment: env, trash: { url in
+        try fm.moveItem(at: url, to: retainedPartial); throw CocoaError(.fileWriteUnknown)
+    })
+    let partialFailed: Bool = { if case .failed(let reason) = partialOutcome { return reason.contains("not confirmed") }; return false }()
+    try test(partialFailed && partialOutcome.needsReconciliation && !fm.fileExists(atPath: partialSource) && fm.fileExists(atPath: retainedPartial.path),
+             "trash safety: adapter error after a retained move reports uncertainty and requires reconciliation, never a false no-move claim")
+
+    try cleanupTrashExecutionBoundaryTests(root.appendingPathComponent("execution-boundaries"), test)
+
+    let directAlias = URL(fileURLWithPath: "/tmp/storage-monitor-direct-alias-" + UUID().uuidString + ".txt")
+    try Data("retained direct /tmp alias fixture".utf8).write(to: directAlias)
+    let directAliasToken = try token(directAlias.path)
+    try test(try retainedMove(directAliasToken), "trash safety: a direct child of /tmp resolves its exact alias parent without following unexpected ancestors")
+
+    let secret = try file("guarded/.env")
+    try test(try blocked(secret), "trash safety: protected credential target is blocked")
+    try test(try blocked((secret as NSString).deletingLastPathComponent), "trash safety: directory containing protected descendants is blocked")
+    let appData = try file("custom-data/history.sqlite3")
+    var own = env; own.ownData = (appData as NSString).deletingLastPathComponent
+    try test(try blocked(appData, environment: own), "trash safety: active application data cannot be moved")
+    let unresolvedRoot = home.appendingPathComponent("unresolved-protection-root").path
+    try fm.createSymbolicLink(atPath: unresolvedRoot, withDestinationPath: home.appendingPathComponent("missing-root").path)
+    var unresolved = env; unresolved.ownData = unresolvedRoot
+    try test(try blocked(ordinary, environment: unresolved),
+             "trash safety: a broken protection-root link fails closed instead of falling back to a lexical path")
+    if home.path.hasPrefix("/private/tmp/") || home.path.hasPrefix("/tmp/") {
+        let aliasHome = home.path.hasPrefix("/private/tmp/")
+            ? "/tmp/" + String(home.path.dropFirst("/private/tmp/".count))
+            : "/private/tmp/" + String(home.path.dropFirst("/tmp/".count))
+        var aliasEnvironment = env; aliasEnvironment.home = aliasHome
+        try test(try blocked(secret, environment: aliasEnvironment),
+                 "trash safety: /tmp home alias cannot bypass protected credentials")
+        try test(ArtifactPaths.canonicalProtectionLocation(aliasHome + "/not-created/app-data") ==
+                 ArtifactPaths.canonicalProtectionLocation(home.path + "/not-created/app-data"),
+                 "trash safety: absent protected descendants inherit the canonical existing ancestor")
+    }
+    try test(try blocked(home.path), "trash safety: home root is blocked")
+    let unknown = try file("mystery/output.data")
+    try test(try token(unknown).inspection.classification == nil, "trash safety: unrecognized artifact remains advisory and eligible")
+    let build = try file("project/build/output.txt")
+    let unexplained = try token((build as NSString).deletingLastPathComponent)
+    try test(unexplained.inspection.assessment?.status != .reviewCandidate, "trash safety: insufficient evidence never becomes a review candidate through Trash eligibility")
+    let generated = try file("node-project/node_modules/package/index.js")
+    _ = try file("node-project/package.json", text: "{\"name\":\"disposable-qa\",\"dependencies\":{}}")
+    _ = try file("node-project/package-lock.json", text: "{}")
+    let candidate = try token(((generated as NSString).deletingLastPathComponent as NSString).deletingLastPathComponent)
+    try test(candidate.inspection.assessment?.status == .reviewCandidate, "trash safety: verified review candidate retains its assessment")
+    try test(try retainedMove(candidate, accepted: false), "trash safety: review candidate plain confirmation executes its exact validated target")
+
+    let currentRelease = try file("ordinary-parent/.codex-fixture/packages/standalone/releases/1.0.0-darwin-arm64/bin/codex", text: "fixture executable")
+    let releaseDirectory = ((currentRelease as NSString).deletingLastPathComponent as NSString).deletingLastPathComponent
+    _ = try file("ordinary-parent/.codex-fixture/packages/standalone/releases/1.0.0-darwin-arm64/codex-package.json", text: "{}")
+    try fm.createSymbolicLink(atPath: home.appendingPathComponent("ordinary-parent/.codex-fixture/packages/standalone/current").path, withDestinationPath: "releases/1.0.0-darwin-arm64")
+    let currentInspection = ArtifactInspector.inspect(try trashSafetyNode(releaseDirectory), environment: env)
+    try test(currentInspection.classification?.facts.isCurrent == true && currentInspection.assessment?.status == .preserve,
+             "trash safety: current-dependency fixture establishes positive current use without process or PATH")
+    try test(try blocked(home.appendingPathComponent("ordinary-parent").path), "trash safety: ordinary parent containing a verified current dependency is blocked")
+    _ = try file("clean-parent/ordinary-child.txt")
+    try test(try retainedMove(token(home.appendingPathComponent("clean-parent").path)), "trash safety: completely assessed clean ordinary parent remains eligible")
+    var expiredEnvironment = env; expiredEnvironment.now = { Date().addingTimeInterval(-61) }
+    let expired = try token(ordinary, environment: expiredEnvironment)
+    try test(CleanupTrashPolicy.perform(confirmation: expired, overrideAccepted: true, environment: env, trash: { _ in nil }) == .refused("The confirmation expired. Review the item again."),
+             "trash safety: expired confirmation refuses before any adapter")
+
+    let running = try file("executables/running")
+    try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: running)
+    var busy = env; busy.processes = { ProcessObservation(executables: [running], workingDirectories: [], inspected: 100, unreadable: 0) }
+    try test(try blocked(running, environment: busy), "trash safety: running executable is a hard block")
+    let alias = home.appendingPathComponent("executables/hard-alias").path
+    try fm.linkItem(atPath: running, toPath: alias)
+    try test(try blocked(alias, environment: busy), "trash safety: running executable hard-link alias is blocked by object identity")
+    try test(try blocked((running as NSString).deletingLastPathComponent, environment: busy), "trash safety: ancestor containing a running executable is blocked")
+    let pathBin = home.appendingPathComponent("path-bin").path
+    try fm.createDirectory(atPath: pathBin, withIntermediateDirectories: true)
+    try fm.createSymbolicLink(atPath: (pathBin as NSString).appendingPathComponent("fixture-command"), withDestinationPath: running)
+    var pathReferenced = env; pathReferenced.pathDirectories = [pathBin]
+    try test(try blocked(running, environment: pathReferenced), "trash safety: PATH symlink reference to an otherwise unrecognized executable is hard blocked")
+    var absent = env; absent.processes = { .empty }
+    try test(try blocked(ordinary, environment: absent), "trash safety: completely unavailable initial active-use provider blocks even an ordinary file")
+    final class EmptyFinalProvider: @unchecked Sendable { var calls = 0 }
+    let emptyFinalProvider = EmptyFinalProvider(), emptyFinalToken = try token(ordinary)
+    var finalAbsent = env
+    finalAbsent.processes = {
+        emptyFinalProvider.calls += 1
+        return emptyFinalProvider.calls == 1 ? ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 0) : .empty
+    }
+    var emptyFinalAdapterCalls = 0
+    let emptyFinalOutcome = CleanupTrashPolicy.perform(confirmation: emptyFinalToken, overrideAccepted: true, environment: finalAbsent, trash: { _ in emptyFinalAdapterCalls += 1; return nil })
+    try test(refused(emptyFinalOutcome) && emptyFinalProvider.calls == 2 && emptyFinalAdapterCalls == 0,
+             "trash safety: a provider becoming unavailable at final observation blocks before any adapter")
+    // Partial observations are not global non-use proof. Programs and databases then require the explicit
+    // program-use warning; any observed use (above) still blocks.
+    var partial = env; partial.processes = { ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 1) }
+    func requiresProgramWarning(_ path: String, environment: ArtifactEnvironment) throws -> Bool {
+        let prepared = try token(path, environment: environment)
+        guard case .allowed(true, let warnings) = prepared.decision, warnings.first == CleanupTrashPolicy.programUseWarning else { return false }
+        var calls = 0
+        let outcome = CleanupTrashPolicy.perform(confirmation: prepared, overrideAccepted: false, environment: environment, trash: { _ in calls += 1; return nil })
+        return outcome == .refused("The warning was not accepted.") && calls == 0 && FileManager.default.fileExists(atPath: path)
+    }
+    try test(try requiresProgramWarning(running, environment: partial), "trash safety: partially observed program requires the program-use warning and an unaccepted warning moves nothing")
+    // A complete observation still covers only the current user's processes, so programs always carry the warning.
+    try test(try requiresProgramWarning(running, environment: env), "trash safety: a completely observed program still requires the program-use warning")
+    let plainToken = try token(ordinary)
+    let plainHasProgramWarning: Bool = { if case .allowed(_, let warnings) = plainToken.decision { return warnings.contains(CleanupTrashPolicy.programUseWarning) }; return true }()
+    CleanupTrashPolicy.cancel(plainToken)
+    try test(!plainHasProgramWarning, "trash safety: an ordinary file without programs has no program-use warning")
+    let partialCandidate = try token(((generated as NSString).deletingLastPathComponent as NSString).deletingLastPathComponent, environment: partial)
+    var partialCandidateAdapterCalls = 0
+    let partialCandidateOutcome = CleanupTrashPolicy.perform(confirmation: partialCandidate, overrideAccepted: false, environment: partial, trash: { _ in partialCandidateAdapterCalls += 1; return nil })
+    try test(partialCandidate.inspection.assessment?.status == .reviewCandidate && partialCandidateOutcome == .refused("The warning was not accepted.") && partialCandidateAdapterCalls == 0,
+             "trash safety: partial observations require acknowledgment even for a review candidate before any adapter")
+    let partialOrdinary = try token(ordinary, environment: partial)
+    let partialWarning: Bool = { if case .allowed(true, let warnings) = partialOrdinary.decision { return warnings.contains { $0.contains("observations were partial") && $0.contains("not proof of non-use") } }; return false }()
+    try test(partialWarning, "trash safety: ordinary partial scoped observations require an explicit non-use uncertainty warning")
+    let db = try file("databases/user.sqlite3")
+    _ = try token(db)
+    try test(true, "trash safety: a nonprotected inactive database remains eligible with an uncertainty warning")
+    let inactiveAgentDB = try file(".codex/state.sqlite")
+    let inactiveDBToken = try token(inactiveAgentDB)
+    try test(inactiveDBToken.inspection.classification?.facts.isDatabase == true, "trash safety: database classification alone is advisory when active-use checks are reliable")
+    if case .allowed(true, let warnings) = inactiveDBToken.decision {
+        try test(warnings.contains { $0.contains("Marked Preserve:") && $0.contains("database") }, "trash safety: conservative database Preserve reasons remain explicit in the warning")
+    } else { try test(false, "trash safety: database Preserve warning remains visible") }
+
+    var databaseBusy = env; databaseBusy.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [db + "-wal"], inspected: 100, unreadable: 0) }
+    try test(try blocked(db, environment: databaseBusy), "trash safety: verified open SQLite WAL blocks its database")
+    var openBase = env; openBase.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [db], inspected: 100, unreadable: 0) }
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let companion = try file("databases/user.sqlite3" + suffix)
+        try test(try blocked(companion, environment: openBase), "trash safety: an observed active database hard-blocks its " + suffix + " companion")
+        try test(try requiresProgramWarning(companion, environment: partial), "trash safety: incomplete database-use evidence requires the program-use warning for a " + suffix + " companion")
+        let aliasBase = db.hasPrefix("/private/tmp/") ? "/tmp/" + String(db.dropFirst("/private/tmp/".count)) : "/private" + db
+        var aliasBaseUse = env; aliasBaseUse.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [aliasBase], inspected: 100, unreadable: 0) }
+        try test(try blocked(companion, environment: aliasBaseUse), "trash safety: active database alias blocks its " + suffix + " companion")
+        let companionToken = try token(companion)
+        final class CompanionObservation: @unchecked Sendable { var count = 0 }
+        let companionObservation = CompanionObservation()
+        var lateBaseUse = env
+        lateBaseUse.processes = {
+            companionObservation.count += 1
+            return ProcessObservation(executables: [], workingDirectories: [], openFiles: companionObservation.count >= 2 ? [db] : [], inspected: 100, unreadable: 0)
+        }
+        var companionAdapterCalls = 0
+        let companionOutcome = CleanupTrashPolicy.perform(confirmation: companionToken, overrideAccepted: true, environment: lateBaseUse, trash: { _ in companionAdapterCalls += 1; return nil })
+        try test(refused(companionOutcome) && companionObservation.count == 2 && companionAdapterCalls == 0,
+                 "trash safety: base becoming active at the final observation blocks its " + suffix + " companion before any adapter")
+    }
+    try test(try requiresProgramWarning(db, environment: partial), "trash safety: incomplete database-use check requires the program-use warning")
+    // An unresolvable open file elsewhere (a system service's restricted store) is irrelevant; one beside the database fails closed.
+    // A symbolic-link loop cannot be resolved (ELOOP), unlike a missing path, which resolves by walking up.
+    let unrelatedFolder = home.appendingPathComponent("unrelated-service")
+    try fm.createDirectory(at: unrelatedFolder, withIntermediateDirectories: true)
+    let elsewhere = unrelatedFolder.appendingPathComponent("store").path
+    try fm.createSymbolicLink(atPath: elsewhere, withDestinationPath: elsewhere)
+    try test(ArtifactPaths.canonicalProtectionLocation(elsewhere) == nil, "trash safety fixture: the unrelated open file is genuinely unresolvable")
+    let namesake = unrelatedFolder.appendingPathComponent("user.sqlite3-wal").path
+    try fm.createSymbolicLink(atPath: namesake, withDestinationPath: namesake)
+    try test(CleanupTrashPolicy.openFileMatchesDatabase(namesake, [db]) == nil, "trash safety: an unresolvable file named like the database's companion fails closed in any folder")
+    var unrelatedUnresolved = env; unrelatedUnresolved.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [elsewhere], inspected: 100, unreadable: 0) }
+    try test(!(try blocked(db, environment: unrelatedUnresolved)), "trash safety: an unresolvable open file in an unrelated folder does not block a database")
+    try test(CleanupTrashPolicy.openFileMatchesDatabase(elsewhere, [db]) == false, "trash safety: unrelated unresolvable open file is not a database companion")
+    try test(CleanupTrashPolicy.openFileMatchesDatabase(db + "-wal", [db]) == true, "trash safety: resolvable companion still matches its database")
+    let loopDatabase = try file("loop-databases/user.sqlite3"), loop = ((loopDatabase as NSString).deletingLastPathComponent as NSString).appendingPathComponent("loop")
+    try fm.createSymbolicLink(atPath: loop, withDestinationPath: loop)
+    var besideUnresolved = env; besideUnresolved.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [loop], inspected: 100, unreadable: 0) }
+    try test(try blocked(loopDatabase, environment: besideUnresolved), "trash safety: an unresolvable open file beside the database fails closed")
+    // Scoped descendant checks: a nested open file observed through the /tmp alias still blocks its ancestor.
+    let nestedBusy = try file("nested-busy/a/b/held.txt")
+    let aliasNested = nestedBusy.hasPrefix("/private/tmp/") ? "/tmp/" + String(nestedBusy.dropFirst("/private/tmp/".count)) : nestedBusy
+    var nestedObservation = env; nestedObservation.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [aliasNested], inspected: 100, unreadable: 0) }
+    try test(try blocked(home.appendingPathComponent("nested-busy").path, environment: nestedObservation), "trash safety: a nested open file (observed through an alias) blocks its ancestor")
+    var nestedCwd = env; nestedCwd.processes = { ProcessObservation(executables: [], workingDirectories: [(nestedBusy as NSString).deletingLastPathComponent], inspected: 100, unreadable: 0) }
+    try test(try blocked(home.appendingPathComponent("nested-busy").path, environment: nestedCwd), "trash safety: a working directory nested in the target blocks it")
+    // A symbolic link whose target is outside the item: a process working in that target blocks the item.
+    let outsideProject = home.appendingPathComponent("outside-project"); try fm.createDirectory(at: outsideProject, withIntermediateDirectories: true)
+    let linkHolder = home.appendingPathComponent("link-holder"); try fm.createDirectory(at: linkHolder, withIntermediateDirectories: true)
+    try fm.createSymbolicLink(atPath: linkHolder.appendingPathComponent("project").path, withDestinationPath: outsideProject.path)
+    var linkedCwd = env; linkedCwd.processes = { ProcessObservation(executables: [], workingDirectories: [outsideProject.path], inspected: 100, unreadable: 0) }
+    try test(try blocked(linkHolder.path, environment: linkedCwd), "trash safety: a working directory inside a contained link's target blocks the item")
+    // The user-initiated preflight walks every descendant of an ordinary large folder (the Inspector's quick budget could not).
+    let large = home.appendingPathComponent("large-cache")
+    for folderIndex in 0..<50 {
+        let folder = large.appendingPathComponent("d\(folderIndex)"); try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        for fileIndex in 0..<100 { try Data("x".utf8).write(to: folder.appendingPathComponent("f\(fileIndex)")) }
+    }
+    try test(try blocked(large.path, budget: .standard), "trash safety: a 5,050-entry folder exceeds the Inspector's quick budget")
+    final class Progress: @unchecked Sendable { var highest = 0 }
+    let reported = Progress()
+    let largePreparation = CleanupTrashPolicy.prepare(node: try trashSafetyNode(large.path), environment: env, progress: { reported.highest = max(reported.highest, $0) })
+    let largeReason: String = { if case .blocked(let why) = largePreparation { return why }; return "" }()
+    if case .ready(let prepared) = largePreparation { CleanupTrashPolicy.cancel(prepared) }
+    try test(largeReason.isEmpty, "trash safety: the Trash preflight budget assesses an ordinary 5,050-entry folder" + (largeReason.isEmpty ? "" : " (refused: \(largeReason))"))
+    try test(reported.highest >= 5_000, "trash safety: preflight reports items checked while it walks a large folder (\(reported.highest))")
+    let guidance: [(String, CleanupTrashGuidance.Kind)] = [
+        ("A running process uses the target or a descendant: /x", .inUse),
+        ("The directory cannot be assessed within the safety budget. Nothing will be moved.", .tooLarge),
+        ("This folder is too broad to move to the Trash as one item.", .neverMoved),
+        ("Protected: credential store.", .neverMoved),
+        ("A descendant is not owned by the current user.", .notYours),
+        ("A Git worktree contains uncommitted, untracked, or potentially unmerged work: /x", .unsavedWork),
+        ("The confirmation expired. Review the item again.", .needsReview),
+        ("Active-use observations are stale; review the item again.", .needsReview),
+        ("Not available in QA builds: the catalog is a copy, but its paths are real files.", .qaCopy),
+        (CleanupTrashPolicy.unavailableReason, .needsReview),
+    ]
+    for (reason, kind) in guidance {
+        let explained = CleanupTrashGuidance.explain(reason)
+        try test(explained.kind == kind && !explained.title.isEmpty, "trash guidance: \(kind) for “\(reason.prefix(48))”")
+    }
+    try test(CleanupTrashGuidance.explain("This folder is too broad to move to the Trash as one item.").nextStep == nil, "trash guidance: a permanent restriction offers no misleading next step")
+    let raw = ["Storage Monitor has not established whether this item is safe to remove.", "Marked Preserve: database.", CleanupTrashPolicy.programUseWarning,
+               "Storage Monitor has not established whether this item is safe to remove.", "This moves the entire directory, including all of its contents, to Trash."]
+    let shown = CleanupTrashGuidance.presentedWarnings(raw)
+    try test(shown == ["Marked Preserve: database.", CleanupTrashPolicy.programUseWarning, "This moves the entire directory, including all of its contents, to Trash."],
+             "trash sheet: the generic not-established sentence is stated once by the sheet and every specific risk is kept in order")
+    let staleDate = Date().addingTimeInterval(-60)
+    var stale = env; stale.processes = { ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 0, takenAt: staleDate) }
+    try test(try blocked(ordinary, environment: stale), "trash safety: stale active-use evidence cannot authorize Trash")
+    let changing = try token(ordinary)
+    var becameBusy = env; becameBusy.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [ordinary], inspected: 100, unreadable: 0) }
+    try test(refused(CleanupTrashPolicy.perform(confirmation: changing, overrideAccepted: true, environment: becameBusy, trash: { _ in nil })), "trash safety: active-use evidence is collected again after confirmation")
+    final class ObservationCount: @unchecked Sendable { var count = 0 }
+    let observationCount = ObservationCount(), finalObservationToken = try token(ordinary)
+    var finalObservation = env
+    finalObservation.processes = {
+        observationCount.count += 1
+        return ProcessObservation(executables: [], workingDirectories: [], openFiles: observationCount.count >= 2 ? [ordinary] : [], inspected: 100, unreadable: 0)
+    }
+    try test(refused(CleanupTrashPolicy.perform(confirmation: finalObservationToken, overrideAccepted: true, environment: finalObservation, trash: { _ in nil })), "trash safety: process use starting after traversal is rejected by the final observation")
+
+    let replaced = try file("races/replaced.txt"), indexed = try trashSafetyNode(home.appendingPathComponent("races/replaced.txt").path)
+    let replacementToken = try token(replaced)
+    try fm.moveItem(atPath: replaced, toPath: replaced + ".reviewed-held")
+    try Data("replacement".utf8).write(to: URL(fileURLWithPath: replaced))
+    if case .blocked = CleanupTrashPolicy.prepare(node: indexed, environment: env) { try test(true, "trash safety: replacement before confirmation rejects indexed identity") } else { try test(false, "trash safety: replaced indexed item") }
+    try test(refused(CleanupTrashPolicy.perform(confirmation: replacementToken, overrideAccepted: true, environment: env, trash: { _ in nil })), "trash safety: replacement after confirmation is rejected before execution")
+    let immediate = try file("races/immediate.txt"), immediateToken = try token(home.appendingPathComponent("races/immediate.txt").path)
+    var racing = env
+    let immediateObservations = ObservationCount()
+    racing.processes = {
+        if immediateObservations.count == 0 {
+            try? FileManager.default.moveItem(atPath: immediate, toPath: immediate + ".reviewed-held")
+            try? Data("replaced during final active-use check".utf8).write(to: URL(fileURLWithPath: immediate))
+        }
+        immediateObservations.count += 1
+        return ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 0)
+    }
+    try test(refused(CleanupTrashPolicy.perform(confirmation: immediateToken, overrideAccepted: true, environment: racing, trash: { _ in nil })), "trash safety: target replacement during final execution checks is rejected")
+    let edited = try file("races/edited.txt"), editToken = try token(home.appendingPathComponent("races/edited.txt").path)
+    let handle = try FileHandle(forWritingTo: URL(fileURLWithPath: edited)); try handle.write(contentsOf: Data("in-place modification".utf8)); try handle.close()
+    try test(refused(CleanupTrashPolicy.perform(confirmation: editToken, overrideAccepted: true, environment: env, trash: { _ in nil })), "trash safety: in-place content changes invalidate confirmation")
+    let childRace = try file("child-race/a.txt"), childParent = (childRace as NSString).deletingLastPathComponent
+    let childToken = try token(childParent); _ = try file("child-race/new.txt")
+    try test(refused(CleanupTrashPolicy.perform(confirmation: childToken, overrideAccepted: true, environment: env, trash: { _ in nil })), "trash safety: added descendant invalidates confirmation")
+    let permission = try file("permission/file.txt"), permissionToken = try token(home.appendingPathComponent("permission/file.txt").path)
+    try fm.setAttributes([.posixPermissions: 0o500], ofItemAtPath: (permission as NSString).deletingLastPathComponent)
+    try test(refused(CleanupTrashPolicy.perform(confirmation: permissionToken, overrideAccepted: true, environment: env, trash: { _ in nil })), "trash safety: permission changes are rechecked before execution")
+    try fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: (permission as NSString).deletingLastPathComponent)
+    try test(try blocked(childParent, budget: .init(entries: 1, reads: 1, seconds: 1)), "trash safety: bounded descendant budget fails closed")
+    let linkPath = home.appendingPathComponent("links/ordinary-link").path
+    try fm.createDirectory(atPath: (linkPath as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+    try fm.createSymbolicLink(atPath: linkPath, withDestinationPath: ordinary)
+    let linkToken = try token(linkPath)
+    try test(try retainedMove(linkToken) && fm.fileExists(atPath: ordinary), "trash safety: confirmed symbolic-link operation moves only link and preserves referent")
+    let badLink = home.appendingPathComponent("links/secret-link").path
+    try fm.createSymbolicLink(atPath: badLink, withDestinationPath: secret)
+    try test(try blocked(badLink), "trash safety: symbolic link into protected content is blocked")
+    let parentLink = home.appendingPathComponent("parent-link").path
+    try fm.createSymbolicLink(atPath: parentLink, withDestinationPath: (ordinary as NSString).deletingLastPathComponent)
+    try test(try blocked((parentLink as NSString).appendingPathComponent("note.txt")), "trash safety: symbolic-link ancestor must be reviewed at its canonical location")
+
+    if let git = env.git {
+        func command(_ args: [String], directory: String) throws {
+            let task = Process(); task.executableURL = URL(fileURLWithPath: git.executable)
+            task.arguments = ["-C", directory, "-c", "user.name=Disposable Fixture", "-c", "user.email=fixture@example.invalid"] + args
+            task.environment = ["PATH": "/usr/bin:/bin", "HOME": root.path, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": "/dev/null"]
+            task.standardInput = FileHandle.nullDevice; task.standardOutput = FileHandle.nullDevice; task.standardError = FileHandle.nullDevice
+            try task.run(); task.waitUntilExit(); guard task.terminationStatus == 0 else { throw CocoaError(.fileReadUnknown) }
+        }
+        // A Git worktree can also be a Python tool environment. Git's earlier advisory classification
+        // must not hide Python's later verified PATH dependency from safety validation.
+        _ = try file("overlap-repository/pyvenv.cfg", text: "version = 3.12\n")
+        _ = try file("overlap-repository/bin/tool", text: "nonexecutable fixture; never run")
+        let overlapRepository = home.appendingPathComponent("overlap-repository").path
+        try command(["init", "-b", "main"], directory: overlapRepository)
+        try command(["add", "pyvenv.cfg", "bin/tool"], directory: overlapRepository)
+        try command(["commit", "-m", "Disposable overlapping-layout fixture"], directory: overlapRepository)
+        let toolsParent = home.appendingPathComponent(".local/share/uv/tools").path
+        try fm.createDirectory(atPath: toolsParent, withIntermediateDirectories: true)
+        let overlapping = (toolsParent as NSString).appendingPathComponent("overlapping-tool")
+        try command(["worktree", "add", "-b", "overlapping-tool", overlapping, "HEAD"], directory: overlapRepository)
+        let overlapPath = home.appendingPathComponent("overlap-path").path
+        try fm.createDirectory(atPath: overlapPath, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(atPath: (overlapPath as NSString).appendingPathComponent("tool"), withDestinationPath: (overlapping as NSString).appendingPathComponent("bin/tool"))
+        var overlapEnvironment = env; overlapEnvironment.pathDirectories = [overlapPath]
+        let overlapContext = ArtifactContext(subject: .init(nodeID: 999, path: overlapping, kind: .directory, identity: nil), probe: ArtifactProbe(), environment: overlapEnvironment)
+        let firstClassification = GitWorktreeDetector().classify(overlapContext)
+        let laterClassification = PythonDetector().classify(overlapContext)
+        try test(firstClassification?.kind == .gitWorktree && CleanupTrashPolicy.hardBlock(firstClassification?.facts) == nil && laterClassification?.facts.linkedFromPath == true,
+                 "trash safety: overlapping-layout fixture has an earlier clean Git classification and later verified Python dependency")
+        try test(try blocked(toolsParent, environment: overlapEnvironment), "trash safety: every applicable detector contributes hard blocks for descendants")
+        try test(try blocked(overlapping, environment: overlapEnvironment), "trash safety: every applicable detector contributes hard blocks for the exact selected item")
+
+        let tracked = try file("git-project/tracked.txt"), project = (tracked as NSString).deletingLastPathComponent
+        try command(["init", "-b", "main"], directory: project); try command(["add", "tracked.txt"], directory: project)
+        try command(["commit", "-m", "Disposable fixture"], directory: project); try command(["branch", "retained-fixture"], directory: project)
+        try test(try blocked(project), "trash safety: a whole repository with only a local backup branch cannot establish external preservation")
+        try command(["update-ref", "refs/remotes/fixture/main", "HEAD"], directory: project)
+        _ = try token(project)
+        try test(true, "trash safety: clean whole-repository fixture requires observed remote-tracking coverage")
+        try test(try blocked((project as NSString).appendingPathComponent(".git/objects")), "trash safety: direct selection of Git objects metadata is hard blocked")
+        try test(try blocked((project as NSString).appendingPathComponent(".git/refs")), "trash safety: direct selection of Git refs metadata is hard blocked")
+        let gitMetadataLink = home.appendingPathComponent("git-metadata-link").path
+        try fm.createSymbolicLink(atPath: gitMetadataLink, withDestinationPath: (project as NSString).appendingPathComponent(".git/objects"))
+        try test(try blocked(gitMetadataLink), "trash safety: symlink into Git metadata is hard blocked")
+        let bareParent = home.appendingPathComponent("bare-container").path
+        let bare = (bareParent as NSString).appendingPathComponent("backup.git")
+        try fm.createDirectory(atPath: bare, withIntermediateDirectories: true)
+        try command(["init", "--bare"], directory: bare)
+        try test(try blocked(bare), "trash safety: verified bare Git metadata store is hard blocked regardless of folder name")
+        try test(try blocked((bare as NSString).appendingPathComponent("objects")), "trash safety: descendants of a bare metadata store are hard blocked")
+        try test(try blocked(bareParent), "trash safety: ordinary ancestor containing a bare metadata store is hard blocked")
+        let separateParent = home.appendingPathComponent("separate-container").path
+        let separateWorktree = (separateParent as NSString).appendingPathComponent("project")
+        let separateStore = (separateParent as NSString).appendingPathComponent("metadata-store")
+        try fm.createDirectory(atPath: separateWorktree, withIntermediateDirectories: true)
+        try command(["init", "--separate-git-dir", separateStore], directory: separateWorktree)
+        try test(try blocked(separateStore), "trash safety: separate Git metadata store is protected without a dot-git name")
+        try test(try blocked((separateStore as NSString).appendingPathComponent("refs")), "trash safety: descendants of separate Git metadata are protected")
+        try test(try blocked(separateParent), "trash safety: ordinary ancestor containing separate Git metadata is hard blocked")
+
+        let marker = home.appendingPathComponent("HOOK-MUST-NOT-RUN").path
+        try command(["config", "core.fsmonitor", "touch '" + marker + "'"], directory: project)
+        _ = git.inspect(worktree: project)
+        try test(!fm.fileExists(atPath: marker), "trash safety: repository fsmonitor hook is neutralized")
+        let gitToken = try token(project)
+        try Data("uncommitted".utf8).write(to: URL(fileURLWithPath: tracked))
+        try test(try blocked(project), "trash safety: Git uncommitted changes are hard blocked")
+        try test(refused(CleanupTrashPolicy.perform(confirmation: gitToken, overrideAccepted: true, environment: env, trash: { _ in nil })), "trash safety: Git state is checked again after confirmation")
+        try command(["add", "tracked.txt"], directory: project); try command(["commit", "-m", "Disposable unique work"], directory: project)
+        try test(try blocked(project), "trash safety: Git potentially unmerged commits are hard blocked")
+        try command(["branch", "-f", "retained-fixture", "HEAD"], directory: project)
+        let linkedParent = home.appendingPathComponent("nested-linked").path
+        try fm.createDirectory(atPath: linkedParent, withIntermediateDirectories: true)
+        let linked = (linkedParent as NSString).appendingPathComponent("worktree")
+        try command(["worktree", "add", "-b", "fixture-linked", linked, "HEAD"], directory: project)
+        try command(["update-ref", "refs/remotes/fixture/main", "HEAD"], directory: project)
+        try command(["worktree", "lock", linked], directory: project)
+        try test(try blocked(project), "trash safety: common repository cannot be removed while an external linked worktree is locked")
+        try test(try blocked(linkedParent), "trash safety: nested locked linked worktree blocks its ordinary ancestor")
+        try command(["worktree", "unlock", linked], directory: project)
+        try Data("unique linked work".utf8).write(to: URL(fileURLWithPath: (linked as NSString).appendingPathComponent("tracked.txt")))
+        try test(try blocked(project), "trash safety: common repository cannot orphan a dirty external linked worktree")
+        try command(["add", "tracked.txt"], directory: linked)
+        try test(try blocked(project), "trash safety: common repository cannot orphan staged external linked work")
+        try command(["add", "tracked.txt"], directory: linked); try command(["commit", "-m", "Disposable linked unique work"], directory: linked)
+        try test(try blocked(linkedParent), "trash safety: nested linked worktree potentially unmerged commits block its ancestor")
+        try command(["branch", "retained-linked", "HEAD"], directory: linked)
+        try Data("stashed fixture work".utf8).write(to: URL(fileURLWithPath: (linked as NSString).appendingPathComponent("tracked.txt")))
+        try command(["stash", "push", "-m", "Disposable stash"], directory: linked)
+        try test(try blocked(linkedParent), "trash safety: nested linked worktree stashed work blocks its ancestor")
+        _ = try file("git-project/untracked.txt")
+        try test(try blocked(project), "trash safety: Git untracked files are hard blocked")
+        try test(try blocked((project as NSString).deletingLastPathComponent), "trash safety: nested Git work cannot be bypassed by selecting an ancestor")
+    } else { try test(false, "trash safety: real Git fixture unavailable") }
+    let release = root.appendingPathComponent("fake-git-release")
+    let releaseQuoted = "'" + release.path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    let delayedGit = root.appendingPathComponent("delayed-git")
+    let delayedScript = "#!/bin/sh\nprintf 'start\\n'\nwhile [ ! -e " + releaseQuoted + " ]; do /bin/sleep 0.01; done\nprintf 'delayed-final-output\\n'\nprintf 'delayed-final-error\\n' >&2\n"
+    try Data(delayedScript.utf8).write(to: delayedGit); try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: delayedGit.path)
+    let delayedCount = ObservationCount()
+    let delayedResult = GitInspector(executable: delayedGit.path, timeout: 1).run([], in: root.path, afterIdleRead: {
+        if delayedCount.count == 0 { delayedCount.count += 1; try? Data("release".utf8).write(to: release); usleep(100_000) }
+    })
+    try test(delayedResult?.status == 0 && delayedResult?.output == "start\ndelayed-final-output\n", "trash safety: Git drains delayed final stdout and stderr to EOF after the process exits")
+    let emptyGit = root.appendingPathComponent("empty-git")
+    try Data("#!/bin/sh\nexit 0\n".utf8).write(to: emptyGit); try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: emptyGit.path)
+    let emptyObservation = GitInspector(executable: emptyGit.path).inspect(worktree: root.path)
+    try test(emptyObservation.error != nil && emptyObservation.uncommitted == nil, "trash safety: empty successful Git output cannot be classified as a clean worktree")
+    let missingUID = ProcessObservation.currentUserSafety(userIdentifier: { _ in nil })
+    try test(!missingUID.complete && missingUID.unreadable > 0, "trash safety: unreadable process ownership cannot be reported as complete")
+    let failedFDSize = ProcessObservation.currentUserSafety(descriptorSize: { _ in 0 })
+    try test(!failedFDSize.complete && failedFDSize.unreadable > 0, "trash safety: zero libproc descriptor-size failure cannot establish complete active-use evidence")
+    func scopeReason(_ path: String, ownData: String? = nil) -> String? {
+        var scoped = env; scoped.ownData = ownData
+        return ArtifactProtection.reason(ArtifactContext(subject: .init(nodeID: 0, path: path, kind: .file, identity: nil), probe: ArtifactProbe(), environment: scoped))
+    }
+    try test(["/usr/local/etc/app/credentials.json", "/usr/local/etc/app/server.key", "/usr/local/etc/app/.env"].allSatisfy { scopeReason($0) != nil }, "trash safety: usr/local exception never bypasses credential checks")
+    try test(scopeReason("/usr/local/app-data/history.sqlite3", ownData: "/usr/local/app-data") != nil, "trash safety: usr/local exception never bypasses application-data protection")
+    try test(scopeReason("/usr/localfoo/tool") != nil && scopeReason("/usr/local/ordinary.txt") == nil, "trash safety: usr/local exception respects path component boundaries")
+    let gitCredentials = try file(".git-credentials", text: "DISPOSABLE-NOT-A-REAL-CREDENTIAL")
+    let kubeConfig = try file(".kube/config", text: "DISPOSABLE-NOT-A-REAL-KUBECONFIG")
+    try test(try blocked(gitCredentials), "trash safety: Git plaintext credential store is protected")
+    try test(try blocked(kubeConfig), "trash safety: Kubernetes authentication config is protected")
+    try test(try blocked((kubeConfig as NSString).deletingLastPathComponent), "trash safety: Kubernetes authentication directory is protected")
+    // Fixtures are intentionally retained. No test item is permanently deleted by this suite.
+}
+
+/// Adversaries only change retained disposable fixtures. Every app mutation adapter remains unreachable.
+private func cleanupTrashExecutionBoundaryTests(_ root: URL, _ test: (Bool, String) throws -> Void) throws {
+    let fm = FileManager.default
+    try fm.createDirectory(at: root, withIntermediateDirectories: true)
+    let environment = ArtifactEnvironment(home: root.path, pathDirectories: [], processes: {
+        ProcessObservation(executables: [], workingDirectories: [], inspected: 1, unreadable: 0)
+    }, git: nil)
+    final class Calls: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = 0
+        func hit() { lock.lock(); value += 1; lock.unlock() }
+        var count: Int { lock.lock(); defer { lock.unlock() }; return value }
+    }
+    func prepare(_ node: InventoryNode) throws -> CleanupTrashConfirmationToken {
+        guard case .ready(let token) = CleanupTrashPolicy.prepare(node: node, environment: environment) else { throw CocoaError(.fileReadUnknown) }
+        return token
+    }
+    let scenarios = ["unchanged", "leaf-replaced", "directory-replaced", "parent-replaced", "ancestor-replaced", "leaf-symlink", "symlink-to-file", "parent-symlink", "descendant-added", "protected-child-added", "protected-substitute", "in-place-edit", "permission-change", "moved-target", "missing-target"]
+    for name in scenarios {
+        let fixture = root.appendingPathComponent(name), parent = fixture.appendingPathComponent("ancestor/parent")
+        try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+        let selected = parent.appendingPathComponent("target"), unrelated = fixture.appendingPathComponent("unrelated.txt")
+        try Data("unrelated object must stay".utf8).write(to: unrelated)
+        let unrelatedIdentity = try trashSafetyNode(unrelated.path).identity
+        let directory = ["directory-replaced", "descendant-added", "protected-child-added", "protected-substitute"].contains(name)
+        if directory { try fm.createDirectory(at: selected, withIntermediateDirectories: true) }
+        else if name == "symlink-to-file" { try fm.createSymbolicLink(at: selected, withDestinationURL: unrelated) }
+        else { try Data("reviewed object".utf8).write(to: selected) }
+        let node = try trashSafetyNode(selected.path), confirmation = try prepare(node)
+        var retained = selected
+        switch name {
+        case "leaf-replaced", "leaf-symlink", "symlink-to-file", "directory-replaced", "protected-substitute", "moved-target", "missing-target":
+            retained = parent.appendingPathComponent("reviewed-held")
+            try fm.moveItem(at: selected, to: retained)
+            if name == "leaf-symlink" { try fm.createSymbolicLink(at: selected, withDestinationURL: unrelated) }
+            else if name == "directory-replaced" || name == "protected-substitute" {
+                try fm.createDirectory(at: selected, withIntermediateDirectories: true)
+                try Data("substitute child".utf8).write(to: selected.appendingPathComponent(name == "protected-substitute" ? ".env" : "child.txt"))
+            }
+            // Missing means absent at the selected path. The original remains retained; no unlink is needed.
+            else if name == "moved-target" || name == "missing-target" { }
+            else { try Data("substitute object".utf8).write(to: selected) }
+        case "parent-replaced", "parent-symlink":
+            let held = parent.deletingLastPathComponent().appendingPathComponent("parent-held")
+            try fm.moveItem(at: parent, to: held); retained = held.appendingPathComponent("target")
+            if name == "parent-symlink" {
+                let alternate = fixture.appendingPathComponent("alternate")
+                try fm.createDirectory(at: alternate, withIntermediateDirectories: true)
+                try Data("substitute child".utf8).write(to: alternate.appendingPathComponent("target"))
+                try fm.createSymbolicLink(at: parent, withDestinationURL: alternate)
+            } else {
+                try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+                try Data("substitute child".utf8).write(to: selected)
+            }
+        case "ancestor-replaced":
+            let ancestor = parent.deletingLastPathComponent(), held = fixture.appendingPathComponent("ancestor-held")
+            try fm.moveItem(at: ancestor, to: held); retained = held.appendingPathComponent("parent/target")
+            try fm.createDirectory(at: parent, withIntermediateDirectories: true)
+            try Data("substitute descendant".utf8).write(to: selected)
+        case "descendant-added": try Data("new child".utf8).write(to: selected.appendingPathComponent("child.txt"))
+        case "protected-child-added": try Data("DISPOSABLE FIXTURE".utf8).write(to: selected.appendingPathComponent(".env"))
+        case "in-place-edit":
+            let handle = try FileHandle(forWritingTo: selected); try handle.write(contentsOf: Data("edited".utf8)); try handle.close()
+        case "permission-change": try fm.setAttributes([.posixPermissions: 0o500], ofItemAtPath: parent.path)
+        default: break
+        }
+        let atBoundary = try? trashSafetyNode(selected.path).identity
+        let protectedChild = ["protected-child-added", "protected-substitute"].contains(name) ? selected.appendingPathComponent(".env") : nil
+        let protectedIdentity = try protectedChild.map { try trashSafetyNode($0.path).identity }
+        let calls = Calls()
+        let movedDestination = fixture.appendingPathComponent("successful-retained")
+        let outcome = CleanupTrashPolicy.perform(confirmation: confirmation, overrideAccepted: true, environment: environment, trash: { url in
+            calls.hit()
+            if name == "unchanged" { try fm.moveItem(at: url, to: movedDestination); return movedDestination }
+            return nil
+        })
+        let refused: Bool = { if case .refused = outcome { return true }; return false }()
+        if name == "unchanged" {
+            let success = outcome == .moved(trashPath: movedDestination.path) && calls.count == 1 && (try? trashSafetyNode(movedDestination.path).identity) == node.identity
+            try fm.moveItem(at: movedDestination, to: selected)
+            try test(success, "trash execution boundary: unchanged explicitly confirmed target reaches exactly one retained adapter")
+        }
+        let preserved = try trashSafetyNode(retained.path).identity == node.identity && (try? trashSafetyNode(selected.path).identity) == atBoundary && trashSafetyNode(unrelated.path).identity == unrelatedIdentity
+        let protectedPreserved = protectedChild.map { (try? trashSafetyNode($0.path).identity) == protectedIdentity } ?? true
+        if name != "unchanged" { try test(refused && calls.count == 0 && preserved && protectedPreserved, "trash execution boundary: \(name) preserves reviewed, substitute and unrelated identities; zero adapter calls") }
+        if name == "permission-change" { try fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: parent.path) }
+        if name == "protected-child-added" || name == "protected-substitute" {
+            let protection: Bool
+            if case .blocked(let reason) = CleanupTrashPolicy.prepare(node: try trashSafetyNode(selected.path), environment: environment) { protection = reason.contains("Protected") }
+            else { protection = false }
+            try test(protection, "trash execution boundary: \(name) independently blocks advisory validation")
+        }
+    }
+    let direct = root.appendingPathComponent("direct.txt")
+    try Data("direct entrypoint fixture".utf8).write(to: direct)
+    let node = try trashSafetyNode(direct.path), calls = Calls()
+    let forged = CleanupTrashPolicy.perform(node: node, decision: .allowed(override: false, warnings: []), overrideAccepted: false, environment: environment, trash: { _ in calls.hit(); return nil })
+    try test(forged == .refused("The warning was not accepted.") && calls.count == 0 && (try? trashSafetyNode(direct.path).identity) == node.identity, "trash execution boundary: forged legacy permission cannot bypass independently prepared warning or reach adapter")
+    for url in [direct, root.appendingPathComponent("nonexistent")] {
+        var blocked = false
+        do { _ = try CleanupTrashPolicy.systemTrash(url) }
+        catch CleanupTrashUnavailableError.confirmationRequired { blocked = true }
+        catch { }
+        try test(blocked && fm.fileExists(atPath: direct.path), "trash execution boundary: raw systemTrash refuses before URL resolution (\(url.lastPathComponent))")
+    }
+    let wrongDevice = try trashSafetyNode(direct.path, deviceOverride: node.identity.device + 1)
+    let deviceBlocked: Bool = { if case .blocked = CleanupTrashPolicy.prepare(node: wrongDevice, environment: environment) { return true }; return false }()
+    try test(deviceBlocked, "trash execution boundary: injected mount/device identity mismatch independently fails advisory prepare")
+    let other = root.appendingPathComponent("other-selection.txt")
+    try Data("another selection must stay".utf8).write(to: other)
+    let otherNode = try trashSafetyNode(other.path, id: node.id + 1)
+    let bound = try prepare(node), otherToken = try prepare(otherNode)
+    let boundDestination = root.appendingPathComponent("bound-retained"), otherDestination = root.appendingPathComponent("other-retained")
+    let boundOutcome = CleanupTrashPolicy.perform(confirmation: bound, overrideAccepted: true, environment: environment, trash: { url in calls.hit(); try fm.moveItem(at: url, to: boundDestination); return boundDestination })
+    let otherOutcome = CleanupTrashPolicy.perform(confirmation: otherToken, overrideAccepted: true, environment: environment, trash: { url in calls.hit(); try fm.moveItem(at: url, to: otherDestination); return otherDestination })
+    try test(bound.node.path == direct.path && bound.node.identity == node.identity && otherToken.node.id == otherNode.id && otherToken.node.path == other.path && boundOutcome == .moved(trashPath: boundDestination.path) && otherOutcome == .moved(trashPath: otherDestination.path) && calls.count == 2,
+             "trash execution boundary: separate confirmations retain their own immutable path, indexed ID and identity")
+    try fm.moveItem(at: boundDestination, to: direct); try fm.moveItem(at: otherDestination, to: other)
+    let shared = try prepare(node), outcomes = Calls(), successes = Calls(), consumed = Calls()
+    let concurrentDestination = root.appendingPathComponent("shared-retained")
+    let beforeSharedCalls = calls.count
+    DispatchQueue.concurrentPerform(iterations: 2) { _ in
+        let result = CleanupTrashPolicy.perform(confirmation: shared, overrideAccepted: true, environment: environment, trash: { url in calls.hit(); try fm.moveItem(at: url, to: concurrentDestination); return concurrentDestination })
+        outcomes.hit()
+        if case .moved = result { successes.hit() }
+        if result == .refused("This confirmation has already been used or cancelled.") { consumed.hit() }
+    }
+    try test(outcomes.count == 2 && successes.count == 1 && consumed.count == 1 && calls.count == beforeSharedCalls + 1 && (try? trashSafetyNode(concurrentDestination.path).identity) == node.identity,
+             "trash execution boundary: concurrent requests consume exactly one shared token and invoke one adapter")
+    try fm.moveItem(at: concurrentDestination, to: direct)
+    // Hold the first adapter to prove distinct confirmations across controllers cannot execute concurrently.
+    let distinctFirst = try prepare(node), distinctSecond = try prepare(otherNode)
+    let entered = DispatchSemaphore(value: 0), release = DispatchSemaphore(value: 0), finished = DispatchSemaphore(value: 0)
+    let distinctCalls = Calls(), distinctMoved = Calls(), distinctDestination = root.appendingPathComponent("distinct-retained")
+    DispatchQueue.global().async {
+        let result = CleanupTrashPolicy.perform(confirmation: distinctFirst, overrideAccepted: true, environment: environment, trash: { url in
+            distinctCalls.hit(); entered.signal()
+            guard release.wait(timeout: .now() + 5) == .success else { throw CocoaError(.userCancelled) }
+            try fm.moveItem(at: url, to: distinctDestination); return distinctDestination
+        })
+        if case .moved = result { distinctMoved.hit() }; finished.signal()
+    }
+    let adapterEntered = entered.wait(timeout: .now() + 5) == .success
+    let deniedConcurrent = CleanupTrashPolicy.perform(confirmation: distinctSecond, overrideAccepted: true, environment: environment, trash: { _ in distinctCalls.hit(); return nil })
+    release.signal()
+    let firstFinished = finished.wait(timeout: .now() + 5) == .success
+    let secondConsumed = CleanupTrashPolicy.perform(confirmation: distinctSecond, overrideAccepted: true, environment: environment, trash: { _ in distinctCalls.hit(); return nil })
+    try test(adapterEntered && firstFinished && distinctMoved.count == 1 && distinctCalls.count == 1 && { if case .refused(let reason) = deniedConcurrent { return reason.contains("in progress") }; return false }() && secondConsumed == .refused("This confirmation has already been used or cancelled."),
+             "trash execution boundary: distinct concurrent tokens fail without waiting, consume authorization and never retry")
+    try fm.moveItem(at: distinctDestination, to: direct)
+    let baselineCalls = calls.count
+    let cancelled = try prepare(node)
+    let cancelFinished = DispatchSemaphore(value: 0)
+    DispatchQueue.global().async { CleanupTrashPolicy.cancel(cancelled); cancelFinished.signal() }
+    let completed = cancelFinished.wait(timeout: .now() + 5) == .success
+    let cancelledResult = CleanupTrashPolicy.perform(confirmation: cancelled, overrideAccepted: true, environment: environment, trash: { _ in calls.hit(); return nil })
+    try test(completed && cancelledResult == .refused("This confirmation has already been used or cancelled.") && calls.count == baselineCalls, "trash execution boundary: acknowledged concurrent cancellation precedes execution without sleeps")
+
+    // A barrier in the existing observation provider controls an actual concurrent replacement during
+    // execution revalidation. It does not add any production mutation-enabling hook.
+    let race = root.appendingPathComponent("concurrent-target.txt"), held = root.appendingPathComponent("concurrent-reviewed-held.txt")
+    try Data("reviewed concurrently".utf8).write(to: race)
+    let raceNode = try trashSafetyNode(race.path), raceToken = try prepare(raceNode)
+    let replaceNow = DispatchSemaphore(value: 0), replacementFinished = DispatchSemaphore(value: 0), replaced = Calls()
+    DispatchQueue.global().async {
+        guard replaceNow.wait(timeout: .now() + 5) == .success else { replacementFinished.signal(); return }
+        do {
+            try FileManager.default.moveItem(at: race, to: held)
+            try Data("replacement must stay".utf8).write(to: race)
+            replaced.hit()
+        } catch { }
+        replacementFinished.signal()
+    }
+    let observations = Calls(), acknowledged = Calls()
+    var racingEnvironment = environment
+    racingEnvironment.processes = {
+        if observations.count == 0 {
+            observations.hit(); replaceNow.signal()
+            if replacementFinished.wait(timeout: .now() + 5) == .success { acknowledged.hit() }
+        }
+        return ProcessObservation(executables: [], workingDirectories: [], inspected: 1, unreadable: 0)
+    }
+    let raceOutcome = CleanupTrashPolicy.perform(confirmation: raceToken, overrideAccepted: true, environment: racingEnvironment, trash: { _ in calls.hit(); return nil })
+    let rejectedReplacement: Bool = { if case .refused(let reason) = raceOutcome { return reason != CleanupTrashPolicy.unavailableReason }; return false }()
+    try test(acknowledged.count == 1 && replaced.count == 1 && rejectedReplacement && calls.count == baselineCalls && (try? trashSafetyNode(held.path).identity) == raceNode.identity && (try? trashSafetyNode(race.path).identity) != raceNode.identity,
+             "trash execution boundary: acknowledged concurrent replacement during revalidation retains both objects and independently invalidates evidence")
+
+    // Cancellation of validation itself is separate from consuming a cancelled confirmation.
+    let taskFinished = DispatchSemaphore(value: 0), taskBlocked = Calls()
+    let validationTask = Task.detached {
+        withUnsafeCurrentTask { $0?.cancel() }
+        if case .blocked(let reason) = CleanupTrashPolicy.prepare(node: node, environment: environment), reason.contains("cancelled") { taskBlocked.hit() }
+        taskFinished.signal()
+    }
+    _ = validationTask
+    let validationFinished = taskFinished.wait(timeout: .now() + 5) == .success
+    try test(validationFinished && taskBlocked.count == 1 && calls.count == baselineCalls && (try? trashSafetyNode(direct.path).identity) == node.identity,
+             "trash execution boundary: pre-cancelled validation task independently fails closed without mutation")
+    let barrierToken = try prepare(node)
+    let armed = Calls()
+    let boundaryResult = CleanupTrashPolicy.perform(confirmation: barrierToken, overrideAccepted: true, environment: environment, trash: { _ in
+        // This is the accepted non-atomic pathname boundary; nil results must not trigger a second adapter.
+        armed.hit(); return nil
+    })
+    let failedAtBarrier: Bool = { if case .failed = boundaryResult { return true }; return false }()
+    try test(failedAtBarrier && armed.count == 1 && fm.fileExists(atPath: direct.path), "trash execution boundary: validated adapter is reached once; nil result fails without native fallback")
+}

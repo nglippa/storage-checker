@@ -419,9 +419,12 @@ private final class TrashControllerGate: @unchecked Sendable {
             test(first && cleanup.inspection?.assessment?.status == .reviewCandidate && cleanup.inspecting == nil, "cleanup inspector: evidence for the selection is collected off the main thread and published")
             let queueInspection = ArtifactInspector.inspect(deps, environment: environment)
             let queueInspectionsBefore = cleanup.statistics.inspections
+            let retainedInspection = cleanup.inspection
             cleanup.beginQueueReview(deps)
-            test(cleanup.inspecting == deps.id && cleanup.inspection == nil && cleanup.preview == nil,
-                 "review queue: selecting a row prepares the shared Inspector without launching a duplicate inspection")
+            test(cleanup.inspecting == deps.id && cleanup.inspection == retainedInspection && cleanup.preview == nil,
+                 "review queue: rechecking the same row retains displayed evidence without launching a duplicate inspection")
+            test(cleanup.trashDecision(deps) == .blocked("The review of this item is still running."),
+                 "review queue: retained evidence cannot make Trash available while revalidation is pending")
             cleanup.acceptQueueReview(queueInspection, node: deps)
             test(cleanup.inspection == queueInspection && cleanup.inspecting == nil && cleanup.statistics.inspections == queueInspectionsBefore + 1,
                  "review queue: the refreshed queue evidence is adopted by the existing Cleanup Inspector")

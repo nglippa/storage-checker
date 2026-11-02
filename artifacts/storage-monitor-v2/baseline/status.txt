@@ -1,0 +1,20 @@
+ M CLEANUP-TRASH-SAFETY-AUDIT.md
+ M SourcesGUI/CleanupInspectorView.swift
+ M SourcesGUI/DiagnosticAnalysis.swift
+ M SourcesGUI/EventDetailView.swift
+ M SourcesGUI/HistoryView.swift
+ M SourcesGUI/InventoryView.swift
+ M SourcesGUI/LivingTreeView.swift
+ M SourcesGUI/OverviewView.swift
+ M SourcesGUI/StorageMonitorApp.swift
+ M SourcesShared/CleanupDetectors.swift
+ M SourcesShared/CleanupEvidence.swift
+ M SourcesShared/CleanupPresentation.swift
+ M SourcesShared/CleanupTrashSafety.swift
+ M SourcesShared/InventoryPresentation.swift
+ M tests/CleanupInspectorTests.swift
+ M tests/CleanupTrashSafetyTests.swift
+ M tests/GUIModelTests.swift
+?? .DS_Store
+?? UX-REFINEMENT-MILESTONE.md
+?? artifacts/
