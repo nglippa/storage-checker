@@ -1,0 +1,195 @@
+[
+ {
+  "title": "01  Storage Inventory & Cleanup",
+  "subtitle": "Find the largest consumers \u2192 explore the hierarchy \u2192 understand a selection \u2192 review carefully",
+  "output": "storage-monitor-v2-compact-collage-1-inventory-cleanup.png",
+  "rows": [
+   {
+    "heading": "01 / Storage landing",
+    "tiles": [
+     {
+      "file": "before-i01-storage-default-atlas-light.png",
+      "title": "BEFORE  Storage landing",
+      "note": "Light \u00b7 1440 \u00d7 840 pt \u00b7 prior milestone"
+     },
+     {
+      "file": "i01-storage-default-atlas-light.png",
+      "title": "AFTER  Storage landing",
+      "note": "Light \u00b7 1440 \u00d7 840 pt \u00b7 capacity first, lighter Inspector"
+     },
+     {
+      "file": "i17-storage-inspector-expanded-light.png",
+      "title": "AFTER  Inspector details expanded",
+      "note": "Light \u00b7 1440 \u00d7 840 pt \u00b7 progressive disclosure"
+     }
+    ]
+   },
+   {
+    "heading": "02 / Living Tree",
+    "tiles": [
+     {
+      "file": "before-i04-living-tree-overview-dark.png",
+      "title": "BEFORE  Living Tree",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 prior milestone"
+     },
+     {
+      "file": "i04-living-tree-overview-dark.png",
+      "title": "AFTER  Living Tree 2D",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 labelled controls, tree fills viewport"
+     },
+     {
+      "file": "i06-living-tree-selected-folder-dark.png",
+      "title": "AFTER  Selected branch, 3D",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 size, share of parent, Explore Folder"
+     }
+    ]
+   },
+   {
+    "heading": "03 / Hierarchy and largest items",
+    "tiles": [
+     {
+      "file": "i03-expanded-hierarchy-folder-details-light.png",
+      "title": "Folder hierarchy and selection",
+      "note": "Light \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "i10-largest-files-dark.png",
+      "title": "Largest Files",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "i11-largest-folders-light.png",
+      "title": "Largest Folders",
+      "note": "Light \u00b7 1440 \u00d7 840 pt"
+     }
+    ]
+   },
+   {
+    "heading": "04 / Cleanup Review",
+    "tiles": [
+     {
+      "file": "before-i12-cleanup-review-candidates-dark.png",
+      "title": "BEFORE  Cleanup assessments",
+      "note": "Dark \u00b7 1440 \u00d7 900 pt \u00b7 prior milestone"
+     },
+     {
+      "file": "i13-cleanup-candidate-selected-dark.png",
+      "title": "AFTER  Assessments, item selected",
+      "note": "Dark \u00b7 1440 \u00d7 900 pt \u00b7 Item / Review status / Storage"
+     },
+     {
+      "file": "i14-cleanup-item-full-details-light.png",
+      "title": "AFTER  Cleanup item explanation",
+      "note": "Light \u00b7 component render \u00b7 top 850 pt shown",
+      "crop": [
+       0,
+       0,
+       960,
+       1700
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "title": "02  Monitoring & Application Experience",
+  "subtitle": "Available now \u2192 latest change \u2192 trend with events \u2192 explanation \u2192 evidence",
+  "output": "storage-monitor-v2-compact-collage-2-monitoring-experience.png",
+  "rows": [
+   {
+    "heading": "01 / Monitoring overview and connected selection",
+    "tiles": [
+     {
+      "file": "before-m01-monitoring-default-large-dark.png",
+      "title": "BEFORE  Monitoring overview",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 prior milestone"
+     },
+     {
+      "file": "m01-monitoring-default-large-dark.png",
+      "title": "AFTER  Monitoring overview",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 compact summary, taller chart, event points"
+     },
+     {
+      "file": "m04-monitoring-selected-event-large-light.png",
+      "title": "AFTER  Event selected",
+      "note": "Light \u00b7 1440 \u00d7 840 pt \u00b7 chart point, row and panel linked"
+     }
+    ]
+   },
+   {
+    "heading": "02 / Minimum window (1000 \u00d7 700 equivalent)",
+    "tiles": [
+     {
+      "file": "before-m02-monitoring-minimum-dark.png",
+      "title": "BEFORE  Minimum size",
+      "note": "Dark \u00b7 1000 \u00d7 640 pt \u00b7 chart pushed out of view"
+     },
+     {
+      "file": "m02-monitoring-minimum-dark.png",
+      "title": "AFTER  Minimum size",
+      "note": "Dark \u00b7 1000 \u00d7 640 pt \u00b7 chart and events visible"
+     },
+     {
+      "file": "m03-monitoring-minimum-light.png",
+      "title": "AFTER  Minimum size, light",
+      "note": "Light \u00b7 1000 \u00d7 640 pt"
+     }
+    ]
+   },
+   {
+    "heading": "03 / Event explanation",
+    "tiles": [
+     {
+      "file": "before-m06-explanation-complete-dark.png",
+      "title": "BEFORE  Explanation panel",
+      "note": "Dark \u00b7 component render",
+      "crop": [
+       0,
+       0,
+       880,
+       1120
+      ]
+     },
+     {
+      "file": "m06-explanation-complete-dark.png",
+      "title": "AFTER  Explanation panel",
+      "note": "Dark \u00b7 short labelled sections",
+      "crop": [
+       0,
+       0,
+       880,
+       1120
+      ]
+     },
+     {
+      "file": "m07-details-and-evidence-expanded-light.png",
+      "title": "AFTER  Details and evidence expanded",
+      "note": "Light \u00b7 component render \u00b7 top 850 pt shown",
+      "crop": [
+       0,
+       0,
+       1040,
+       1700
+      ]
+     }
+    ]
+   },
+   {
+    "heading": "04 / Small window with selection, and Settings",
+    "tiles": [
+     {
+      "file": "m05-monitoring-selected-event-minimum-dark.png",
+      "title": "AFTER  Minimum size, event selected",
+      "note": "Dark \u00b7 side panel text dim = known offscreen capture artifact"
+     },
+     {
+      "file": "m09-settings-dark.png",
+      "title": "AFTER  Settings",
+      "note": "Dark \u00b7 component render"
+     }
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,1552 @@
+diff --git a/CLEANUP-TRASH-SAFETY-AUDIT.md b/CLEANUP-TRASH-SAFETY-AUDIT.md
+index 23a6caa..706623c 100644
+--- a/CLEANUP-TRASH-SAFETY-AUDIT.md
++++ b/CLEANUP-TRASH-SAFETY-AUDIT.md
+@@ -1,5 +1,11 @@
+ # Single-item Trash safety audit
+ 
++<!-- ux-milestone:start -->
++## UX milestone follow-up — 2026-10-27
++
++User-directed: partial process observation no longer hard-blocks folders containing programs or databases; it requires explicit acknowledgment of `programUseWarning`. Observed use still blocks. The Trash preflight now has its own budget (`trashPreflight`), a target-scoped process index, and a database open-file check that fails closed only beside the database. Diagnosis, fixtures and results: [UX-REFINEMENT-MILESTONE.md](UX-REFINEMENT-MILESTONE.md). 2026-10-28: the program/database warning now always applies to items containing programs or databases (observation covers only the current user); native sheet component behaviour and Finder Put Back of a disposable folder **VERIFIED** (same inode restored). Full-app native sheet remains unreachable by design in QA builds.
++<!-- ux-milestone:end -->
++
+ <!-- final-rc-followup:start -->
+ ## Final RC follow-up — 2026-10-27
+ 
+diff --git a/SourcesGUI/CleanupInspectorView.swift b/SourcesGUI/CleanupInspectorView.swift
+index ee2d9cf..9caf6e1 100644
+--- a/SourcesGUI/CleanupInspectorView.swift
++++ b/SourcesGUI/CleanupInspectorView.swift
+@@ -20,6 +20,8 @@ import AppKit
+     @Published private(set) var trashResult: (name: String, outcome: CleanupTrashOutcome)?
+     @Published private(set) var trashing = false
+     @Published private(set) var preparingTrash = false
++    /// Items checked so far by the running preparation (reported every few hundred items; 0 before the first report).
++    @Published private(set) var preparationChecked = 0
+     @Published private(set) var trashConfirmation: CleanupTrashConfirmationToken?
+ 
+     private let reader: InventoryReader
+@@ -166,9 +168,12 @@ import AppKit
+         guard allowsTrash, !preparingTrash, !trashing,
+               subject?.id == node.id, fingerprint == Self.fingerprint(node) else { return nil }
+         cancelTrashConfirmation()
+-        trashResult = nil; reconciliationError = nil; preparingTrash = true
++        trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
+         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
+-        let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment) }
++        let report: @Sendable (Int) -> Void = { checked in
++            Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
++        }
++        let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
+         let preparation = Task { [weak self] in
+             let result = await withTaskCancellationHandler(operation: { await work.value }, onCancel: { work.cancel() })
+             guard let self else {
+@@ -389,7 +394,7 @@ struct CleanupInspectorSection: View {
+         switch cleanup.trashDecision(node) {
+         case .blocked(let why):
+             if cleanup.inspection?.nodeID == node.id || cleanup.ordinary == node.id {
+-                Text("Cannot be moved to the Trash from here. \(why)").font(.caption2).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
++                refusal(why, prefix: "Can't be moved to the Trash")
+             }
+         case .allowed:
+             HStack(spacing: 6) {
+@@ -397,6 +402,12 @@ struct CleanupInspectorSection: View {
+                     .buttonStyle(.link).font(.caption).disabled(cleanup.trashing || cleanup.preparingTrash)
+                     .help("Validates this exact item, then asks for confirmation before moving it to the macOS Trash.")
+                 if cleanup.trashing || cleanup.preparingTrash { ProgressView().controlSize(.mini) }
++                if cleanup.preparingTrash {
++                    Text(Self.checkingText(cleanup.preparationChecked, node: node)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
++                        .accessibilityIdentifier("cleanup.trashProgress")
++                    Button("Stop") { cleanup.cancelTrashConfirmation() }.buttonStyle(.link).font(.caption)
++                        .help("Stops checking. Nothing is moved.").accessibilityIdentifier("cleanup.trashStop")
++                }
+             }
+             .sheet(isPresented: Binding(get: { cleanup.trashConfirmation != nil }, set: { if !$0 { cleanup.cancelTrashConfirmation() } })) {
+                 if let confirmation = cleanup.trashConfirmation {
+@@ -410,7 +421,33 @@ struct CleanupInspectorSection: View {
+         }
+     }
+ 
+-    private func trashResultLine(_ result: (name: String, outcome: CleanupTrashOutcome)) -> some View {
++    /// Items checked so far, against the inventory's indexed count when there is one (labelled "about": it can be stale).
++    static func checkingText(_ checked: Int, node: InventoryNode) -> String {
++        let indexed = node.kind == .directory ? Int(node.descendantFiles + node.descendantDirectories + 1) : 1
++        guard checked > 0 else { return "Checking every item inside before moving…" }
++        return indexed > checked ? "Checked \(checked.formatted()) of about \(indexed.formatted()) items…" : "Checked \(checked.formatted()) items…"
++    }
++
++    /// A refusal: what kind of restriction it is, the exact reason, and the next step where there is one.
++    private func refusal(_ why: String, prefix: String) -> some View {
++        let guidance = CleanupTrashGuidance.explain(why)
++        return VStack(alignment: .leading, spacing: 3) {
++            Text("\(prefix) · \(guidance.title)").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
++            Text(why).font(.caption2).foregroundStyle(.secondary).textSelection(.enabled)
++            if let next = guidance.nextStep { Text(next).font(.caption2).foregroundStyle(.primary) }
++        }
++        .fixedSize(horizontal: false, vertical: true)
++        .accessibilityElement(children: .combine)
++        .accessibilityIdentifier("cleanup.trashRefusal")
++    }
++
++    @ViewBuilder private func trashResultLine(_ result: (name: String, outcome: CleanupTrashOutcome)) -> some View {
++        if case .refused(let why) = result.outcome {
++            refusal(why, prefix: "“\(result.name)” was not moved")
++        } else { trashOutcomeLine(result) }
++    }
++
++    private func trashOutcomeLine(_ result: (name: String, outcome: CleanupTrashOutcome)) -> some View {
+         let text: String, symbol: String
+         switch result.outcome {
+         case .moved(let path): text = "Moved “\(result.name)” to the macOS Trash. " + (path.map { "Destination: \(CleanupTrashConfirmation.displayPath($0)). " } ?? "") + "Finder Put Back has not been verified. Available disk space may not increase. " + (cleanup.reconciliationError.map { "The inventory refresh request failed: \($0). Refresh this folder to reconcile it." } ?? "The inventory will update after it rechecks the folder."); symbol = "trash"
+@@ -509,56 +546,55 @@ struct CleanupTrashConfirmation: View {
+     @State private var accepted = false
+ 
+     var body: some View {
+-        let (override, warnings): (Bool, [String]) = { if case .allowed(let o, let w) = decision { return (o, w) }; return (true, []) }()
++        let (override, rawWarnings): (Bool, [String]) = { if case .allowed(let o, let w) = decision { return (o, w) }; return (true, []) }()
++        let warnings = CleanupTrashGuidance.presentedWarnings(rawWarnings)
+         VStack(alignment: .leading, spacing: 12) {
+             ScrollView {
+-            VStack(alignment: .leading, spacing: 12) {
++            VStack(alignment: .leading, spacing: 14) {
+             HStack(alignment: .top, spacing: 10) {
+                 Image(systemName: override ? "exclamationmark.triangle.fill" : "trash").font(.title2).foregroundStyle(override ? .orange : .secondary)
+                 VStack(alignment: .leading, spacing: 4) {
+-                    Text("Review “\(Self.displayPath(node.name))” before removal").font(.headline)
++                    Text("Move “\(Self.displayPath(node.name))” to the Trash?").font(.headline)
+                     Text(verbatim: Self.displayPath(node.path)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+-                    Text("Filesystem identity: \(node.identity.stableKey)").font(.caption2.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+-                    Text("Type: \(node.kind.rawValue) · Indexed size \(InventoryMapPlan.weight(node).map(AtlasText.bytes) ?? "unknown") · \(status.map { "Review: \($0.title)" } ?? "Not reviewed")").font(.caption).foregroundStyle(.secondary)
++                    Text("\(node.kind == .directory ? "Folder" : (node.kind == .file ? "File" : node.kind.rawValue.capitalized)) · \(InventoryMapPlan.weight(node).map(AtlasText.bytes) ?? "size unknown")" + (status.map { " · \($0.title)" } ?? "")).font(.caption).foregroundStyle(.secondary)
+                 }
+             }
+             if let classification = inspection?.classification {
+-                Text("\(classification.kind.title) · \(classification.tool.rawValue) · \(classification.confidence.title)").font(.caption.weight(.medium))
+-                ForEach(Array(classification.supporting.prefix(4)), id: \.self) { observation in
+-                    Text("· " + observation.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
++                VStack(alignment: .leading, spacing: 3) {
++                    Text("\(classification.kind.title) · \(classification.tool.rawValue) · \(classification.confidence.title)").font(.caption.weight(.medium))
++                    ForEach(Array(classification.supporting.prefix(4)), id: \.self) { observation in
++                        Text("· " + observation.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
++                    }
+                 }
+-            } else {
+-                Text("Unrecognized artifact. Storage Monitor has not established whether this item is safe to remove.").font(.caption).foregroundStyle(.secondary)
+             }
+-            if let preparedAt { Text("Validated \(preparedAt.formatted(date: .omitted, time: .standard)); this confirmation expires after 60 seconds.").font(.caption2).foregroundStyle(.secondary) }
+-            if let recovery = inspection?.storage.recovery {
+-                switch recovery {
+-                case .estimated(let bytes, let basis): Text("Estimated recoverable: ≈ \(AtlasText.bytes(bytes)). \(basis)").font(.caption).foregroundStyle(.secondary)
+-                case .unknown(let why): Text("Recoverable storage: Unknown. \(why)").font(.caption).foregroundStyle(.secondary)
+-                }
+-            } else { Text("Recoverable storage: Unknown.").font(.caption).foregroundStyle(.secondary) }
+-            if !warnings.isEmpty {
++            if !warnings.isEmpty || override {
+                 VStack(alignment: .leading, spacing: 4) {
+-                    Text(override ? "Removal has not been established as safe" : "What could be affected").font(.caption.weight(.semibold))
+-                    VStack(alignment: .leading, spacing: 3) { ForEach(warnings, id: \.self) { Text("· \($0)").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) } }
++                    Text(override ? CleanupTrashGuidance.notConfirmedSafe : "What could be affected").font(.callout.weight(.semibold))
++                    VStack(alignment: .leading, spacing: 3) { ForEach(warnings, id: \.self) { Text("· \($0)").font(.caption).fixedSize(horizontal: false, vertical: true) } }
+                 }
++                .accessibilityElement(children: .combine).accessibilityIdentifier("inventory.cleanup.trashWarnings")
++            }
++            Group {
++                if let recovery = inspection?.storage.recovery, case .estimated(let bytes, let basis) = recovery { Text("Space you may get back: about \(AtlasText.bytes(bytes)). \(basis)") }
++                else { Text("Space you may get back: unknown until the Trash is emptied.") }
++            }.font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
++            VStack(alignment: .leading, spacing: 4) {
++                Text("About Move to Trash").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
++                Text("macOS moves the item to the Trash; nothing is deleted. Space is freed only when you empty the Trash, and APFS snapshots or shared storage can keep some of it. In a cloud-synced folder the removal may reach your other devices. \(CleanupTrashPolicy.residualRisk)")
++                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
++                if let preparedAt { Text("Checked at \(preparedAt.formatted(date: .omitted, time: .standard)). Confirm within 60 seconds, or review it again.").font(.caption).foregroundStyle(.secondary) }
++                Text("Filesystem identity \(node.identity.stableKey)").font(.caption2.monospaced()).foregroundStyle(.tertiary).textSelection(.enabled)
+             }
+-            Text("Move to Trash asks macOS to place this item in Trash. It is not permanent deletion. Available disk space may not increase until Trash is emptied; APFS sharing and snapshots can retain data. Finder Put Back has not been verified; keep the exact original path and confirm restoration options before relying on it.")
+-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+-            Text(CleanupTrashPolicy.residualRisk)
+-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+-            Text("Moving content in a cloud-synced folder may propagate its removal to other devices.").font(.caption).foregroundStyle(.secondary)
+             if override {
+-                Text("Storage Monitor has not established whether this item is safe to remove.").font(.caption).foregroundStyle(.secondary)
+-                Toggle(isOn: $accepted) { Text("I understand these removal warnings.").font(.callout) }
+-                    .toggleStyle(.checkbox)
++                Toggle(isOn: $accepted) { Text("I understand Storage Monitor hasn't confirmed this is safe to remove.").font(.callout) }
++                    .toggleStyle(.checkbox).accessibilityIdentifier("inventory.cleanup.acceptWarnings")
+             }
+             }.frame(maxWidth: .infinity, alignment: .leading)
+             }
+             Divider()
+             HStack {
+                 Spacer()
+-                Button("Cancel", role: .cancel) { done(nil) }.keyboardShortcut(.cancelAction)
++                Button("Cancel", role: .cancel) { done(nil) }.keyboardShortcut(.cancelAction).accessibilityIdentifier("inventory.cleanup.cancelTrash")
+                 Button("Move to Trash", role: .destructive) { done(accepted) }
+                     .disabled(override && !accepted)
+                     .accessibilityIdentifier("inventory.cleanup.confirmTrash")
+diff --git a/SourcesGUI/DiagnosticAnalysis.swift b/SourcesGUI/DiagnosticAnalysis.swift
+index 03d4603..5e20403 100644
+--- a/SourcesGUI/DiagnosticAnalysis.swift
++++ b/SourcesGUI/DiagnosticAnalysis.swift
+@@ -454,3 +454,121 @@ enum CauseAnalyzer {
+         return lines
+     }
+ }
++
++// MARK: Plain-language summary
++
++/// The event explained for someone who is not a storage engineer. Built only from `EventAnalysis`, so it never
++/// says more than the measurements do: a measured volume change is "measured", a same-interval change is
++/// "related, not established", and no evidence is "unknown". Exact figures stay in the details below it.
++struct EventPlainSummary: Equatable, Sendable {
++    enum Certainty: Equatable, Sendable { case measured, partlyMeasured, related, unknown }
++    let whatHappened: String
++    let explanation: String?
++    let certainty: Certainty
++    let certaintyText: String
++    let actions: [String]
++
++    static func make(_ event: StorageEvent, _ analysis: EventAnalysis) -> EventPlainSummary {
++        let b = analysis.breakdown
++        let whatHappened: String
++        if let net = b.net, net != 0 {
++            let amount = changeMagnitude(net)
++            let when = b.start.map { " between \($0.formatted(date: .omitted, time: .shortened)) and \(b.end.formatted(date: .omitted, time: .shortened))" } ?? ""
++            whatHappened = net < 0 ? "Your Mac lost \(amount) of available storage\(when)." : "Your Mac gained \(amount) of available storage\(when)."
++        } else { whatHappened = analysis.headline }
++
++        guard let top = analysis.causes.first else {
++            return EventPlainSummary(whatHappened: whatHappened, explanation: nil, certainty: .unknown,
++                                     certaintyText: "Storage Monitor doesn't know why. " + (analysis.causesUnavailable ?? "No measurement explains this change."),
++                                     actions: (b.net ?? 0) < 0 ? ["Use Storage to see which folders are largest right now."] : [])
++        }
++        let others = analysis.causes.dropFirst().map { "\(plainName($0)) (\(signedChange($0.delta)))" }
++        var explanation = describe(top, event: event)
++        if !others.isEmpty { explanation += " It also measured: " + others.joined(separator: ", ") + "." }
++        // Volumes that moved the other way are measured too; without them the larger figure reads as the whole change.
++        // Offsets too small to change the reading (under 10 MB or 1% of the net) stay in the detailed breakdown only.
++        let material = b.net.map { net in b.offsettingVolumes.filter { abs($0.delta) >= max(10 * CauseAnalyzer.negligibleChange, abs(net) / 100) } } ?? []
++        if let net = b.net, !material.isEmpty {
++            let offsets = material.sorted { abs($0.delta) > abs($1.delta) }.map { volume in
++                "\(offsetName(volume)) \(net < 0 ? "freed" : "used") \(changeMagnitude(volume.delta))"
++            }
++            explanation += " At the same time, " + offsets.joined(separator: " and ") + ", so the net \(net < 0 ? "loss" : "gain") was \(changeMagnitude(net))."
++        }
++
++        let certainty: Certainty, certaintyText: String
++        if top.evidenceClass == .confirmed {
++            switch b.reconciliation {
++            case .exact, .withinTolerance:
++                certainty = .measured
++                certaintyText = "Measured. Storage Monitor recorded how much space each part of the disk used before and after, and these changes account for the whole difference. Which app caused it was not recorded."
++            case .unaccounted(let rest):
++                certainty = .partlyMeasured
++                certaintyText = "Partly measured. These changes were recorded, but \(changeMagnitude(rest)) of the difference is not explained by them. Which app caused it was not recorded."
++            case .unavailable:
++                certainty = .partlyMeasured
++                certaintyText = "Partly measured. These changes were recorded, but they could not be matched exactly to the change in free space. Which app caused it was not recorded."
++            }
++        } else {
++            certainty = .related
++            certaintyText = "Not established. This was measured over the same period, so it may be related, but it is not confirmed as the cause."
++        }
++
++        var actions = [String]()
++        let loss = (b.net ?? 0) < 0
++        if loss, top.title.hasPrefix("Virtual memory") {
++            actions.append("Quitting apps you aren't using lowers memory pressure. macOS removes swap it no longer needs, and a restart clears it.")
++        }
++        if loss, top.title.hasPrefix("Data volume") || analysis.causes.contains(where: { $0.title.hasPrefix("Data volume") }) {
++            actions.append("Use Storage to see which folders are largest right now.")
++        }
++        return EventPlainSummary(whatHappened: whatHappened, explanation: explanation, certainty: certainty, certaintyText: certaintyText, actions: actions)
++    }
++
++    /// "What changed?": the most recent change of at least 1 GB within a day of the newest change; otherwise the newest.
++    static func latestNotable(_ events: [StorageEvent]) -> StorageEvent? {
++        let changes = events.filter { ($0.delta ?? 0) != 0 }.sorted { $0.timestamp > $1.timestamp }
++        guard let newest = changes.first else { return nil }
++        return changes.first { abs($0.delta ?? 0) >= decimalGB && newest.timestamp.timeIntervalSince($0.timestamp) <= 86_400 } ?? newest
++    }
++
++    static func offsetName(_ volume: VolumeChange) -> String {
++        switch volume.role {
++        case "VM": return "virtual memory"
++        case "Data": return "files and apps"
++        default: return "macOS system areas"
++        }
++    }
++
++    static func plainName(_ cause: LikelyCause) -> String {
++        switch cause.title {
++        case "Virtual memory growth": return "virtual memory grew"
++        case "Virtual memory reduction": return "virtual memory shrank"
++        case "Data volume growth": return "files and apps grew"
++        case "Data volume reduction": return "files and apps shrank"
++        case "Other system allocation": return "macOS system areas grew"
++        case "Other system allocation released": return "macOS system areas shrank"
++        default: return cause.title.lowercased()
++        }
++    }
++
++    private static func describe(_ cause: LikelyCause, event: StorageEvent) -> String {
++        let amount = changeMagnitude(cause.delta)
++        switch cause.title {
++        case "Virtual memory growth":
++            return "macOS used \(amount) more disk space for virtual memory (swap: memory moved onto the disk when apps need more than the Mac's RAM)."
++        case "Virtual memory reduction":
++            return "macOS released \(amount) of disk space it had been using for virtual memory (swap)."
++        case "Data volume growth":
++            let folder = CauseAnalyzer.drivingFolders(event).first
++            return "Files and apps on your Mac took up \(amount) more space." + (folder.map { " The largest measured growth was in \(($0.path as NSString).abbreviatingWithTildeInPath) (\(signedChange($0.allocatedDelta)))." } ?? " Which folders grew was not recorded.")
++        case "Data volume reduction":
++            return "Files and apps on your Mac took up \(amount) less space."
++        case "Other system allocation":
++            return "macOS system areas (such as software updates) used \(amount) more space."
++        case "Other system allocation released":
++            return "macOS system areas (such as software updates) released \(amount)."
++        default:
++            return "Over the same period, \(cause.title.lowercased()) changed by \(signedChange(cause.delta))."
++        }
++    }
++}
+diff --git a/SourcesGUI/EventDetailView.swift b/SourcesGUI/EventDetailView.swift
+index f977f71..31ba6f7 100644
+--- a/SourcesGUI/EventDetailView.swift
++++ b/SourcesGUI/EventDetailView.swift
+@@ -18,22 +18,41 @@ private struct EventInspector: View {
+     let event: StorageEvent
+     let analysis: EventAnalysis
+     @ViewState private var expanded = TechnicalSection.expandedByDefault
++    /// The measurements behind the summary. Remembered while the viewer is open.
++    @AppStorage("event.showEvidence") private var showEvidence = false
+ 
+     // QA-only capture aids; ignored unless the viewer was opened on a QA database.
+     private static let qaArgs = ViewerConfiguration.current.isQA ? CommandLine.arguments : []
+     private static let qaScrollBottom = qaArgs.contains("--inspector-scroll-bottom")
++    private static let qaShowEvidence = qaArgs.contains("--show-evidence")
+     private static let qaExpanded: Set<TechnicalSection> = qaArgs.firstIndex(of: "--expand-technical").flatMap { i in qaArgs.count > i+1 ? Set(qaArgs[i+1].split(separator: ",").compactMap { TechnicalSection(rawValue: String($0)) }) : nil } ?? []
+ 
++    private var summary: EventPlainSummary { EventPlainSummary.make(event, analysis) }
++
+     var body: some View {
+         ScrollViewReader { proxy in
+         ScrollView {
+             VStack(alignment: .leading, spacing: 0) {
+                 Color.clear.frame(height: 0).id("inspector.top")
+                 header
+-                InspectorSection(title: "Likely causes", prominent: true, id: "event.causes") { causes }
+-                InspectorSection(title: "Storage breakdown", id: "event.breakdown") { breakdown }
+-                InspectorSection(title: "Supporting evidence", id: "event.evidence") { evidence }
+-                InspectorSection(title: "Technical details", id: "event.technical", divider: false) { technical }
++                plainSummary
++                Divider()
++                DisclosureGroup(isExpanded: $showEvidence) {
++                    VStack(alignment: .leading, spacing: 0) {
++                        InspectorSection(title: "Measured changes", id: "event.causes") { causes }
++                        InspectorSection(title: "Storage breakdown", id: "event.breakdown") { breakdown }
++                        InspectorSection(title: "Supporting evidence", id: "event.evidence") { evidence }
++                        InspectorSection(title: "Technical details", id: "event.technical", divider: false) { technical }
++                    }
++                } label: {
++                    // The whole label toggles, not only the disclosure triangle.
++                    Text("Details and evidence").font(.subheadline.weight(.semibold))
++                        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
++                        .onTapGesture { withAnimation(.snappy(duration: 0.2)) { showEvidence.toggle() } }
++                        .accessibilityHint("Exact measurements, volume allocation, timestamps and diagnostic output")
++                }
++                .padding(.top, 10)
++                .accessibilityIdentifier("event.evidenceDisclosure")
+             }
+             .padding(.horizontal, 18)
+             .padding(.bottom, 18)
+@@ -41,15 +60,42 @@ private struct EventInspector: View {
+             Color.clear.frame(height: 1).id("inspector.bottom")
+         }
+         .background(Color(nsColor: .windowBackgroundColor))
+-        // A newly selected event starts with every disclosure collapsed, at the top.
++        // A newly selected event starts with every technical disclosure collapsed, at the top.
+         .onChange(of: event.id) { _, _ in expanded = TechnicalSection.expandedByDefault; proxy.scrollTo("inspector.top", anchor: .top) }
+         .onAppear {
++            if Self.qaShowEvidence || !Self.qaExpanded.isEmpty { showEvidence = true }
+             if !Self.qaExpanded.isEmpty { expanded = Self.qaExpanded }
+             if Self.qaScrollBottom { DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { proxy.scrollTo("inspector.bottom", anchor: .bottom) } }
+         }
+         }
+     }
+ 
++    // MARK: Plain summary
++
++    private var plainSummary: some View {
++        let s = summary
++        return VStack(alignment: .leading, spacing: 14) {
++            PlainBlock(title: "What happened", id: "event.whatHappened") {
++                Text(s.whatHappened).font(.body)
++            }
++            if let explanation = s.explanation {
++                PlainBlock(title: "What may explain it", id: "event.explanation") { Text(explanation).font(.body) }
++            }
++            PlainBlock(title: "How sure is this?", id: "event.certainty") {
++                Label { Text(s.certaintyText) } icon: {
++                    Image(systemName: s.certainty == .measured ? "checkmark.circle" : (s.certainty == .unknown ? "questionmark.circle" : "circle.lefthalf.filled"))
++                        .foregroundStyle(s.certainty == .measured ? Color.green : Color.secondary)
++                }.font(.callout).foregroundStyle(.secondary)
++            }
++            if !s.actions.isEmpty {
++                PlainBlock(title: "What you can do", id: "event.actions") {
++                    VStack(alignment: .leading, spacing: 4) { ForEach(s.actions, id: \.self) { Text($0).font(.callout) } }
++                }
++            }
++        }
++        .padding(.bottom, 14)
++    }
++
+     // MARK: Header
+ 
+     private var header: some View {
+@@ -68,9 +114,8 @@ private struct EventInspector: View {
+                     .accessibilityIdentifier("event.copyMenu")
+             }
+             Text(event.timestamp.formatted(date: .abbreviated, time: .shortened)).font(.subheadline).foregroundStyle(.secondary)
+-            Text(analysis.headline).font(.callout).fixedSize(horizontal: false, vertical: true).padding(.top, 4)
+         }
+-        .padding(.top, 16).padding(.bottom, 12)
++        .padding(.top, 16).padding(.bottom, 14)
+     }
+ 
+     // MARK: A — Likely causes
+@@ -292,6 +337,22 @@ func volumeColor(_ volume: VolumeChange) -> Color {
+     switch volume.role { case "Data": return .accentColor; case "VM": return .purple; default: return .gray }
+ }
+ 
++/// One question in the plain summary: a quiet label above a full-width answer that wraps.
++private struct PlainBlock<Content: View>: View {
++    let title: String
++    let id: String
++    @ViewBuilder let content: Content
++    var body: some View {
++        VStack(alignment: .leading, spacing: 4) {
++            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
++            content.fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
++        }
++        .frame(maxWidth: .infinity, alignment: .leading)
++        .accessibilityElement(children: .contain)
++        .accessibilityIdentifier(id)
++    }
++}
++
+ private struct InspectorSection<Content: View>: View {
+     let title: String
+     var prominent = false
+diff --git a/SourcesGUI/HistoryView.swift b/SourcesGUI/HistoryView.swift
+index fa09fba..b7a93a6 100644
+--- a/SourcesGUI/HistoryView.swift
++++ b/SourcesGUI/HistoryView.swift
+@@ -6,12 +6,66 @@ struct HistoryView: View {
+     @ViewState private var order = [KeyPathComparator<StorageEvent>]()
+     @FocusState private var searchFocused: Bool
+     @ViewState private var showFilters = false
++    @FocusState private var tableFocused: Bool
++    @State private var summaryHeight: CGFloat = 0
++    /// When a selection from the list last opened or refreshed the inspector (see `tableFocused` below).
++    @State private var listSelectionAt: Date?
++    /// Height kept for the event list (filters, header, at least six rows, footer) before the summary above it scrolls.
++    static let eventListReserve: CGFloat = 270
+     private var events: [StorageEvent] { order.isEmpty ? store.visibleEvents : store.visibleEvents.sorted(using:order) }
+     var body: some View {
++        GeometryReader { geometry in
+         VStack(spacing:0) {
+             if store.configuration.isQA {
+                 Label("QA history · \(URL(fileURLWithPath:store.configuration.database).lastPathComponent)",systemImage:"testtube.2").font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,22).padding(.vertical,6).background(Color.yellow.opacity(0.08))
+             }
++            // The summary keeps its natural (measured) height when there is room. In a short window it scrolls on its
++            // own, so the event list below always keeps at least `eventListReserve`.
++            ScrollView {
++                summary.background(GeometryReader { proxy in Color.clear.preference(key:SummaryHeight.self,value:proxy.size.height) })
++            }
++            .scrollBounceBehavior(.basedOnSize)
++            .onPreferenceChange(SummaryHeight.self) { summaryHeight = $0 }
++            .frame(height:summaryHeight > 0 ? min(summaryHeight, max(180, geometry.size.height - Self.eventListReserve)) : nil)
++            .accessibilityIdentifier("history.summaryScroll")
++            Divider()
++            eventList
++        }
++        }
++        .textSelection(.enabled)
++        .background(Color(nsColor:.windowBackgroundColor))
++        .inspector(isPresented:$store.showInspector) {
++            EventDetailView(event:store.selectedEvent)
++                .inspectorColumnWidth(min:300,ideal:360,max:480)
++        }
++        .toolbar {
++            ToolbarItem(placement:.navigation) { Label("Storage Monitor",systemImage:"internaldrive").font(.headline) }
++            ToolbarItemGroup(placement:.primaryAction) {
++                Button { store.refreshAll() } label: { Image(systemName:"arrow.clockwise") }.help("Refresh live capacity and recorded history (⌘R). Does not record a reading, run diagnostics, or send alerts.").accessibilityLabel("Refresh").accessibilityIdentifier("history.refresh")
++                Button { store.showInspector.toggle() } label: { Image(systemName:"sidebar.right") }.help("Show Event Details (⌥⌘I)").accessibilityLabel("Show Event Details").accessibilityIdentifier("history.inspector")
++            }
++        }
++        .onChange(of:store.filters) { _,_ in order = [] }
++        .onChange(of:store.selection) { _,value in
++            guard value != nil else { return }
++            listSelectionAt = tableFocused ? Date() : nil
++            store.showInspector = true
++        }
++        // Opening the inspector rebuilds the split view and takes keyboard focus from the list. When that happens right
++        // after a selection made in the list, focus goes back to it so the arrow keys keep moving between events.
++        // A later focus change (a click elsewhere) is the person's choice and is kept.
++        .onChange(of:tableFocused) { _,focused in
++            if !focused, let at = listSelectionAt, Date().timeIntervalSince(at) < 0.5 { tableFocused = true }
++            if focused { listSelectionAt = nil }
++        }
++        .onExitCommand { store.showInspector = false }
++        .background(Button("Focus search") { searchFocused = true }.keyboardShortcut("f").hidden())
++        .navigationTitle(store.configuration.isQA ? "Storage Monitor — QA: \(URL(fileURLWithPath:store.configuration.database).lastPathComponent)" : "Storage Monitor")
++    }
++
++    /// Current storage, the latest notable change and the chart.
++    @ViewBuilder private var summary: some View {
++        VStack(spacing:0) {
+             OverviewView(snapshot:store.snapshot,live:store.live,historyMissing:store.historyMissing,historyLoading:store.isLoading && store.snapshot == nil)
+             Divider()
+             if let error = store.error {
+@@ -24,6 +78,17 @@ struct HistoryView: View {
+                 }.padding(16).background(Color.orange.opacity(0.07)).accessibilityIdentifier("history.error")
+                 Divider()
+             }
++            if let event = LatestChange.pick(store.snapshot?.events ?? []) {
++                LatestChange(event: event) { store.selection = event.id; store.showInspector = true }
++                Divider()
++            }
++            CapacityChart(readings:store.snapshot?.measurements ?? [],range:$store.chartRange)
++        }
++    }
++
++    /// Filters, the recorded events and the count.
++    @ViewBuilder private var eventList: some View {
++        VStack(spacing:0) {
+             filterBar
+             Divider()
+             if let validation = store.filters.validation { Label(validation,systemImage:"exclamationmark.triangle").font(.caption).foregroundStyle(.primary).frame(maxWidth:.infinity,alignment:.leading).padding(.horizontal,22).padding(.vertical,8).accessibilityIdentifier("filters.validation") }
+@@ -38,6 +103,7 @@ struct HistoryView: View {
+                 .textSelection(.disabled)
+                 .tableStyle(.inset(alternatesRowBackgrounds:false))
+                 .accessibilityIdentifier("history.table")
++                .focused($tableFocused)
+                 .onCopyCommand {
+                     guard let event = store.selectedEvent else { return [] }
+                     return [NSItemProvider(object:EventPanelText.summary(event) as NSString)]
+@@ -70,51 +136,38 @@ struct HistoryView: View {
+                 if store.isLoading { ProgressView().controlSize(.mini).scaleEffect(0.7) }
+                 Text("Read-only · background monitor is independent")
+             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal,22).padding(.vertical,8)
+-            Divider()
+-            CapacityChart(readings:store.snapshot?.measurements ?? [],range:$store.chartRange)
+         }
+-        .textSelection(.enabled)
+-        .background(Color(nsColor:.windowBackgroundColor))
+-        .inspector(isPresented:$store.showInspector) {
+-            EventDetailView(event:store.selectedEvent)
+-                .inspectorColumnWidth(min:300,ideal:360,max:480)
+-        }
+-        .toolbar {
+-            ToolbarItem(placement:.navigation) { Label("Storage Monitor",systemImage:"internaldrive").font(.headline) }
+-            ToolbarItemGroup(placement:.primaryAction) {
+-                Button { store.refreshAll() } label: { Image(systemName:"arrow.clockwise") }.help("Refresh live capacity and recorded history (⌘R). Does not record a reading, run diagnostics, or send alerts.").accessibilityLabel("Refresh").accessibilityIdentifier("history.refresh")
+-                Button { store.showInspector.toggle() } label: { Image(systemName:"sidebar.right") }.help("Show Event Details (⌥⌘I)").accessibilityLabel("Show Event Details").accessibilityIdentifier("history.inspector")
+-            }
+-        }
+-        .onChange(of:store.filters) { _,_ in order = [] }
+-        .onChange(of:store.selection) { _,value in if value != nil { store.showInspector = true } }
+-        .onExitCommand { store.showInspector = false }
+-        .background(Button("Focus search") { searchFocused = true }.keyboardShortcut("f").hidden())
+-        .navigationTitle(store.configuration.isQA ? "Storage Monitor — QA: \(URL(fileURLWithPath:store.configuration.database).lastPathComponent)" : "Storage Monitor")
+     }
++    // One quiet row: the filters live in a popover, summarised beside their button.
+     private var filterBar: some View {
+         VStack(alignment:.leading,spacing:9) {
+-            HStack(spacing:10) {
+-                Text("Event history").font(.headline)
+-                Spacer()
+-                HStack(spacing:6) {
+-                    Image(systemName:"magnifyingglass").foregroundStyle(.secondary)
+-                    TextField("Search recorded events",text:$store.filters.search).textFieldStyle(.plain).focused($searchFocused).accessibilityIdentifier("filter.search").accessibilityLabel("Search descriptions, categories, and diagnostic evidence")
+-                    if !store.filters.search.isEmpty { Button { store.filters.search = "" } label: { Image(systemName:"xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain).accessibilityLabel("Clear search") }
+-                }.padding(.horizontal,8).padding(.vertical,5).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:6)).frame(minWidth:160,maxWidth:300)
+-                Button("Clear Filters") { store.clearFilters(); order = [] }.disabled(!store.hasActiveFilters).accessibilityIdentifier("filter.clear")
+-            }
+             ViewThatFits(in:.horizontal) {
+-                HStack(spacing:8) { primaryFilters; sortPicker }
+-                HStack(spacing:8) {
+-                    Button { showFilters.toggle() } label: { Label("Filters\(store.filters.activeCount == 0 ? "" : " (\(store.filters.activeCount))")",systemImage:"line.3.horizontal.decrease") }.fixedSize().accessibilityIdentifier("filter.expand")
+-                        .popover(isPresented:$showFilters,arrowEdge:.bottom) { Form { primaryFilters; customControls }.formStyle(.grouped).frame(width:400).padding(8) }
+-                    Text(filterSummary).font(.subheadline).foregroundStyle(.secondary).lineLimit(1).layoutPriority(-1)
+-                    Spacer(); sortPicker
++                HStack(spacing:10) { filterTitle; filterButton; Spacer(minLength:8); searchField; sortPicker; clearButton }
++                VStack(alignment:.leading,spacing:8) {
++                    HStack(spacing:10) { filterTitle; Spacer(minLength:8); searchField }
++                    HStack(spacing:10) { filterButton; Spacer(minLength:8); sortPicker; clearButton }
+                 }
+             }
+             if store.filters.time == .custom || store.filters.size == .custom { customControls }
+-        }.padding(.horizontal,22).padding(.vertical,12)
++        }.padding(.horizontal,22).padding(.vertical,10)
++    }
++    private var filterTitle: some View { Text("All recorded changes").font(.headline).fixedSize() }
++    private var filterButton: some View {
++        HStack(spacing:8) {
++            Button { showFilters.toggle() } label: { Label("Filters\(store.filters.activeCount == 0 ? "" : " (\(store.filters.activeCount))")",systemImage:"line.3.horizontal.decrease") }.fixedSize().accessibilityIdentifier("filter.expand")
++                .popover(isPresented:$showFilters,arrowEdge:.bottom) { Form { primaryFilters; customControls }.formStyle(.grouped).frame(width:400).padding(8) }
++            Text(filterSummary).font(.subheadline).foregroundStyle(.secondary).lineLimit(1).layoutPriority(-1)
++        }
++    }
++    private var searchField: some View {
++        HStack(spacing:6) {
++            Image(systemName:"magnifyingglass").foregroundStyle(.secondary)
++            TextField("Search recorded events",text:$store.filters.search).textFieldStyle(.plain).focused($searchFocused).accessibilityIdentifier("filter.search").accessibilityLabel("Search descriptions, categories, and diagnostic evidence")
++            if !store.filters.search.isEmpty { Button { store.filters.search = "" } label: { Image(systemName:"xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain).accessibilityLabel("Clear search") }
++        }.padding(.horizontal,8).padding(.vertical,5).background(Color(nsColor:.controlBackgroundColor),in:RoundedRectangle(cornerRadius:6)).frame(minWidth:150,maxWidth:240)
++    }
++    private var clearButton: some View {
++        Button("Clear Filters") { store.clearFilters(); order = [] }.disabled(!store.hasActiveFilters).fixedSize().accessibilityIdentifier("filter.clear")
+     }
+     @ViewBuilder private var primaryFilters: some View {
+         Picker("Type",selection:$store.filters.type) { ForEach(EventTypeFilter.allCases,id:\.self) { Text($0.rawValue).tag($0) } }.frame(minWidth:155).accessibilityIdentifier("filter.type")
+@@ -126,7 +179,7 @@ struct HistoryView: View {
+         Picker("Sort",selection:Binding(get:{ order.isEmpty ? store.filters.sort.rawValue : "__columns" },set:{ value in if let sort = EventSort(rawValue:value) { store.filters.sort = sort; order = [] } })) {
+             ForEach(EventSort.allCases,id:\.self) { Text($0.rawValue).tag($0.rawValue) }
+             if !order.isEmpty { Text("Table Column Order").tag("__columns") }
+-        }.frame(minWidth:150,idealWidth:200,maxWidth:210).accessibilityIdentifier("filter.sort")
++        }.labelsHidden().frame(minWidth:130,idealWidth:150,maxWidth:170).accessibilityIdentifier("filter.sort")
+     }
+     @ViewBuilder private var customControls: some View {
+         VStack(alignment:.leading,spacing:7) {
+@@ -154,3 +207,32 @@ private struct ChangeCell: View {
+     let event: StorageEvent
+     var body: some View { Text(event.delta.map(signedChange) ?? "—").monospacedDigit().foregroundStyle(.primary).frame(maxWidth:.infinity,alignment:.trailing) }
+ }
++
++/// "What changed?": the most important recent recorded change, in plain words, with a way into its details.
++struct LatestChange: View {
++    let event: StorageEvent
++    let showDetails: () -> Void
++    static func pick(_ events: [StorageEvent]) -> StorageEvent? { EventPlainSummary.latestNotable(events) }
++    var body: some View {
++        let summary = EventPlainSummary.make(event, CauseAnalyzer.analyze(event))
++        HStack(alignment: .top, spacing: 16) {
++            VStack(alignment: .leading, spacing: 5) {
++                Text("Latest notable change · \(event.timestamp.formatted(date: .abbreviated, time: .shortened))").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
++                Text(summary.whatHappened).font(.title3.weight(.medium)).fixedSize(horizontal: false, vertical: true)
++                if let explanation = summary.explanation { Text(explanation).font(.callout).fixedSize(horizontal: false, vertical: true) }
++                Text(summary.certainty == .measured ? "Measured · which app caused it was not recorded" : (summary.certainty == .unknown ? "Cause unknown" : (summary.certainty == .related ? "Possible cause, not established" : "Partly measured")))
++                    .font(.caption).foregroundStyle(.secondary)
++            }
++            Spacer(minLength: 12)
++            Button("Show Details", action: showDetails).accessibilityIdentifier("latest.details")
++        }
++        .padding(.horizontal, 22).padding(.vertical, 14)
++        .accessibilityElement(children: .contain)
++        .accessibilityIdentifier("latest.change")
++    }
++}
++
++private struct SummaryHeight: PreferenceKey {
++    static let defaultValue: CGFloat = 0
++    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
++}
+diff --git a/SourcesGUI/InventoryView.swift b/SourcesGUI/InventoryView.swift
+index 857a8c5..8867a71 100644
+--- a/SourcesGUI/InventoryView.swift
++++ b/SourcesGUI/InventoryView.swift
+@@ -3,7 +3,9 @@ import AppKit
+ 
+ struct MonitorRootView: View {
+     @ObservedObject var store: ViewerStore
+-    @State private var section = Bundle.main.object(forInfoDictionaryKey: "StorageMonitorQAInventory") as? Bool == true ? "inventory" : "history"
++    /// Every launch opens on the storage browser. The section is never restored from saved state.
++    /// QA-only capture aid: `--open-monitoring` opens Monitoring; ignored unless the viewer was opened on a QA database.
++    @State private var section = ViewerConfiguration.current.isQA && CommandLine.arguments.contains("--open-monitoring") ? "history" : "inventory"
+     @StateObject private var inventory: InventoryBrowserModel
+     init(store: ViewerStore) {
+         self.store = store
+@@ -25,9 +27,9 @@ struct MonitorRootView: View {
+         .toolbar {
+             ToolbarItem(placement: .principal) {
+                 Picker("Section", selection: $section) {
++                    Text("Storage").tag("inventory")
+                     Text("Monitoring").tag("history")
+-                    Text("Disk Inventory").tag("inventory")
+-                }.pickerStyle(.segmented).fixedSize().help("Switch between capacity monitoring and the disk inventory")
++                }.pickerStyle(.segmented).fixedSize().help("Storage shows what is using your disk. Monitoring shows how free space changed over time and why.")
+                 .accessibilityIdentifier("app.section")
+             }
+         }
+@@ -384,6 +386,7 @@ struct DiskInventoryView: View {
+     }
+     private var header: some View {
+         VStack(alignment: .leading, spacing: 6) {
++            InventoryCapacitySummary(live: history.live, recorded: history.snapshot?.latest)
+             HStack {
+                 titleTrail
+                 Spacer()
+@@ -599,6 +602,14 @@ struct DiskInventoryView: View {
+                 Picker("Browse", selection: $model.mode) { ForEach(InventoryBrowserMode.allCases) { Text($0.rawValue).tag($0) } }
+                     .labelsHidden().fixedSize().accessibilityIdentifier("inventory.mode")
+                 if model.mode != .review { Button("Go to folder…") { model.chooseFolder() }.accessibilityIdentifier("inventory.goToFolder") }
++                if model.mode == .review {
++                    Button { model.mode = .explorer } label: { Label("Back to Explorer", systemImage: "chevron.backward") }
++                        .help("Return to browsing folders").accessibilityIdentifier("inventory.backToExplorer")
++                } else {
++                    Button { model.mode = .review } label: { Label("Review Cleanup", systemImage: "checklist") }
++                        .help("Find items such as caches and old dependencies that may be safe to remove. Nothing is moved without your confirmation.")
++                        .accessibilityIdentifier("inventory.reviewCleanup")
++                }
+                 if model.mode == .contents && model.search.isEmpty {
+                     Picker("Sort", selection: $model.sort) {
+                         Text("Allocated size").tag(InventorySort.allocated); Text("Name").tag(InventorySort.name)
+@@ -684,3 +695,27 @@ struct DiskInventoryView: View {
+         else { model.showEnclosingFolder(of: item) }
+     }
+ }
++
++/// Answers "how much space do I have?" at the top of the storage browser: live free space when available,
++/// otherwise the last recorded reading, labelled as such.
++struct InventoryCapacitySummary: View {
++    @ObservedObject var live: LiveCapacityMonitor
++    let recorded: Measurement?
++    var body: some View {
++        let reading = live.state.reading
++        let free = reading?.free ?? recorded?.free, used = reading?.used ?? recorded?.used
++        if let free, let used {
++            let total = free + used, severity = EventSeverity.capacity(free)
++            HStack(spacing: 10) {
++                Text("\(capacity(free)) available").font(.callout.weight(.semibold)).monospacedDigit()
++                ProgressView(value: Double(used), total: Double(max(total, 1))).progressViewStyle(.linear)
++                    .tint(severity == .normal ? .accentColor : (severity == .warning ? .orange : .red)).frame(width: 160)
++                    .accessibilityLabel("Disk usage").accessibilityValue("\(capacity(used)) used of \(capacity(total))")
++                Text("\(capacity(used)) used of \(capacity(total))").font(.caption).foregroundStyle(.secondary).monospacedDigit()
++                if severity != .normal { Text(severity == .critical ? "Very low space" : "Low space").font(.caption.weight(.semibold)).foregroundStyle(severity == .critical ? .red : .orange) }
++                if reading == nil { Text("· last recorded reading").font(.caption).foregroundStyle(.tertiary) }
++            }
++            .accessibilityElement(children: .combine).accessibilityIdentifier("inventory.capacity")
++        }
++    }
++}
+diff --git a/SourcesGUI/LivingTreeView.swift b/SourcesGUI/LivingTreeView.swift
+index 5fed5c5..99afeae 100644
+--- a/SourcesGUI/LivingTreeView.swift
++++ b/SourcesGUI/LivingTreeView.swift
+@@ -639,6 +639,7 @@ struct LivingTreeView: View {
+     @State private var highlight: LivingTreeCategory?
+     @State private var zoom = AtlasZoom.identity
+     @State private var zoomProgress = 1.0
++    @State private var showingHelp = false
+     @State private var fade = 1.0
+     @State private var shownRoot: Int64?
+     @FocusState private var focused: Bool
+@@ -791,7 +792,7 @@ struct LivingTreeView: View {
+             return .handled
+         }
+         .onKeyPress(.return) { if let focus { open(focus, model: model) }; return .handled }
+-        .onKeyPress(.escape) { goUp(); return .handled }
++        .onKeyPress(.escape) { if showingHelp { showingHelp = false } else { goUp() }; return .handled }
+         .accessibilityElement(children: .contain)
+         .accessibilityLabel("Living Tree of \(model.root.parentID == nil ? "Startup Data" : model.root.name)")
+         .accessibilityValue("\(tree.dimension.title), zoom \(Self.percent(tree.camera.zoom))")
+@@ -1017,26 +1018,28 @@ struct LivingTreeView: View {
+             Button {
+                 dimensionSetting = (tree.dimension == .flat ? LivingTreeDimension.depth : .flat).rawValue
+             } label: {
+-                Text(tree.dimension == .flat ? "3D" : "2D").font(.caption.weight(.semibold)).foregroundStyle(.secondary).frame(minWidth: 30, minHeight: 22).contentShape(Rectangle())
++                Text(tree.dimension == .flat ? "3D" : "2D").font(.callout.weight(.semibold)).foregroundStyle(.secondary).frame(minWidth: 34, minHeight: 26).contentShape(Rectangle())
+             }
+             .buttonStyle(.plain)
+             .help(tree.dimension == .flat ? "Show the tree in 3D: drag to turn it" : "Show the tree flat")
+             .accessibilityLabel(tree.dimension == .flat ? "Show in 3D" : "Show flat")
+             Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 14).padding(.horizontal, 3)
+             controlButton("minus", "Zoom Out (−)", disabled: target.zoom <= LivingTreeCamera.minimumZoom + 1e-6) { tree.zoom(by: 1 / 1.5, at: nil, animated: true) }
+-            Button { tree.fitTree() } label: {
+-                Text(Self.percent(tree.camera.zoom)).font(.caption.monospacedDigit()).foregroundStyle(.secondary).frame(minWidth: 42, minHeight: 22)
+-            }
+-            .buttonStyle(.plain).help("Zoom relative to the whole tree; click to fit the tree (0)").accessibilityLabel("Zoom \(Self.percent(tree.camera.zoom)), fit tree")
++            Text(Self.percent(tree.camera.zoom)).font(.caption.monospacedDigit()).foregroundStyle(.secondary).frame(minWidth: 42, minHeight: 26)
++                .accessibilityLabel("Zoom \(Self.percent(tree.camera.zoom))")
+             controlButton("plus", "Zoom In (+)", disabled: target.zoom >= LivingTreeCamera.maximumZoom - 1e-6) { tree.zoom(by: 1.5, at: nil, animated: true) }
+-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 14).padding(.horizontal, 3)
+-            controlButton("arrow.up.left.and.arrow.down.right", "Fit Tree (0)", disabled: target.isFit) { tree.fitTree() }
++            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 16).padding(.horizontal, 3)
++            controlButton("arrow.up.left.and.arrow.down.right", "Fit to Content", disabled: target.isFit) { tree.fitTree() }
++            controlButton("arrow.counterclockwise", "Reset View (0)", disabled: target.isFit && (tree.dimension == .flat || tree.orbit == .standard)) { tree.resetView() }
+             controlButton("scope", "Focus Selection (F)", disabled: explorer.selection == nil) {
+                 if let model = tree.model, let key = focusKey(model) { tree.focus(on: key) }
+             }
+             controlButton(tree.isolating ? "circle.inset.filled" : "circle.dashed", tree.isolating ? "Show Everything (I)" : "Isolate Selection (I)", disabled: explorer.selection == nil && !tree.isolating) {
+                 tree.isolating.toggle()
+             }
++            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 16).padding(.horizontal, 3)
++            controlButton("questionmark", "How to Navigate", disabled: false) { showingHelp.toggle() }
++                .popover(isPresented: $showingHelp, arrowEdge: .top) { navigationHelp }
+         }
+         .padding(.horizontal, 3).padding(.vertical, 2)
+         .background(Color(white: 0.085).opacity(0.9), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+@@ -1047,7 +1050,7 @@ struct LivingTreeView: View {
+ 
+     private func controlButton(_ symbol: String, _ help: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+         Button(action: action) {
+-            Image(systemName: symbol).font(.system(size: 11, weight: .medium)).frame(width: 24, height: 22).contentShape(Rectangle())
++            Image(systemName: symbol).font(.system(size: 13, weight: .medium)).frame(width: 30, height: 26).contentShape(Rectangle())
+         }
+         .buttonStyle(.plain).foregroundStyle(disabled ? .tertiary : .secondary).disabled(disabled)
+         .help(help).accessibilityLabel(String(help.prefix { $0 != "(" }).trimmingCharacters(in: .whitespaces))
+@@ -1056,6 +1059,11 @@ struct LivingTreeView: View {
+     private var header: some View {
+         HStack(spacing: 6) {
+             let trail = browser.breadcrumbs.isEmpty ? (browser.directory.map { [$0] } ?? []) : browser.breadcrumbs
++            let parent = trail.count > 1 ? trail[trail.count - 2] : nil
++            Button { goUp() } label: { Image(systemName: "chevron.up").font(.caption.weight(.semibold)).frame(width: 22, height: 20).contentShape(Rectangle()) }
++                .buttonStyle(.plain).foregroundStyle(parent == nil ? .tertiary : .secondary).disabled(parent == nil)
++                .help(parent.map { "Up to \(browser.displayName($0)) (Esc)" } ?? "Already at the top folder")
++                .accessibilityLabel("Up one level").accessibilityIdentifier("tree.up")
+             if trail.count > 4 { Text("…").foregroundStyle(.tertiary) }
+             ForEach(Array(trail.suffix(4).enumerated()), id: \.element.id) { index, node in
+                 if index > 0 || trail.count > 4 { Image(systemName: "chevron.compact.right").font(.caption2).foregroundStyle(.tertiary) }
+@@ -1066,6 +1074,14 @@ struct LivingTreeView: View {
+                     .help(current ? node.path : "Go to \(browser.displayName(node))")
+             }
+             Spacer(minLength: 12)
++            if let id = explorer.selection, let element = tree.model?[.node(id)] {
++                Text("Selected: \(element.name)" + (element.bytes.map { " · \(ByteCountFormatter.string(fromByteCount: $0, countStyle: .file))" } ?? ""))
++                    .font(.caption.weight(.medium)).foregroundStyle(.primary).lineLimit(1).truncationMode(.middle)
++                    .padding(.horizontal, 8).padding(.vertical, 3)
++                    .background(Color.white.opacity(0.08), in: Capsule())
++                    .help(element.node?.path ?? element.name)
++                    .accessibilityIdentifier("tree.selection")
++            }
+             LivingTreeLegend()
+         }
+         .padding(.horizontal, 16).padding(.top, 9).padding(.bottom, 4)
+@@ -1076,12 +1092,37 @@ struct LivingTreeView: View {
+         HStack(spacing: 8) {
+             Text(footerText).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+             Spacer()
+-            Text(tree.dimension == .depth
+-                 ? "Drag or two-finger scroll to turn · ⇧-scroll or ⇧-drag to pan · pinch to zoom · F focuses · I isolates · 0 resets"
+-                 : "Drag or scroll to pan · pinch or ⌘-scroll to zoom · double-click opens · F focuses · I isolates · 0 fits").font(.caption).foregroundStyle(.tertiary).lineLimit(1)
++            Text("Click a branch to select it · double-click to open · Esc goes up").font(.caption).foregroundStyle(.tertiary).lineLimit(1)
+         }.padding(.horizontal, 16).frame(height: 24).accessibilityIdentifier("inventory.livingTree.status")
+     }
+ 
++    /// Every way to move around, in plain words. Each has a visible button as well; none is gesture-only.
++    private var navigationHelp: some View {
++        VStack(alignment: .leading, spacing: 10) {
++            Text("Getting around the Living Tree").font(.headline).fixedSize(horizontal: false, vertical: true)
++            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
++                helpRow("Select a folder or file", "Click its branch. Its details appear in the Inspector.")
++                helpRow("Open a folder", "Double-click it, or select it and press Return.")
++                helpRow("Go back up", "The ⌃ button beside the path, a folder name in the path, or Esc.")
++                helpRow("Zoom", "The − and + buttons, pinch, or ⌘-scroll.")
++                helpRow(tree.dimension == .depth ? "Turn and move" : "Move around", tree.dimension == .depth ? "Drag or two-finger scroll to turn. Hold ⇧ while dragging or scrolling to move." : "Drag or scroll.")
++                helpRow("See everything", "Fit to Content frames the whole tree. Reset View (0) also undoes turning.")
++                helpRow("Find the selection", "Focus Selection (F) frames it; Isolate (I) hides the rest.")
++            }
++            Text("Prefer a list? Choose Atlas, or use the Navigator below. They show the same folders.").font(.caption).foregroundStyle(.secondary)
++                .fixedSize(horizontal: false, vertical: true)
++        }
++        .padding(16).frame(width: 420)
++        .onExitCommand { showingHelp = false }
++    }
++
++    private func helpRow(_ action: String, _ how: String) -> some View {
++        GridRow {
++            Text(action).font(.callout.weight(.medium)).fixedSize(horizontal: false, vertical: true)
++            Text(how).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
++        }
++    }
++
+     private var footerText: String {
+         guard let model = tree.model else { return " " }
+         var parts = ["Thickness shows indexed allocation", "\(model.count.formatted()) elements"]
+diff --git a/SourcesGUI/OverviewView.swift b/SourcesGUI/OverviewView.swift
+index b2748a1..4d5502b 100644
+--- a/SourcesGUI/OverviewView.swift
++++ b/SourcesGUI/OverviewView.swift
+@@ -77,12 +77,8 @@ struct OverviewView: View {
+         let free = reading?.free ?? recorded.free, total = reading?.total ?? recorded.capacity
+         let severity = EventSeverity.capacity(free)
+         VStack(alignment:.leading,spacing:14) {
+-            HStack(alignment:.firstTextBaseline,spacing:10) {
+-                Label("Internal storage",systemImage:"internaldrive").font(.headline)
+-                Spacer(minLength:8)
+-                SeverityLabel(severity:severity)
+-                    .help(reading == nil ? "Based on the last recorded reading." : "Capacity pressure from the live reading. Alerts come only from recorded background readings.")
+-            }
++            // Capacity pressure is shown once, by the bar's colour and the sentence under it.
++            Label("Internal storage",systemImage:"internaldrive").font(.headline)
+             ViewThatFits(in:.horizontal) {
+                 HStack(alignment:.top,spacing:28) {
+                     available(free:free,reading:reading,freshness:freshness,now:now).frame(minWidth:230,alignment:.leading)
+@@ -195,15 +191,15 @@ struct OverviewView: View {
+     private func recordedText(_ recorded: Measurement) -> some View {
+         HStack(spacing:5) {
+             Image(systemName:Date().timeIntervalSince(recorded.timestamp)>4500 ? "clock.badge.exclamationmark" : "clock")
+-            Text("Last recorded reading \(recorded.timestamp.formatted(date:.omitted,time:.shortened)) · \(capacity(recorded.free))")
++            Text("Last recorded \(recorded.timestamp.formatted(date:.abbreviated,time:.shortened)): \(capacity(recorded.free)) available")
+                 .help("Background monitor reading \(recorded.timestamp.formatted(date:.complete,time:.complete)). History, events and the chart use recorded readings only.")
+         }.lineLimit(1)
+     }
+     @ViewBuilder private func comparisonText(_ comparison: ObservationComparison?, live: LiveCapacityReading?, inline: Bool) -> some View {
+         if let comparison {
+-            Text("\(inline ? "· " : "")Live is \(signedChange(comparison.difference)) vs that reading (observation comparison, not a recorded event)")
++            Text("\(inline ? "· " : "")\(comparison.difference == 0 ? "No change since then" : "\(changeMagnitude(comparison.difference)) \(comparison.difference < 0 ? "less" : "more") available now")")
+                 .lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
+-                .help("Live \(exactBytes(comparison.live.free)) at \(comparison.live.timestamp.formatted(date:.omitted,time:.standard)) minus recorded \(exactBytes(comparison.recorded.free)). Not stored, not an alert.")
++                .help("Live \(exactBytes(comparison.live.free)) at \(comparison.live.timestamp.formatted(date:.omitted,time:.standard)) minus recorded \(exactBytes(comparison.recorded.free)). An observation comparison: not stored, not a recorded event, not an alert.")
+         } else if live != nil {
+             Text("\(inline ? "· " : "")Live and recorded readings are from different containers; not compared").lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
+         }
+diff --git a/SourcesGUI/StorageMonitorApp.swift b/SourcesGUI/StorageMonitorApp.swift
+index a44f559..26ac415 100644
+--- a/SourcesGUI/StorageMonitorApp.swift
++++ b/SourcesGUI/StorageMonitorApp.swift
+@@ -232,12 +232,48 @@ private struct WindowSetup: NSViewRepresentable {
+     func updateNSView(_ nsView: NSView,context: Context) {}
+     final class WindowView: NSView {
+         static var signalSource: DispatchSourceSignal?
++        private var interactionMonitor: Any?
++        private var responderObservation: NSKeyValueObservation?
++        private var keyObserver: NSObjectProtocol?
++        private var releasingAutomaticFocus = false
++        /// AppKit makes the first text field (a search field) first responder when the window opens, so typing meant
++        /// for another app lands in it as the window comes forward. Until the person's first deliberate interaction in
++        /// this window (a click, a ⌘ shortcut or Tab), any automatic move of focus into a text field is undone as it
++        /// happens. The event monitor is local to this app and returns every event unchanged; all observers stop after
++        /// that first interaction, so a click into Search works at once and nothing changes later.
++        func releaseInitialTextFocus(_ window: NSWindow) {
++            releasingAutomaticFocus = true
++            interactionMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown, .keyDown]) { [weak self, weak window] event in
++                let deliberate = event.type != .keyDown || event.modifierFlags.contains(.command) || event.keyCode == 48 // Tab
++                if let window, event.window === window, deliberate { self?.stopReleasingAutomaticFocus() }
++                return event
++            }
++            responderObservation = window.observe(\.firstResponder, options: [.new]) { [weak self] window, _ in
++                DispatchQueue.main.async { self?.releaseAutomaticFocus(window) }
++            }
++            keyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) { [weak self, weak window] _ in
++                guard let window else { return }
++                DispatchQueue.main.async { self?.releaseAutomaticFocus(window) }
++            }
++            releaseAutomaticFocus(window)
++        }
++        private func releaseAutomaticFocus(_ window: NSWindow) {
++            guard releasingAutomaticFocus, let editor = window.firstResponder as? NSTextView, editor.isFieldEditor else { return }
++            window.makeFirstResponder(nil)
++        }
++        private func stopReleasingAutomaticFocus() {
++            releasingAutomaticFocus = false
++            if let monitor = interactionMonitor { NSEvent.removeMonitor(monitor) }
++            if let observer = keyObserver { NotificationCenter.default.removeObserver(observer) }
++            interactionMonitor = nil; keyObserver = nil; responderObservation = nil
++        }
+         override func viewDidMoveToWindow() {
+             super.viewDidMoveToWindow()
+             guard let window else { return }
+             if NativeQARuntime.active != nil { window.isRestorable = false; window.disableSnapshotRestoration() }
+             else { window.setFrameAutosaveName(ViewerConfiguration.current.isQA ? "StorageMonitorQA" : "StorageMonitorMain") }
+             window.minSize = NSSize(width:780,height:700)   // frame size: about 640 pt of content below the toolbar
++            releaseInitialTextFocus(window)
+             if let size = ViewerConfiguration.current.windowSize { window.setContentSize(size) }
+             if NativeQARuntime.active != nil { window.title = "Storage Monitor — Native QA — Disposable Fixtures" }
+             else if ViewerConfiguration.current.isQA { window.title = "Storage Monitor — QA: \(URL(fileURLWithPath:ViewerConfiguration.current.database).lastPathComponent)" }
+diff --git a/SourcesShared/CleanupDetectors.swift b/SourcesShared/CleanupDetectors.swift
+index 95c49ad..5483cc0 100644
+--- a/SourcesShared/CleanupDetectors.swift
++++ b/SourcesShared/CleanupDetectors.swift
+@@ -348,8 +348,9 @@ public struct NodeDetector: ArtifactDetector {
+         if nested { contradicting.append(ArtifactObservation(.layout, .contradicts, "It is inside another node_modules folder (part of an installed package).")) }
+         if project != nil { supporting.append(ArtifactObservation(.manifest, .supports, "package.json found in the enclosing folder (\(projectName)).")) }
+         else { contradicting.append(ArtifactObservation(.manifest, .contradicts, "No package.json in the enclosing folder.")) }
+-        let siblings = c.probe.list(parent, limit: 400)?.names ?? []
+-        let lock = Self.lockfiles.first { siblings.contains($0) }
++        // Exact-name lookups: a large parent (pnpm's .pnpm store) would truncate a listing and hide the lockfile.
++        c.probe.readable(parent)
++        let lock = Self.lockfiles.first { c.probe.info(ArtifactContext.join(parent, $0)) != nil }
+         facts.reproducible = lock != nil
+         if let lock { supporting.append(ArtifactObservation(.manifest, .supports, "Lockfile \(lock) pins the dependency versions.")) }
+         else if project != nil { unknowns.append("No lockfile: reinstalling may resolve different versions.") }
+@@ -360,10 +361,12 @@ public struct NodeDetector: ArtifactDetector {
+         let relations = project != nil ? [ArtifactRelation(label: projectName, path: parent, roles: [.project])] : []
+ 
+         if c.name == "node_modules" {
+-            let inside = c.probe.list(c.subject.path, limit: 64)?.names ?? []
+-            let marker = [".package-lock.json": "npm", ".modules.yaml": "pnpm", ".yarn-state.yml": "Yarn", ".yarn-integrity": "Yarn"].first { inside.contains($0.key) }
+-            if let marker { supporting.append(ArtifactObservation(.layout, .supports, "Installed by \(marker.value) (its install record is present).")); facts.generatedEvidence = true }
+-            else if inside.contains(".bin") { supporting.append(ArtifactObservation(.layout, .supports, "Contains installed command links (.bin).")); facts.generatedEvidence = true }
++            // Look the install records up by name: a large folder's truncated listing would miss them.
++            c.probe.readable(c.subject.path)
++            func inside(_ name: String) -> Bool { c.probe.info(ArtifactContext.join(c.subject.path, name)) != nil }
++            let marker = [(".package-lock.json", "npm"), (".modules.yaml", "pnpm"), (".yarn-state.yml", "Yarn"), (".yarn-integrity", "Yarn")].first { inside($0.0) }
++            if let marker { supporting.append(ArtifactObservation(.layout, .supports, "Installed by \(marker.1) (its install record is present).")); facts.generatedEvidence = true }
++            else if inside(".bin") { supporting.append(ArtifactObservation(.layout, .supports, "Contains installed command links (.bin).")); facts.generatedEvidence = true }
+             var characteristics: Set<ArtifactCharacteristic> = [.generated]
+             if facts.reproducible == true { characteristics.insert(.reinstallable) }
+             if busy { characteristics.insert(.active) }
+@@ -376,8 +379,9 @@ public struct NodeDetector: ArtifactDetector {
+ 
+         // Build output: requires positive evidence beyond the folder's name.
+         guard !nested else { return nil }
+-        let inside = c.probe.list(c.subject.path, limit: 64)?.names ?? []
+-        if inside.contains("package.json") || inside.contains(".git") { contradicting.append(ArtifactObservation(.layout, .contradicts, "It contains its own project files (package.json or .git), unlike generated output.")) }
++        c.probe.readable(c.subject.path)
++        func inside(_ name: String) -> Bool { c.probe.info(ArtifactContext.join(c.subject.path, name)) != nil }
++        if inside("package.json") || inside(".git") { contradicting.append(ArtifactObservation(.layout, .contradicts, "It contains its own project files (package.json or .git), unlike generated output.")) }
+         if let project {
+             if c.name == ".next", dependsOn(project, { $0 == "next" }) { facts.generatedEvidence = true; supporting.append(ArtifactObservation(.manifest, .supports, "The project depends on Next.js, which writes .next.")) }
+             if c.name == "storybook-static", dependsOn(project, { $0 == "storybook" || $0.hasPrefix("@storybook/") }) { facts.generatedEvidence = true; supporting.append(ArtifactObservation(.manifest, .supports, "The project uses Storybook, which builds storybook-static.")) }
+@@ -471,9 +475,9 @@ public struct PythonDetector: ArtifactDetector {
+             else { unknowns.append("No command on PATH links into this tool environment.") }
+         } else {
+             let parent = c.parent
+-            let siblings = c.probe.list(parent, limit: 400)?.names ?? []
+-            let manifest = Self.manifests.first { siblings.contains($0) }
+-            let lock = Self.locks.first { siblings.contains($0) }
++            c.probe.readable(parent)
++            let manifest = Self.manifests.first { c.probe.info(ArtifactContext.join(parent, $0)) != nil }
++            let lock = Self.locks.first { c.probe.info(ArtifactContext.join(parent, $0)) != nil }
+             facts.projectFound = manifest != nil
+             facts.reproducible = lock != nil
+             if let manifest { supporting.append(ArtifactObservation(.manifest, .supports, "Its folder has a Python project (\(manifest))."));
+diff --git a/SourcesShared/CleanupEvidence.swift b/SourcesShared/CleanupEvidence.swift
+index f911b8b..026da15 100644
+--- a/SourcesShared/CleanupEvidence.swift
++++ b/SourcesShared/CleanupEvidence.swift
+@@ -160,6 +160,15 @@ public final class ArtifactProbe: @unchecked Sendable {
+ 
+     public func exists(_ path: String) -> Bool { info(path) != nil }
+ 
++    /// Whether a folder can be listed, noting when macOS refuses, without reading (or truncating) its entries.
++    @discardableResult public func readable(_ path: String) -> Bool {
++        guard let dir = opendir(path) else {
++            if errno == EACCES || errno == EPERM { note("macOS did not allow reading \((path as NSString).lastPathComponent)") }
++            return false
++        }
++        closedir(dir); return true
++    }
++
+     /// Entry names of a directory (no metadata), at most `limit` and within the probe's entry budget.
+     public func list(_ path: String, limit: Int = 512) -> (names: [String], complete: Bool)? {
+         guard !timedOut else { note("Inspection time limit reached"); return nil }
+@@ -253,22 +262,60 @@ public struct ProcessObservation: Equatable, Sendable {
+     public let inspected: Int
+     public let unreadable: Int
+     public let takenAt: Date
++    /// Each observed path resolved once per observation (it is a point-in-time snapshot), instead of once per query.
++    private let resolved = ResolvedPaths()
+ 
+     public init(executables: [String], workingDirectories: [String], openFiles: [String] = [], inspected: Int, unreadable: Int, takenAt: Date = Date()) {
+         self.executables = executables.map(ArtifactPaths.logical); self.workingDirectories = workingDirectories.map(ArtifactPaths.logical)
+         self.openFiles = openFiles.map(ArtifactPaths.logical); self.inspected = inspected; self.unreadable = unreadable; self.takenAt = takenAt
+     }
+ 
++    public static func == (a: Self, b: Self) -> Bool {
++        a.executables == b.executables && a.workingDirectories == b.workingDirectories && a.openFiles == b.openFiles
++            && a.inspected == b.inspected && a.unreadable == b.unreadable && a.takenAt == b.takenAt
++    }
++
++    /// realpath components, memoized; nil when the path cannot be resolved (as `canonicalRelativeComponents` treats it).
++    private final class ResolvedPaths: @unchecked Sendable {
++        private let lock = NSLock()
++        private var components = [String: [String]?]()
++        func callAsFunction(_ path: String) -> [String]? {
++            lock.lock(); if let known = components[path] { lock.unlock(); return known }; lock.unlock()
++            let value = ProcessObservation.realComponents(path)
++            lock.lock(); components[path] = value; lock.unlock()
++            return value
++        }
++    }
++    static func realComponents(_ path: String) -> [String]? {
++        guard let real = realpath(path, nil) else { return nil }
++        defer { free(real) }
++        return ArtifactPaths.components(String(cString: real))
++    }
++
+     public static let empty = ProcessObservation(executables: [], workingDirectories: [], inspected: 0, unreadable: 0)
+ 
+     public var complete: Bool { unreadable == 0 && inspected > 0 }
+ 
+-    private func relates(_ observed: String, to path: String) -> Bool {
+-        ArtifactPaths.canonicalRelativeComponents(observed, within: path) != nil || ArtifactPaths.isWithin(observed, path)
++    /// Same answer as `canonicalRelativeComponents(observed, within: path) != nil || isWithin(observed, path)`,
++    /// resolving `path` once per query and each observed path once per observation.
++    private func relates(_ list: [String], to path: String) -> [String] {
++        let root = Self.realComponents(path)
++        return list.filter { observed in
++            if let root, let parts = resolved(observed), parts.count >= root.count, Array(parts.prefix(root.count)) == root { return true }
++            return ArtifactPaths.isWithin(observed, path)
++        }
++    }
++    public func runs(within path: String) -> Bool { !relates(executables, to: path).isEmpty }
++    public func works(within path: String) -> Bool { !relates(workingDirectories, to: path).isEmpty }
++    public func holdsOpen(within path: String) -> Bool { !relates(openFiles, to: path).isEmpty }
++
++    /// Only the observations that relate to `root`. For a descendant that is not a symbolic link, anything related to it
++    /// is related to `root` (canonically and lexically), so checks against this subset give the same answers. A link's
++    /// target can lie outside `root`: check links against the full observation.
++    public func scoped(within root: String) -> ProcessObservation {
++        ProcessObservation(executables: relates(executables, to: root), workingDirectories: relates(workingDirectories, to: root),
++                           openFiles: relates(openFiles, to: root), inspected: inspected, unreadable: unreadable, takenAt: takenAt)
+     }
+-    public func runs(within path: String) -> Bool { executables.contains { relates($0, to: path) } }
+-    public func works(within path: String) -> Bool { workingDirectories.contains { relates($0, to: path) } }
+-    public func holdsOpen(within path: String) -> Bool { openFiles.contains { relates($0, to: path) } }
+ 
+     /// The current process table. `openFilesOf` selects processes (by executable path) whose open files are listed.
+     public static func current(maximumProcesses: Int = 8_192, openFilesOf: (String) -> Bool = { _ in false }) -> ProcessObservation {
+diff --git a/SourcesShared/CleanupPresentation.swift b/SourcesShared/CleanupPresentation.swift
+index 8a78174..092759d 100644
+--- a/SourcesShared/CleanupPresentation.swift
++++ b/SourcesShared/CleanupPresentation.swift
+@@ -66,3 +66,52 @@ public struct CleanupInspectorPresentation: Equatable, Sendable {
+         offersPreview = assessment.status == .reviewCandidate && c != nil
+     }
+ }
++
++/// Plain-language guidance for a Move to Trash refusal: whether it is a permanent restriction or something the
++/// person can act on, and the next step. The exact refusal reason is always shown beside it.
++public enum CleanupTrashGuidance {
++    public enum Kind: Equatable, Sendable { case neverMoved, inUse, needsReview, tooLarge, notYours, unsavedWork, notConfirmed, qaCopy }
++
++    public static func explain(_ reason: String) -> (kind: Kind, title: String, nextStep: String?) {
++        let r = reason.lowercased()
++        func has(_ words: String...) -> Bool { words.contains { r.contains($0) } }
++        if has("qa build", "qa session", "qa profile", "qa-bound") { return (.qaCopy, "Not available in test builds", "Test builds read a copy of the catalog, so they never move real files.") }
++        if has("uncommitted", "untracked", "unmerged", "stashed", "local commits", "worktree dependencies", "worktree is locked", "worktree lock") {
++            return (.unsavedWork, "Contains unsaved Git work", "Commit, push or stash the work first, or keep this folder.")
++        }
++        if has("running process", "in active use", "is open by", "became active", "started using", "active executable", "path resolves", "current path directory", "on the current path") {
++            return (.inUse, "In use right now", "Quit the app or command that is using it, then choose Move to Trash… again.")
++        }
++        if has("safety budget", "exceeded", "time budget") {
++            return (.tooLarge, "Too large to check in one go", "Open the folder and move the larger items inside it one at a time.")
++        }
++        if has("changed", "no longer", "nothing is at", "disappeared", "expired", "already been used", "cancelled", "stale", "review it again", "review the item again", "still running", "another move to trash", "observation", "confirm it again") {
++            return (.needsReview, "Needs a fresh review", "Select the item again so Storage Monitor can recheck it.")
++        }
++        if has("ownership", "not owned", "does not permit", "immutable", "restricted", "not locally materialized", "listing is incomplete", "could not be examined", "unreadable") {
++            return (.notYours, "macOS doesn't allow moving it from here", "Only items you own and can change are moved from Storage Monitor. You can still reveal it in Finder.")
++        }
++        if has("could not be confirmed", "not confirmed", "outcome is", "unverified", "uncertain") {
++            return (.notConfirmed, "Result not confirmed", "Check the original location and the Trash before trying again.")
++        }
++        return (.neverMoved, "Storage Monitor never moves this", nil)
++    }
++}
++
++public extension CleanupTrashGuidance {
++    static let notConfirmedSafe = "Storage Monitor has not confirmed that this is safe to remove."
++
++    /// The confirmation's warning list without repeats: the "not established as safe" sentences are stated once by the
++    /// sheet, and the long scoped-observation sentence is said plainly. Every specific risk is kept, in order.
++    static func presentedWarnings(_ warnings: [String]) -> [String] {
++        var seen = Set<String>()
++        return warnings.compactMap { warning -> String? in
++            let text: String
++            if warning == "Storage Monitor has not established whether this item is safe to remove." { return nil }
++            else if warning.hasPrefix("Storage Monitor has not assessed this item") { text = "It isn't a kind of item Storage Monitor recognizes, so what depends on it is unknown." }
++            else if warning.hasPrefix("Current-user active-use observations were partial") { text = "Storage Monitor could only partly see which of your apps are running. Nothing was seen using this item, but that is not proof." }
++            else { text = warning }
++            return seen.insert(text).inserted ? text : nil
++        }
++    }
++}
+diff --git a/SourcesShared/CleanupTrashSafety.swift b/SourcesShared/CleanupTrashSafety.swift
+index 1451ec1..1089b48 100644
+--- a/SourcesShared/CleanupTrashSafety.swift
++++ b/SourcesShared/CleanupTrashSafety.swift
+@@ -28,6 +28,38 @@ fileprivate struct CleanupTrashSnapshot: Equatable {
+     var ancestors: [String: String]
+     var assessment: String
+     var activeUseLimited: Bool
++    /// The target contains programs or databases and active use could only be partly observed (other users'
++    /// processes, or processes with very many open files, are not visible to an ordinary app).
++    var programUseLimited: Bool
++}
++
++public extension ArtifactProbe.Budget {
++    /// The full descendant walk behind a user-initiated Move to Trash. Every check still runs on every descendant;
++    /// the Inspector's quick evidence budget is far too small for ordinary caches, environments and dependency folders.
++    static let trashPreflight = ArtifactProbe.Budget(entries: 150_000, reads: 4_000, seconds: 20)
++}
++
++extension CleanupTrashPolicy {
++    public static let programUseWarning = "This item contains programs or databases. Storage Monitor can only see your own running apps and tools, and not all of them, so it cannot rule out that something is using them. No use was observed."
++
++    /// An observed open file that cannot be resolved fails closed when it is beside the database or has the database's
++    /// name (or a companion's). Other unresolvable paths, such as a system service's restricted store, are not relevant.
++    static func openFileMatchesDatabase(_ active: String, _ locations: Set<String>) -> Bool? {
++        let suffixes = ["", "-wal", "-shm", "-journal"]
++        if let observed = ArtifactPaths.canonicalProtectionLocation(active) {
++            return locations.contains { location in suffixes.contains { observed == location + $0 } }
++        }
++        let folder = ((active as NSString).standardizingPath as NSString).deletingLastPathComponent
++        let name = (active as NSString).lastPathComponent.precomposedStringWithCanonicalMapping.lowercased()
++        let related = locations.contains { location in
++            let databaseFolder = (location as NSString).deletingLastPathComponent
++            let databaseName = (location as NSString).lastPathComponent.precomposedStringWithCanonicalMapping.lowercased()
++            return folder == databaseFolder || ArtifactPaths.logical(folder) == ArtifactPaths.logical(databaseFolder)
++                || ArtifactPaths.canonicalProtectionLocation(folder) == databaseFolder
++                || suffixes.contains { name == databaseName + $0 }
++        }
++        return related ? nil : false
++    }
+ }
+ 
+ fileprivate struct CleanupTrashSafetyFailure: Error { let reason: String }
+@@ -36,14 +68,17 @@ public extension CleanupTrashPolicy {
+     // Serializes distinct confirmed requests across Inspector instances without waiting or automatic retry.
+     private static let executionLock = NSLock()
+ 
+-    static func prepare(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget = .standard) -> CleanupTrashPreparation {
++    static func prepare(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget = .trashPreflight,
++                        progress: (@Sendable (Int) -> Void)? = nil) -> CleanupTrashPreparation {
+         do {
+             var environment = environment
+             environment.qaRuntime = try NativeQARuntime.effectiveScope(environment.qaRuntime)
+-            let (inspection, snapshot) = try validate(node: node, environment: environment, budget: budget)
++            let (inspection, snapshot) = try validate(node: node, environment: environment, budget: budget, progress: progress)
+             var decision = decide(node: node, inspection: inspection, examined: true, home: environment.home)
+             if case .blocked(let reason) = decision { return .blocked(reason) }
+-            if snapshot.activeUseLimited, case .allowed(_, let warnings) = decision {
++            if snapshot.programUseLimited, case .allowed(_, let warnings) = decision {
++                decision = .allowed(override: true, warnings: [programUseWarning] + warnings)
++            } else if snapshot.activeUseLimited, case .allowed(_, let warnings) = decision {
+                 decision = .allowed(override: true, warnings: warnings + ["Current-user active-use observations were partial. No active reference was observed in that scope; this is not proof of non-use. Required protection, descendant, Git and executable/database checks must still pass."])
+             }
+             return .ready(CleanupTrashConfirmationToken(node: node, inspection: inspection, decision: decision, snapshot: snapshot, preparedAt: environment.now(), qaRuntime: environment.qaRuntime))
+@@ -69,10 +104,11 @@ public extension CleanupTrashPolicy {
+             environment.qaRuntime = effective ?? confirmation.qaRuntime
+             if environment.qaRuntime != nil && confirmation.qaRuntime == nil { return .refused("A QA session requires a QA-bound confirmation.") }
+             try confirmation.qaRuntime?.validateTrash(confirmation.node.path)
+-            let (_, current) = try validate(node: confirmation.node, environment: environment, budget: .standard)
++            let revalidationStarted = Date()
++            let (_, current) = try validate(node: confirmation.node, environment: environment, budget: .trashPreflight)
+             guard current == confirmation.snapshot else { return .refused("The target or relevant evidence changed after confirmation was prepared. Review it again.") }
+             guard !Task.isCancelled else { return .refused("Move to Trash was cancelled before the system operation.") }
+-            guard Date().timeIntervalSince(confirmation.preparedAt) <= 60 else { return .refused("The confirmation expired during preflight. Review the item again.") }
++            guard Date().timeIntervalSince(revalidationStarted) <= ArtifactProbe.Budget.trashPreflight.seconds + 5 else { return .refused("The final check took too long. Review the item again.") }
+             try confirmation.qaRuntime?.validateTrash(current.canonical)
+             let source = URL(fileURLWithPath: current.canonical)
+             // No rename/staging/permanent-delete fallback. Only this validated token path reaches FileManager.
+@@ -111,7 +147,8 @@ public extension CleanupTrashPolicy {
+ 
+     static func cancel(_ confirmation: CleanupTrashConfirmationToken) { _ = confirmation.consume() }
+ 
+-    private static func validate(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget) throws -> (ArtifactInspection, CleanupTrashSnapshot) {
++    private static func validate(node: InventoryNode, environment: ArtifactEnvironment, budget: ArtifactProbe.Budget,
++                                 progress: (@Sendable (Int) -> Void)? = nil) throws -> (ArtifactInspection, CleanupTrashSnapshot) {
+         func reject(_ reason: String) throws -> Never { throw CleanupTrashSafetyFailure(reason: reason) }
+         try environment.qaRuntime?.validateTrash(node.path)
+         let probe = ArtifactProbe(budget: budget)
+@@ -171,6 +208,9 @@ public extension CleanupTrashPolicy {
+             if let info = probe.info(path) { activeObjects.insert("\(info.device):\(info.inode)") }
+         }
+         var pathReferences: Set<String>?
++        // Non-link descendants resolve inside `canonical`, so only observations related to it can relate to them.
++        // A symbolic link's target can lie outside; links are checked against the full observation below.
++        let withinTarget = processes.scoped(within: canonical)
+         var entries = [String: String](), pending = [canonical], checked = 0
+         var visitedObjects = Set<String>(), databasePaths = Set<String>()
+         var requiresCompleteProcesses = inspection.classification?.facts.isDatabase == true
+@@ -179,6 +219,7 @@ public extension CleanupTrashPolicy {
+             if Task.isCancelled { try reject("Trash validation was cancelled.") }
+             guard !probe.timedOut, checked < max(1, budget.entries) else { try reject("The directory cannot be assessed within the safety budget. Nothing will be moved.") }
+             checked += 1
++            if checked % 500 == 0 { progress?(checked) }
+             guard let info = probe.info(path) else { try reject("A descendant could not be examined; protection is incomplete.") }
+             guard info.device == rootInfo.device else { try reject("The item contains a mount point on another filesystem.") }
+             guard info.ownerIsCurrentUser else { try reject("A descendant is not owned by the current user.") }
+@@ -195,16 +236,17 @@ public extension CleanupTrashPolicy {
+                 let beforeIncomplete = probe.incomplete.count
+                 let classification = detector.classify(context)
+                 if probe.timedOut || probe.incomplete.count > beforeIncomplete {
+-                    try reject("Required descendant evidence could not be completed within the safety budget.")
++                    let detail = probe.incomplete.dropFirst(beforeIncomplete).first.map { " (\($0); \(path))" } ?? ""
++                    try reject("Required descendant evidence could not be completed within the safety budget." + detail)
+                 }
+                 if let classification, let why = hardBlock(classification.facts) {
+                     try reject("The target or a descendant has a verified dependency: \(why) (\(path))")
+                 }
+             }
+-            if processes.runs(within: path) || processes.holdsOpen(within: path) || processes.works(within: path) { try reject("A running process uses the target or a descendant: \(path)") }
++            if withinTarget.runs(within: path) || withinTarget.holdsOpen(within: path) || withinTarget.works(within: path) { try reject("A running process uses the target or a descendant: \(path)") }
+             // Also compare objects: a hard-link alias of an executing file is still an active executable.
+             if activeObjects.contains("\(info.device):\(info.inode)") { try reject("This object is an active executable or open file, including through another hard link.") }
+-            if info.isExecutable && !processes.complete { try reject("Active executable use could not be completely assessed.") }
++            // Observed use always blocks. Partial observation of programs requires the explicit warning instead.
+             if info.isExecutable { requiresCompleteProcesses = true }
+             if info.isExecutable {
+                 if pathReferences == nil {
+@@ -236,12 +278,9 @@ public extension CleanupTrashPolicy {
+                 guard let location = ArtifactPaths.canonicalProtectionLocation(databaseBase) else { try reject("The database path could not be resolved for active-use checks.") }
+                 databasePaths.insert(location)
+                 for active in processes.openFiles {
+-                    guard let observed = ArtifactPaths.canonicalProtectionLocation(active) else { try reject("An open-file path could not be resolved for database safety.") }
+-                    if observed == location || ["-wal", "-shm", "-journal"].contains(where: { observed == location + $0 }) {
+-                        try reject("The database or one of its companions is open by a running process.")
+-                    }
++                    guard let matches = openFileMatchesDatabase(active, [location]) else { try reject("An open file beside this database could not be resolved for database safety.") }
++                    if matches { try reject("The database or one of its companions is open by a running process.") }
+                 }
+-                if !processes.complete { try reject("Active database use could not be completely assessed.") }
+             }
+             if info.kind == .other { try reject("Special filesystem objects cannot be assessed for Trash.") }
+             if info.kind == .symlink {
+@@ -256,7 +295,7 @@ public extension CleanupTrashPolicy {
+                 let linkContext = ArtifactContext(subject: .init(nodeID: node.id, path: resolved, kind: .file, identity: nil), probe: probe, environment: refreshedEnvironment)
+                 if let why = ArtifactProtection.reason(linkContext) ?? normalizedProtection(resolved, environment: refreshedEnvironment, probe: probe) { try reject("Protected symbolic-link target: \(why)") }
+                 if let referent = probe.info(resolved) { visitedObjects.insert("\(referent.device):\(referent.inode)") }
+-                if processes.runs(within: resolved) || processes.holdsOpen(within: resolved) { try reject("The symbolic link refers to an item in active use.") }
++                if processes.runs(within: resolved) || processes.holdsOpen(within: resolved) || processes.works(within: resolved) { try reject("The symbolic link refers to an item in active use.") }
+                 continue // Trash the link itself, never enumerate or move its referent.
+             }
+             if info.kind == .directory {
+@@ -313,15 +352,12 @@ public extension CleanupTrashPolicy {
+         let latestProcesses = (environment.safetyProcesses ?? environment.processes)()
+         guard latestProcesses.inspected > 0 else { try reject("The final active-use observation is unavailable; nothing was moved.") }
+         guard Date().timeIntervalSince(latestProcesses.takenAt) < 5 else { try reject("The final active-use observation is stale.") }
+-        if requiresCompleteProcesses && !latestProcesses.complete { try reject("The final required active-use check is incomplete.") }
+         if latestProcesses.runs(within: canonical) || latestProcesses.holdsOpen(within: canonical) || latestProcesses.works(within: canonical) { try reject("A process started using the target during validation.") }
+         for active in latestProcesses.executables + latestProcesses.openFiles {
+             if let info = probe.info(active), visitedObjects.contains("\(info.device):\(info.inode)") { try reject("A target object became active during validation, including through an alias.") }
+             if !databasePaths.isEmpty {
+-                guard let observed = ArtifactPaths.canonicalProtectionLocation(active) else { try reject("An active path could not be resolved for database safety.") }
+-                if databasePaths.contains(where: { location in observed == location || ["-wal", "-shm", "-journal"].contains(where: { observed == location + $0 }) }) {
+-                    try reject("A database companion became active during validation.")
+-                }
++                guard let matches = openFileMatchesDatabase(active, databasePaths) else { try reject("An active path beside a database could not be resolved for database safety.") }
++                if matches { try reject("A database companion became active during validation.") }
+             }
+         }
+         var finalEnvironment = environment
+@@ -338,7 +374,9 @@ public extension CleanupTrashPolicy {
+         let f = inspection.classification?.facts
+         let signature = "\(inspection.classification?.kind.rawValue ?? "ordinary")|\(inspection.assessment?.status.rawValue ?? "unknown")|\(String(describing: f))"
+         return (inspection, CleanupTrashSnapshot(canonical: canonical, entries: entries, ancestors: ancestors, assessment: signature,
+-                                                   activeUseLimited: !processes.complete || !latestProcesses.complete))
++                                                   activeUseLimited: !processes.complete || !latestProcesses.complete,
++                                                   // Even a complete observation covers only the current user's processes.
++                                                   programUseLimited: requiresCompleteProcesses))
+     }
+ 
+     private static func stamp(_ path: String, identityOnly: Bool = false) throws -> String {
+diff --git a/SourcesShared/InventoryPresentation.swift b/SourcesShared/InventoryPresentation.swift
+index 9616f65..2c7a275 100644
+--- a/SourcesShared/InventoryPresentation.swift
++++ b/SourcesShared/InventoryPresentation.swift
+@@ -419,7 +419,8 @@ public struct StorageAccountingPresentation: Sendable, Equatable {
+             } else {
+                 rows.append(Row(label: "Indexed sizes exceed the Data volume by", value: size(-difference), detail: "APFS clones share blocks but are counted once per file"))
+             }
+-            summary = "\(size(used)) used · \(size(inventory.indexedAllocated)) in indexed files · " + (difference >= 0 ? "\(size(difference)) of the Data volume not attributed" : "indexed sizes exceed the Data volume by \(size(-difference))")
++            // Used and free space are shown beside this line; it says what the index has found, plainly. Exact rows are in Details.
++            summary = "Files found: \(size(inventory.indexedAllocated))" + (difference >= 0 ? " · \(size(difference)) of your files' space not matched to a file yet" : " · more than the disk reports, because copies that share storage count once per file")
+             if !firstPassComplete { notes.append("The first pass is still running, so more files will be attributed.") }
+             if inventory.protectedFolders > 0 {
+                 notes.append("\(inventory.protectedFolders.formatted()) folder\(inventory.protectedFolders == 1 ? " is" : "s are") protected by macOS privacy controls and \(inventory.protectedFolders == 1 ? "was" : "were") not opened" + (needsAccess ? "; Full Disk Access is not granted to the background monitor." : "."))
+diff --git a/tests/CleanupInspectorTests.swift b/tests/CleanupInspectorTests.swift
+index df9903c..4c53612 100644
+--- a/tests/CleanupInspectorTests.swift
++++ b/tests/CleanupInspectorTests.swift
+@@ -491,9 +491,12 @@ func cleanupTrashTests(_ folder: URL, _ test: (Bool, String) throws -> Void) thr
+              && { if case .refused(let why) = forced { return why.hasPrefix("Protected") }; return false }(),
+              "cleanup trash: nothing moves when the override was not accepted, when the path now holds a different item, or when it is protected (re-checked at the moment of the move)")
+     let moved = CleanupTrashPolicy.perform(node: oldNode, decision: decide(oldNode, oldInspection), overrideAccepted: false, environment: environment, trash: fake)
+-    try test(moved == .refused(CleanupTrashPolicy.unavailableReason) && calls.urls.isEmpty && fm.fileExists(atPath: historical), "cleanup trash: legacy advisory review cannot replace a displayed explicit confirmation")
++    // The release contains a program, so the program-use warning refuses first; either refusal must move nothing.
++    try test((moved == .refused(CleanupTrashPolicy.unavailableReason) || moved == .refused("The warning was not accepted.")) && calls.urls.isEmpty && fm.fileExists(atPath: historical),
++             "cleanup trash: legacy advisory review cannot replace a displayed explicit confirmation")
+     guard case .ready(let confirmation) = CleanupTrashPolicy.prepare(node: oldNode, environment: environment) else { throw CocoaError(.fileReadUnknown) }
+-    let failing = CleanupTrashPolicy.perform(confirmation: confirmation, overrideAccepted: false, environment: environment, trash: { _ in throw CocoaError(.fileWriteNoPermission) })
++    // Confirmed with its warnings accepted (the release contains a program), so the simulated macOS failure is reached.
++    let failing = CleanupTrashPolicy.perform(confirmation: confirmation, overrideAccepted: true, environment: environment, trash: { _ in throw CocoaError(.fileWriteNoPermission) })
+     let failed: Bool = { if case .failed(let reason) = failing { return reason.contains("not confirmed") }; return false }()
+     try test(failed && fm.fileExists(atPath: historical), "cleanup trash: explicitly confirmed native failure is reported with outcome uncertainty")
+ }
+diff --git a/tests/CleanupTrashSafetyTests.swift b/tests/CleanupTrashSafetyTests.swift
+index 6e2db98..ca82077 100644
+--- a/tests/CleanupTrashSafetyTests.swift
++++ b/tests/CleanupTrashSafetyTests.swift
+@@ -167,9 +167,23 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
+     let emptyFinalOutcome = CleanupTrashPolicy.perform(confirmation: emptyFinalToken, overrideAccepted: true, environment: finalAbsent, trash: { _ in emptyFinalAdapterCalls += 1; return nil })
+     try test(refused(emptyFinalOutcome) && emptyFinalProvider.calls == 2 && emptyFinalAdapterCalls == 0,
+              "trash safety: a provider becoming unavailable at final observation blocks before any adapter")
+-    // Partial observations are not global non-use proof; executable/database checks below still require completeness.
++    // Partial observations are not global non-use proof. Programs and databases then require the explicit
++    // program-use warning; any observed use (above) still blocks.
+     var partial = env; partial.processes = { ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 1) }
+-    try test(try blocked(running, environment: partial), "trash safety: incomplete required executable check fails closed")
++    func requiresProgramWarning(_ path: String, environment: ArtifactEnvironment) throws -> Bool {
++        let prepared = try token(path, environment: environment)
++        guard case .allowed(true, let warnings) = prepared.decision, warnings.first == CleanupTrashPolicy.programUseWarning else { return false }
++        var calls = 0
++        let outcome = CleanupTrashPolicy.perform(confirmation: prepared, overrideAccepted: false, environment: environment, trash: { _ in calls += 1; return nil })
++        return outcome == .refused("The warning was not accepted.") && calls == 0 && FileManager.default.fileExists(atPath: path)
++    }
++    try test(try requiresProgramWarning(running, environment: partial), "trash safety: partially observed program requires the program-use warning and an unaccepted warning moves nothing")
++    // A complete observation still covers only the current user's processes, so programs always carry the warning.
++    try test(try requiresProgramWarning(running, environment: env), "trash safety: a completely observed program still requires the program-use warning")
++    let plainToken = try token(ordinary)
++    let plainHasProgramWarning: Bool = { if case .allowed(_, let warnings) = plainToken.decision { return warnings.contains(CleanupTrashPolicy.programUseWarning) }; return true }()
++    CleanupTrashPolicy.cancel(plainToken)
++    try test(!plainHasProgramWarning, "trash safety: an ordinary file without programs has no program-use warning")
+     let partialCandidate = try token(((generated as NSString).deletingLastPathComponent as NSString).deletingLastPathComponent, environment: partial)
+     var partialCandidateAdapterCalls = 0
+     let partialCandidateOutcome = CleanupTrashPolicy.perform(confirmation: partialCandidate, overrideAccepted: false, environment: partial, trash: { _ in partialCandidateAdapterCalls += 1; return nil })
+@@ -194,7 +208,7 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
+     for suffix in ["-wal", "-shm", "-journal"] {
+         let companion = try file("databases/user.sqlite3" + suffix)
+         try test(try blocked(companion, environment: openBase), "trash safety: an observed active database hard-blocks its " + suffix + " companion")
+-        try test(try blocked(companion, environment: partial), "trash safety: incomplete database-use evidence blocks a " + suffix + " companion")
++        try test(try requiresProgramWarning(companion, environment: partial), "trash safety: incomplete database-use evidence requires the program-use warning for a " + suffix + " companion")
+         let aliasBase = db.hasPrefix("/private/tmp/") ? "/tmp/" + String(db.dropFirst("/private/tmp/".count)) : "/private" + db
+         var aliasBaseUse = env; aliasBaseUse.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [aliasBase], inspected: 100, unreadable: 0) }
+         try test(try blocked(companion, environment: aliasBaseUse), "trash safety: active database alias blocks its " + suffix + " companion")
+@@ -211,7 +225,74 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
+         try test(refused(companionOutcome) && companionObservation.count == 2 && companionAdapterCalls == 0,
+                  "trash safety: base becoming active at the final observation blocks its " + suffix + " companion before any adapter")
+     }
+-    try test(try blocked(db, environment: partial), "trash safety: incomplete required database-use check fails closed")
++    try test(try requiresProgramWarning(db, environment: partial), "trash safety: incomplete database-use check requires the program-use warning")
++    // An unresolvable open file elsewhere (a system service's restricted store) is irrelevant; one beside the database fails closed.
++    // A symbolic-link loop cannot be resolved (ELOOP), unlike a missing path, which resolves by walking up.
++    let unrelatedFolder = home.appendingPathComponent("unrelated-service")
++    try fm.createDirectory(at: unrelatedFolder, withIntermediateDirectories: true)
++    let elsewhere = unrelatedFolder.appendingPathComponent("store").path
++    try fm.createSymbolicLink(atPath: elsewhere, withDestinationPath: elsewhere)
++    try test(ArtifactPaths.canonicalProtectionLocation(elsewhere) == nil, "trash safety fixture: the unrelated open file is genuinely unresolvable")
++    let namesake = unrelatedFolder.appendingPathComponent("user.sqlite3-wal").path
++    try fm.createSymbolicLink(atPath: namesake, withDestinationPath: namesake)
++    try test(CleanupTrashPolicy.openFileMatchesDatabase(namesake, [db]) == nil, "trash safety: an unresolvable file named like the database's companion fails closed in any folder")
++    var unrelatedUnresolved = env; unrelatedUnresolved.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [elsewhere], inspected: 100, unreadable: 0) }
++    try test(!(try blocked(db, environment: unrelatedUnresolved)), "trash safety: an unresolvable open file in an unrelated folder does not block a database")
++    try test(CleanupTrashPolicy.openFileMatchesDatabase(elsewhere, [db]) == false, "trash safety: unrelated unresolvable open file is not a database companion")
++    try test(CleanupTrashPolicy.openFileMatchesDatabase(db + "-wal", [db]) == true, "trash safety: resolvable companion still matches its database")
++    let loopDatabase = try file("loop-databases/user.sqlite3"), loop = ((loopDatabase as NSString).deletingLastPathComponent as NSString).appendingPathComponent("loop")
++    try fm.createSymbolicLink(atPath: loop, withDestinationPath: loop)
++    var besideUnresolved = env; besideUnresolved.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [loop], inspected: 100, unreadable: 0) }
++    try test(try blocked(loopDatabase, environment: besideUnresolved), "trash safety: an unresolvable open file beside the database fails closed")
++    // Scoped descendant checks: a nested open file observed through the /tmp alias still blocks its ancestor.
++    let nestedBusy = try file("nested-busy/a/b/held.txt")
++    let aliasNested = nestedBusy.hasPrefix("/private/tmp/") ? "/tmp/" + String(nestedBusy.dropFirst("/private/tmp/".count)) : nestedBusy
++    var nestedObservation = env; nestedObservation.processes = { ProcessObservation(executables: [], workingDirectories: [], openFiles: [aliasNested], inspected: 100, unreadable: 0) }
++    try test(try blocked(home.appendingPathComponent("nested-busy").path, environment: nestedObservation), "trash safety: a nested open file (observed through an alias) blocks its ancestor")
++    var nestedCwd = env; nestedCwd.processes = { ProcessObservation(executables: [], workingDirectories: [(nestedBusy as NSString).deletingLastPathComponent], inspected: 100, unreadable: 0) }
++    try test(try blocked(home.appendingPathComponent("nested-busy").path, environment: nestedCwd), "trash safety: a working directory nested in the target blocks it")
++    // A symbolic link whose target is outside the item: a process working in that target blocks the item.
++    let outsideProject = home.appendingPathComponent("outside-project"); try fm.createDirectory(at: outsideProject, withIntermediateDirectories: true)
++    let linkHolder = home.appendingPathComponent("link-holder"); try fm.createDirectory(at: linkHolder, withIntermediateDirectories: true)
++    try fm.createSymbolicLink(atPath: linkHolder.appendingPathComponent("project").path, withDestinationPath: outsideProject.path)
++    var linkedCwd = env; linkedCwd.processes = { ProcessObservation(executables: [], workingDirectories: [outsideProject.path], inspected: 100, unreadable: 0) }
++    try test(try blocked(linkHolder.path, environment: linkedCwd), "trash safety: a working directory inside a contained link's target blocks the item")
++    // The user-initiated preflight walks every descendant of an ordinary large folder (the Inspector's quick budget could not).
++    let large = home.appendingPathComponent("large-cache")
++    for folderIndex in 0..<50 {
++        let folder = large.appendingPathComponent("d\(folderIndex)"); try fm.createDirectory(at: folder, withIntermediateDirectories: true)
++        for fileIndex in 0..<100 { try Data("x".utf8).write(to: folder.appendingPathComponent("f\(fileIndex)")) }
++    }
++    try test(try blocked(large.path, budget: .standard), "trash safety: a 5,050-entry folder exceeds the Inspector's quick budget")
++    final class Progress: @unchecked Sendable { var highest = 0 }
++    let reported = Progress()
++    let largePreparation = CleanupTrashPolicy.prepare(node: try trashSafetyNode(large.path), environment: env, progress: { reported.highest = max(reported.highest, $0) })
++    let largeReason: String = { if case .blocked(let why) = largePreparation { return why }; return "" }()
++    if case .ready(let prepared) = largePreparation { CleanupTrashPolicy.cancel(prepared) }
++    try test(largeReason.isEmpty, "trash safety: the Trash preflight budget assesses an ordinary 5,050-entry folder" + (largeReason.isEmpty ? "" : " (refused: \(largeReason))"))
++    try test(reported.highest >= 5_000, "trash safety: preflight reports items checked while it walks a large folder (\(reported.highest))")
++    let guidance: [(String, CleanupTrashGuidance.Kind)] = [
++        ("A running process uses the target or a descendant: /x", .inUse),
++        ("The directory cannot be assessed within the safety budget. Nothing will be moved.", .tooLarge),
++        ("This folder is too broad to move to the Trash as one item.", .neverMoved),
++        ("Protected: credential store.", .neverMoved),
++        ("A descendant is not owned by the current user.", .notYours),
++        ("A Git worktree contains uncommitted, untracked, or potentially unmerged work: /x", .unsavedWork),
++        ("The confirmation expired. Review the item again.", .needsReview),
++        ("Active-use observations are stale; review the item again.", .needsReview),
++        ("Not available in QA builds: the catalog is a copy, but its paths are real files.", .qaCopy),
++        (CleanupTrashPolicy.unavailableReason, .needsReview),
++    ]
++    for (reason, kind) in guidance {
++        let explained = CleanupTrashGuidance.explain(reason)
++        try test(explained.kind == kind && !explained.title.isEmpty, "trash guidance: \(kind) for “\(reason.prefix(48))”")
++    }
++    try test(CleanupTrashGuidance.explain("This folder is too broad to move to the Trash as one item.").nextStep == nil, "trash guidance: a permanent restriction offers no misleading next step")
++    let raw = ["Storage Monitor has not established whether this item is safe to remove.", "Marked Preserve: database.", CleanupTrashPolicy.programUseWarning,
++               "Storage Monitor has not established whether this item is safe to remove.", "This moves the entire directory, including all of its contents, to Trash."]
++    let shown = CleanupTrashGuidance.presentedWarnings(raw)
++    try test(shown == ["Marked Preserve: database.", CleanupTrashPolicy.programUseWarning, "This moves the entire directory, including all of its contents, to Trash."],
++             "trash sheet: the generic not-established sentence is stated once by the sheet and every specific risk is kept in order")
+     let staleDate = Date().addingTimeInterval(-60)
+     var stale = env; stale.processes = { ProcessObservation(executables: [], workingDirectories: [], inspected: 100, unreadable: 0, takenAt: staleDate) }
+     try test(try blocked(ordinary, environment: stale), "trash safety: stale active-use evidence cannot authorize Trash")
+diff --git a/tests/GUIModelTests.swift b/tests/GUIModelTests.swift
+index 7e74f0e..df66045 100644
+--- a/tests/GUIModelTests.swift
++++ b/tests/GUIModelTests.swift
+@@ -758,6 +758,47 @@ import SQLite3
+         try test(noVolumes.causes.isEmpty && noVolumes.causesUnavailable == "Insufficient diagnostic evidence." && !noVolumes.breakdown.reconciliation.accounted, "no recorded volumes: insufficient evidence, no reconciliation")
+         let orphan = snapshot.events.first { $0.id == "alert:3" }!
+         try test(CauseAnalyzer.analyze(orphan).causes.isEmpty, "alert-only record without readings gets no fabricated causes")
++        // The plain summary never says more than the measurements.
++        let vmEvent = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 47 * decimalGB, [volume("d", "Data", 100 * decimalGB), volume("v", "VM", 5 * decimalGB), volume("u", "Update", decimalGB)]))
++        let vmPlain = EventPlainSummary.make(vmEvent, CauseAnalyzer.analyze(vmEvent))
++        try test(vmPlain.whatHappened.hasPrefix("Your Mac lost 3.00 GB of available storage between"), "plain summary: states the measured loss with its interval")
++        try test(vmPlain.explanation?.contains("virtual memory (swap:") == true, "plain summary: explains virtual memory where the term first appears")
++        try test(vmPlain.certainty == .measured && vmPlain.certaintyText.contains("Which app caused it was not recorded"), "plain summary: an exactly reconciled volume change is measured, and the app stays unknown")
++        try test(vmPlain.actions.contains { $0.contains("Quitting apps") }, "plain summary: virtual memory growth offers the memory action")
++        let gapPlain = EventPlainSummary.make(storageEvent(mixedBefore, gapAfter), gap)
++        try test(gapPlain.certainty == .partlyMeasured && gapPlain.certaintyText.contains("2.00 GB of the difference is not explained"), "plain summary: an unaccounted remainder is stated as partly measured")
++        let unknownPlain = EventPlainSummary.make(storageEvent(reading(1, -30, free: 50 * decimalGB, []), reading(2, 0, free: 48 * decimalGB, [])), noVolumes)
++        try test(unknownPlain.certainty == .unknown && unknownPlain.explanation == nil && unknownPlain.certaintyText.hasPrefix("Storage Monitor doesn't know why."), "plain summary: no evidence says the cause is unknown and offers no explanation")
++        let firstPlain = EventPlainSummary.make(storageEvent(nil, mixedAfter), first)
++        try test(firstPlain.certainty == .unknown && firstPlain.whatHappened == first.headline, "plain summary: a first reading claims no change and no cause")
++        let dataPlain = EventPlainSummary.make(storageEvent(mixedBefore, mixedAfter), mixed)
++        try test(dataPlain.explanation?.contains("Which folders grew was not recorded") == true && dataPlain.actions.contains { $0.contains("Use Storage") }, "plain summary: unattributed Data growth says folders were not recorded and points to Storage")
++        // Offsetting volume changes: the explanation names them and the measured net, not only the larger figure.
++        let offsetEvent = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 48 * decimalGB, [volume("d", "Data", 99 * decimalGB), volume("v", "VM", 5 * decimalGB), volume("u", "Update", decimalGB)]))
++        let offsetAnalysis = CauseAnalyzer.analyze(offsetEvent), offsetPlain = EventPlainSummary.make(offsetEvent, offsetAnalysis)
++        try test(offsetAnalysis.breakdown.reconciliation == .exact && offsetPlain.whatHappened.hasPrefix("Your Mac lost 2.00 GB")
++                 && offsetPlain.explanation?.contains("macOS used 3.00 GB more disk space for virtual memory") == true
++                 && offsetPlain.explanation?.hasSuffix("At the same time, files and apps freed 1.00 GB, so the net loss was 2.00 GB.") == true,
++                 "plain summary: a larger growth offset by a reduction names the offset and the measured net loss")
++        try test(offsetPlain.certainty == .measured, "plain summary: offsetting volume changes that reconcile remain measured, not more certain about the cause")
++        try test(dataPlain.explanation?.contains("At the same time, virtual memory freed 1.00 GB, so the net loss was 2.00 GB.") == true,
++                 "plain summary: Data growth offset by virtual memory shrinking states both and the net")
++        let offsetGain = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 52 * decimalGB, [volume("d", "Data", 97 * decimalGB), volume("v", "VM", 3 * decimalGB), volume("u", "Update", decimalGB)]))
++        let gainPlain = EventPlainSummary.make(offsetGain, CauseAnalyzer.analyze(offsetGain))
++        try test(gainPlain.explanation?.hasSuffix("At the same time, virtual memory used 1.00 GB, so the net gain was 2.00 GB.") == true,
++                 "plain summary: a recovery offset by growth names the growth and the net gain")
++        try test(vmPlain.explanation?.contains("At the same time") == false, "plain summary: no offset sentence when nothing moved the other way")
++        let tinyOffset = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 47 * decimalGB - 999_000, [volume("d", "Data", 100 * decimalGB - 1_000), volume("v", "VM", 5 * decimalGB + 1_000_000 - 1_000), volume("u", "Update", decimalGB)]))
++        let tinyPlain = EventPlainSummary.make(tinyOffset, CauseAnalyzer.analyze(tinyOffset))
++        try test(CauseAnalyzer.analyze(tinyOffset).breakdown.offsettingVolumes.count == 1 && tinyPlain.explanation?.contains("At the same time") == false,
++                 "plain summary: a negligible offset (1 KB beside a 3 GB loss) stays in the breakdown, not the explanation")
++        func at(_ id: String, _ minutes: Double, _ delta: Int64) -> StorageEvent {
++            StorageEvent(id: id, timestamp: anchor.addingTimeInterval(minutes * 60), category: "Storage loss", delta: delta, previousFree: nil, currentFree: nil, previousTime: nil, severity: .normal, measurement: nil, previousMeasurement: nil, alerts: [], diagnostics: [], comparisons: [], source: "test", searchText: "")
++        }
++        let timeline = [at("small-new", 0, -2_000_000), at("big-recent", -60, -3 * decimalGB), at("big-old", -3_000, -9 * decimalGB)]
++        try test(EventPlainSummary.latestNotable(timeline)?.id == "big-recent", "latest change: the most recent change of 1 GB or more within a day")
++        try test(EventPlainSummary.latestNotable([at("small-new", 0, -2_000_000), at("big-old", -3_000, -9 * decimalGB)])?.id == "small-new", "latest change: falls back to the newest change when nothing large is recent")
++        try test(EventPlainSummary.latestNotable([]) == nil, "latest change: none without recorded changes")
+         // Same-interval swap evidence supports VM growth as its likely mechanism.
+         func metric(_ id: String, _ bytes: Int64, _ minute: Double, complete: Bool = true, kind: String = "Swap allocated", source: EvidenceSource = .swap, label: String = "Swap allocated") -> DiagnosticMetric {
+             DiagnosticMetric(id: id, label: label, path: id, bytes: bytes, kind: kind, complete: complete, qualifier: "", source: source, observedAt: anchor.addingTimeInterval(minute * 60))
+@@ -1067,7 +1108,11 @@ import SQLite3
+         try livingTreeColorTests { ok, message in try test(ok, message) }
+         try cleanupInspectorTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-fixtures")) { ok, message in try test(ok, message) }
+         try cleanupTrashTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-trash-fixtures")) { ok, message in try test(ok, message) }
+-        try cleanupTrashSafetyTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-trash-safety-fixtures")) { ok, message in try test(ok, message) }
++        // Trash safety includes the macOS /tmp ↔ /private/tmp alias cases, so its disposable fixtures always live under
++        // /private/tmp, wherever the rest of the suite's fixtures are (the default is build/qa-fixtures).
++        let trashSafetyRoot = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("storage-monitor-trash-safety-" + UUID().uuidString)
++        try FileManager.default.createDirectory(at: trashSafetyRoot, withIntermediateDirectories: true)
++        try cleanupTrashSafetyTests(trashSafetyRoot) { ok, message in try test(ok, message) }
+         try await cleanupReviewQueueTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-queue-fixtures")) { ok, message in try test(ok, message) }
+         print("\(tests) GUI model/read-only tests passed; isolated fixtures: \(folder.path)")
+     }
