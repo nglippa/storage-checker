@@ -169,6 +169,7 @@ struct InventoryInspectorView: View {
     @ObservedObject var browser: InventoryBrowserModel
     @ObservedObject var explorer: InventoryExplorerController
     @ObservedObject private var cleanup: CleanupInspectorController
+    @ObservedObject private var migration: MigrationReadinessController
     var reviewSubject: InventoryNode? = nil
     var showsTrash = true
     var usesQueueEvidence = false
@@ -179,6 +180,7 @@ struct InventoryInspectorView: View {
         self.browser = browser; self.explorer = explorer
         self.reviewSubject = reviewSubject; self.showsTrash = showsTrash; self.usesQueueEvidence = usesQueueEvidence
         _cleanup = ObservedObject(wrappedValue: browser.cleanup)
+        _migration = ObservedObject(wrappedValue: browser.migration)
     }
 
     private var subject: (node: InventoryNode, isSelection: Bool)? {
@@ -193,7 +195,9 @@ struct InventoryInspectorView: View {
             if let subject {
                 let node = subject.node
                 let parent = node.parentID.flatMap { explorer.state.node($0) }
-                let type = node.kind == .file ? UTType(filenameExtension: (node.name as NSString).pathExtension)?.localizedDescription : nil
+                // A detected disk image is named by Migration Readiness ("Docker Desktop disk image"), not by its extension
+                // alone (".raw" would otherwise read as a camera raw photo).
+                let type = migration.item(node.id)?.title ?? (node.kind == .file ? UTType(filenameExtension: (node.name as NSString).pathExtension)?.localizedDescription : nil)
                 let info = InventoryInspectorPresentation(node: node, parent: parent, typeDescription: type, formatter: AtlasText.bytes)
                 VStack(alignment: .leading, spacing: StorageDesign.sectionGap) {
                     identity(node, info: info, isSelection: subject.isSelection)
@@ -205,6 +209,11 @@ struct InventoryInspectorView: View {
                         Text(info.measurement).font(.caption).foregroundStyle(.secondary)
                     }
                     actions(node)
+                    if let item = migration.item(node.id) {
+                        Divider()
+                        MigrationReadinessInspectorSection(item: item, filesystem: migration.report?.filesystem)
+                            .task(id: node.id) { await migration.recheck(node.id) }
+                    }
                     largestContents(node)
                     Divider()
                     if subject.isSelection || node.parentID != nil {

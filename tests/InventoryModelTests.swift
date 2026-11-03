@@ -679,6 +679,134 @@ private final class TrashControllerGate: @unchecked Sendable {
 
         } catch { test(false, "Trash reconciliation fixture: \(error)") }
 
+        // MARK: Migration Readiness (headless): real APFS sparse files at the default GiB thresholds, indexed by the worker.
+        do {
+            let GiB = SparseStorageThresholds.gibibyte
+            let migrationTree = scratch.appendingPathComponent("migration-tree"), migrationState = scratch.appendingPathComponent("migration-state")
+            for folder in ["vm/Ubuntu.utm/Data", "media", "docs", "deep/a/b"] { try fm.createDirectory(at: migrationTree.appendingPathComponent(folder), withIntermediateDirectories: true) }
+            try makeSparseFile(migrationTree.appendingPathComponent("vm/Ubuntu.utm/Data/disk.img").path, logical: 12 * GiB, written: 4_096)
+            try makeSparseFile(migrationTree.appendingPathComponent("deep/a/b/backup.raw").path, logical: 20 * GiB, written: 4_096)
+            try makeSparseFile(migrationTree.appendingPathComponent("media/archive.sparseimage").path, logical: 3 * GiB, written: 4_096)
+            for index in 0..<200 { try Data(count: 2_048).write(to: migrationTree.appendingPathComponent("docs/d\(index).txt")) }
+            let indexedMigration = try run(monitor, ["inventory-work", "--root", migrationTree.path, "--data-dir", migrationState.path, "--budget", "30"])
+            let migrationDatabase = migrationState.appendingPathComponent("history.sqlite3").path
+            test(indexedMigration.status == 0, "migration readiness: a fixture with 35 GiB of logical sparse files is indexed (it allocates almost nothing)")
+            let browser = InventoryBrowserModel(database: migrationDatabase, readiness: readiness)
+            await browser.load()
+            let migration = browser.migration
+            migration.refresh(); await migration.waitForPass()
+            guard let report = migration.report, let headline = report.headline else { throw HistoryError.invalid("no migration report: \(migration.error ?? "none")") }
+            test(report.reviewCount == 2 && report.informationalCount == 1 && headline.node.name == "backup.raw" && headline.severity == .review
+                 && report.items.first { $0.node.name == "disk.img" }?.kind.application == "UTM",
+                 "migration readiness: two items to review and one informational at the default thresholds; the Overview leads with the largest gap")
+            test(report.items.allSatisfy { if case .confirmed = $0.verification { return true }; return false },
+                 "migration readiness: each item was confirmed with lstat (fixture outside protected folders)")
+            let rootNode = browser.root
+            test((rootNode?.logicalBytes ?? 0) >= 35 * GiB && (rootNode?.allocatedBytes ?? .max) < GiB,
+                 "migration readiness: storage totals stay allocated sizes (\(AtlasText.bytes(rootNode?.allocatedBytes ?? 0)) of \(AtlasText.bytes(rootNode?.logicalBytes ?? 0)) logical); the gap is never counted as used")
+            test(browser.structuredExplorer.migrationTargets.count == 2 && browser.structuredExplorer.migrationTargets.allSatisfy { $0.last.map { id in report.item(id)?.severity == .review } == true },
+                 "migration readiness: the report feeds the Structured Explorer's Migration Review targets (review items only)")
+
+            // Inspector synchronization: Reveal in Inspector opens the item's folder and selects it there.
+            browser.revealReviewCandidate(headline.node); await browser.load()
+            test(browser.directory?.id == headline.node.parentID && browser.pendingReveal?.id == headline.id && browser.mode == .explorer,
+                 "migration readiness: Reveal in Inspector opens the item's enclosing folder in the explorer")
+            if let folder = browser.directory, let pending = browser.pendingReveal {   // what the explorer view does on appear
+                browser.explorer.show(root: folder, trail: browser.breadcrumbs); browser.pendingReveal = nil; browser.explorer.reveal(pending)
+            }
+            test(browser.explorer.selection == headline.id && migration.item(browser.explorer.selection)?.id == headline.id,
+                 "migration readiness: the revealed item becomes the shared selection, and the Inspector finds its migration details")
+            let beforeRecheck = await migration.detector.statistics
+            for _ in 0..<5 { await migration.recheck(headline.id) }
+            let afterRecheck = await migration.detector.statistics
+            test(afterRecheck.liveChecks == beforeRecheck.liveChecks && afterRecheck.liveCacheHits >= beforeRecheck.liveCacheHits + 5,
+                 "migration readiness: repeated Inspector selection within 15 s reuses the last check (no filesystem access)")
+
+            // Coalescing: requests within the interval do not start passes.
+            let passes = migration.passes
+            migration.refresh(); migration.refresh(); migration.refresh()
+            await migration.waitForPass()
+            test(migration.passes == passes && !migration.scanning, "migration readiness: refresh requests within 30 s of a pass are coalesced into one deferred pass")
+            migration.cancel()
+
+            // Migration Review on the real Living Tree of the fixture root.
+            let tree = try await InventoryReader(path: migrationDatabase).livingTree(rootID: rootNode!.id)
+            let layout = StructuredExplorerLayout(model: tree, depth: 3)
+            let visibility = StructuredExplorerVisibility(layout: layout, model: tree, filter: .init(migrationReview: true), selection: nil, migrationTargets: MigrationReadinessController.targets(report))
+            let names = Set(visibility.reviewHighlights.compactMap { tree[$0]?.name })
+            test(names == ["Data", "b"] && visibility.context.compactMap { tree[$0]?.name }.contains("Ubuntu.utm") && visibility.opacity(layout.nodes.first { tree[$0.key]?.name == "docs" }!.key) == 0.2,
+                 "migration review: on a real catalog tree, the deepest shown folder on each path is highlighted (\(names.sorted())), its ancestors are context and unrelated folders fade")
+
+            // Navigation is not blocked by a running scan: the scan uses its own reader actor.
+            func timedLoads() async -> [Double] {
+                var samples = [Double]()
+                for _ in 0..<12 { let started = Date(); browser.revision &+= 1; await browser.load(); samples.append(Date().timeIntervalSince(started) * 1000) }
+                return samples.sorted()
+            }
+            let idle = await timedLoads()
+            let slow = SparseStorageDetector(database: migrationDatabase, chunkSpan: 1, pauseNanoseconds: 3_000_000)
+            let scan = Task { try await slow.refresh() }
+            let busy = await timedLoads()
+            let stillScanning = await slow.statistics.fullScans == 0
+            scan.cancel(); _ = try? await scan.value
+            test(stillScanning && busy.last! < max(150, idle.last! * 4),
+                 "migration readiness: folder loads stay responsive during a scan (p50 \(String(format: "%.1f", busy[busy.count / 2])) ms, max \(String(format: "%.1f", busy.last!)) ms; idle max \(String(format: "%.1f", idle.last!)) ms)")
+        } catch { test(false, "migration readiness fixture: \(error)") }
+
+        // MARK: Migration Readiness agreement: one APFS sparse image, made by Apple's own tools, seen identically by the
+        // Overview, the Inspector and the Living Tree. Ground truth comes from /usr/bin/stat, not from this app's code.
+        do {
+            let agreeTree = scratch.appendingPathComponent("agreement-tree"), agreeState = scratch.appendingPathComponent("agreement-state")
+            let imageFolder = agreeTree.appendingPathComponent("Library/Containers/com.docker.docker/Data/vms/0/data")
+            try fm.createDirectory(at: imageFolder, withIntermediateDirectories: true)
+            try Data(count: 8_192).write(to: agreeTree.appendingPathComponent("notes.txt"))
+            let image = imageFolder.appendingPathComponent("Docker.raw").path
+            let made = try run("/usr/sbin/mkfile", ["-n", "64g", image])                    // sparse: nothing allocated
+            let filled = try run("/bin/dd", ["if=/dev/urandom", "of=" + image, "bs=1m", "count=48", "conv=notrunc"])  // 48 MiB of real data
+            let truth = try run("/usr/bin/stat", ["-f", "%z %b", image]).output.split(separator: " ").compactMap { Int64($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            guard made.status == 0, filled.status == 0, truth.count == 2 else { throw HistoryError.invalid("agreement fixture: mkfile \(made.status) dd \(filled.status) stat \(truth)") }
+            let logical = truth[0], allocated = truth[1] * 512
+            test(logical == 64 << 30 && allocated >= 48 << 20 && allocated < 64 << 20,
+                 "agreement (APFS): mkfile -n + dd made a 64 GiB image with \(AtlasText.bytes(allocated)) allocated, per /usr/bin/stat")
+            let indexedAgreement = try run(monitor, ["inventory-work", "--root", agreeTree.path, "--data-dir", agreeState.path, "--budget", "30"])
+            let agreeDatabase = agreeState.appendingPathComponent("history.sqlite3").path
+            let browser = InventoryBrowserModel(database: agreeDatabase, readiness: readiness)
+            await browser.load()
+            browser.migration.refresh(); await browser.migration.waitForPass()
+            guard indexedAgreement.status == 0, let report = browser.migration.report, let overview = report.headline else { throw HistoryError.invalid("agreement: no report") }
+
+            // Overview: the line's headline and the popover's measurements.
+            let overviewValues = (overview.allocation.logical, overview.allocation.allocated, overview.allocation.gap)
+            test(report.reviewCount == 1 && overview.node.name == "Docker.raw" && overview.title == "Docker Desktop disk image" && overviewValues == (logical, allocated, logical - allocated)
+                 && { if case .confirmed = overview.verification { return true }; return false }(),
+                 "agreement: the Overview leads with this image as a Docker Desktop disk image, with exactly stat's logical and allocated sizes")
+
+            // Inspector: Reveal in Inspector, then what the Inspector reads for the selection.
+            browser.revealReviewCandidate(overview.node); await browser.load()
+            if let folder = browser.directory, let pending = browser.pendingReveal {
+                browser.explorer.show(root: folder, trail: browser.breadcrumbs); browser.pendingReveal = nil; browser.explorer.reveal(pending)
+            }
+            _ = await waitUntil { browser.explorer.state.node(overview.id) != nil }
+            let selected = browser.explorer.selection.flatMap { browser.explorer.state.node($0) }
+            let inspector = browser.migration.item(browser.explorer.selection)
+            test(selected?.id == overview.id && inspector?.id == overview.id && inspector.map { ($0.allocation.logical, $0.allocation.allocated, $0.allocation.gap) } ?? (0, 0, 0) == overviewValues
+                 && selected.flatMap(InventoryMapPlan.weight) == allocated && selected?.logicalBytes == logical && selected?.path == overview.node.path,
+                 "agreement: the Inspector's selection is the same node and path; its Migration readiness sizes and its Indexed size (allocated) match")
+
+            // Living Tree: the same node, sized by allocated storage, ringed by Migration Review.
+            guard let rootID = browser.root?.id else { throw HistoryError.invalid("agreement: no root") }
+            let tree = try await InventoryReader(path: agreeDatabase).livingTree(rootID: rootID, reveal: overview.id)
+            let key = LivingTreeKey.node(overview.id)
+            let layout = StructuredExplorerLayout(model: tree, depth: 3, keep: key, keepFullAncestry: true)
+            let review = StructuredExplorerVisibility(layout: layout, model: tree, filter: .init(migrationReview: true), selection: key, migrationTargets: MigrationReadinessController.targets(report))
+            test(tree[key]?.bytes == allocated && tree[key]?.node?.path == overview.node.path && StructuredExplorerText.size(tree[key]!) == AtlasText.bytes(allocated)
+                 && review.reviewHighlights == [key] && tree.ancestry(of: key).compactMap(\.nodeID) == overview.ancestors + [overview.id],
+                 "agreement: the Living Tree draws the same node at its allocated size (\(AtlasText.bytes(allocated)) label), on the same ancestry, with the Migration Review ring")
+            test(AtlasText.bytes(overview.allocation.allocated) == AtlasText.bytes(inspector?.allocation.allocated ?? -1) && AtlasText.bytes(overview.allocation.logical) == AtlasText.bytes(logical),
+                 "agreement: all three show the same text (\(AtlasText.bytes(logical)) logical, \(AtlasText.bytes(allocated)) allocated)")
+            try? fm.removeItem(atPath: image)
+        } catch { test(false, "agreement fixture: \(error)") }
+
         print("\(passed) inventory model tests passed, \(failures.count) failed")
         if !failures.isEmpty {
             failures.forEach { print("  - \($0)") }

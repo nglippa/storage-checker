@@ -14,13 +14,16 @@ import AppKit
     @Published var camera = StructuredExplorerCamera()
     @Published var filter = StructuredExplorerFilter()
     @Published private(set) var isolatedRoot: LivingTreeKey?
+    /// Detected Migration Readiness items as catalog chains (root first, item last), for the Migration Review filter.
+    @Published private(set) var migrationTargets: [[Int64]] = []
+    private var migrationRevision = 0
     private(set) var isolationSelection: Int64?
     private var isolationBase: LivingTreeKey?
     var viewport = CGSize(width: 900, height: 520)
     private var baseline: (revision: Int, depth: Int, layout: StructuredExplorerLayout, stamp: Int)?
     private var retained: (key: LivingTreeKey, fullChain: Bool, layout: StructuredExplorerLayout, stamp: Int)?
     private struct VisibilityKey: Equatable {
-        let layout: Int, filter: StructuredExplorerFilter, selection: LivingTreeKey?
+        let layout: Int, filter: StructuredExplorerFilter, selection: LivingTreeKey?, migration: Int
     }
     private var visibilityCache: (key: VisibilityKey, value: StructuredExplorerVisibility)?
     private(set) var visibilityEvaluations = 0
@@ -84,11 +87,18 @@ import AppKit
     func transform(_ layout: StructuredExplorerLayout) -> StructuredExplorerTransform { camera.transform(bounds: layout.bounds, size: viewport) }
 
     func visibility(_ layout: StructuredExplorerLayout, model: LivingTreeModel, selection: LivingTreeKey?) -> StructuredExplorerVisibility {
-        let key = VisibilityKey(layout: current, filter: filter, selection: selection)
+        let key = VisibilityKey(layout: current, filter: filter, selection: selection, migration: filter.migrationReview ? migrationRevision : 0)
         if let visibilityCache, visibilityCache.key == key { return visibilityCache.value }
-        let value = StructuredExplorerVisibility(layout: layout, model: model, filter: filter, selection: selection)
+        let value = StructuredExplorerVisibility(layout: layout, model: model, filter: filter, selection: selection, migrationTargets: migrationTargets)
         visibilityCache = (key, value); visibilityEvaluations += 1
         return value
+    }
+
+    /// Replaces the Migration Review targets (a new report). Unchanged targets keep the cached visibility.
+    func setMigrationTargets(_ targets: [[Int64]]) {
+        guard targets != migrationTargets else { return }
+        migrationTargets = targets; migrationRevision += 1
+        if targets.isEmpty, filter.migrationReview { filter.migrationReview = false }
     }
 
     @discardableResult func isolate(_ key: LivingTreeKey, model: LivingTreeModel, selection: Int64?) -> Bool {
@@ -132,6 +142,8 @@ struct StructuredExplorerPalette {
     var plate: Color { dark ? Color(white: 0.115).opacity(0.9) : Color.white.opacity(0.92) }
     var plateEdge: Color { dark ? Color.white.opacity(0.10) : Color.black.opacity(0.11) }
     static let accent = Color(red: 0.98, green: 0.60, blue: 0.14)
+    /// Migration Review rings: distinct from the orange selection and from the category tones.
+    static let review = Color(red: 0.56, green: 0.44, blue: 0.98)
 
     func tone(_ key: LivingTreeKey, coloring: LivingTreeColoring) -> Color {
         let neutral = dark ? AtlasTone(hue: 0.60, saturation: 0.10, brightness: 0.80) : AtlasTone(hue: 0.60, saturation: 0.14, brightness: 0.50)
@@ -298,8 +310,13 @@ struct StructuredExplorerView: View {
             }
             if visibility.noMatches {
                 HStack(spacing: 8) {
-                    Text("No folders meet this size in the loaded view.")
-                    Button("Show All") { state.filter.minimumBytes = 0 }
+                    if state.filter.migrationReview {
+                        Text("No migration review items under this folder in the loaded view.")
+                        Button("Turn Off Migration Review") { state.filter.migrationReview = false }
+                    } else {
+                        Text("No folders meet this size in the loaded view.")
+                        Button("Show All") { state.filter.minimumBytes = 0 }
+                    }
                 }.font(.caption).padding(8).background(palette.plate, in: RoundedRectangle(cornerRadius: 5))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top).padding(.top, 8)
             } else if state.isolatedRoot != nil, model[layout.rootKey]?.children.isEmpty == true {
@@ -363,15 +380,15 @@ struct StructuredExplorerView: View {
         }
         .accessibilityChildren {
             ForEach(accessibleNodes, id: \.key) { node in
-                accessibleNode(node, layout: layout, model: model, transform: t, selected: node.key == shownSelection)
+                accessibleNode(node, layout: layout, model: model, transform: t, selected: node.key == shownSelection, review: visibility.reviewPaths.contains(node.key))
             }
         }
     }
 
     @ViewBuilder private func accessibleNode(_ node: StructuredExplorerLayout.Node, layout: StructuredExplorerLayout,
-                                model: LivingTreeModel, transform: StructuredExplorerTransform, selected: Bool) -> some View {
+                                model: LivingTreeModel, transform: StructuredExplorerTransform, selected: Bool, review: Bool = false) -> some View {
         let diameter = max(CGFloat(12), layout.screenRadius(node, transform) * 2)
-        let label = StructuredExplorerText.spoken(node.key, layout: layout, model: model, selected: selected)
+        let label = StructuredExplorerText.spoken(node.key, layout: layout, model: model, selected: selected) + (review ? ", on a migration review path" : "")
         let traits: AccessibilityTraits = selected ? [.isButton, .isSelected] : .isButton
         let base = Circle().frame(width: diameter, height: diameter).position(transform.apply(node.point))
             .accessibilityLabel(label).accessibilityAddTraits(traits)
@@ -591,7 +608,7 @@ struct StructuredExplorerView: View {
                 HStack(spacing: 8) { pathBar; Spacer(minLength: 8); viewControls }
                 VStack(alignment: .leading, spacing: 6) { HStack { pathBar; Spacer() }; HStack { Spacer(); viewControls } }
             }
-            StructuredExplorerFilterControls(state: state, canFocus: selectedFolder != nil,
+            StructuredExplorerFilterControls(state: state, reviewItems: state.migrationTargets.count, canFocus: selectedFolder != nil,
                 canIsolate: selectedFolder != nil && selectedFolder != (state.isolatedRoot ?? tree.model?.rootKey),
                 isolate: { if let model = tree.model, let key = selectedFolder { isolate(key, model: model) } },
                 showPath: { if let model = tree.model, let key = selectedFolder { pathFocus(key, model: model, mode: .path) } },
@@ -713,7 +730,11 @@ struct StructuredExplorerView: View {
     }
 
     private func filterStatus(_ visibility: StructuredExplorerVisibility) -> String {
-        "Showing \(visibility.visibleFolders) of \(visibility.availableFolders) folders · \(visibility.matchingFolders) match · \(visibility.contextFolders) context"
+        var text = "Showing \(visibility.visibleFolders) of \(visibility.availableFolders) folders · \(visibility.matchingFolders) match · \(visibility.contextFolders) context"
+        if state.filter.migrationReview {
+            text += visibility.reviewHighlights.isEmpty ? " · no migration review items under this folder" : " · \(visibility.reviewHighlights.count) on migration review paths"
+        }
+        return text
     }
 
     private var selectedFolder: LivingTreeKey? {
@@ -725,6 +746,7 @@ struct StructuredExplorerView: View {
         guard let model = tree.model, let key = selectionKey(model), let element = model[key] else { return "Selected path is retained." }
         if element.role == .rest { return "Selected group is retained as navigation context." }
         if element.bytes == nil { return "Selected item's size is unknown; its path is retained." }
+        if state.filter.migrationReview { return "Selected item is not on a migration review path; its path is retained." }
         return "Selected item is below the size filter; its path is retained."
     }
 
@@ -925,6 +947,14 @@ struct StructuredExplorerPainter {
                     ink.stroke(tick, with: .color(palette.secondary.opacity(0.7)), lineWidth: 1)
                 }
             }
+        }
+        // Migration Review: a dashed ring on each shown item (or nearest shown folder) leading to a detected item.
+        for key in visibility?.reviewHighlights ?? [] {
+            guard let node = layout[key] else { continue }
+            let c = t.apply(node.point), r = layout.screenRadius(node, t) + 3.5
+            guard view.contains(c) else { continue }
+            ctx.stroke(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)), with: .color(StructuredExplorerPalette.review),
+                       style: StrokeStyle(lineWidth: 2, dash: [3, 2]))
         }
         if let selected, let node = layout[selected] {
             let c = t.apply(node.point), r = layout.screenRadius(node, t) + 5

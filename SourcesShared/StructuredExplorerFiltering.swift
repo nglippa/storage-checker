@@ -12,14 +12,19 @@ public struct StructuredExplorerFilter: Equatable, Hashable, Sendable {
     public var minimumBytes: Int64
     public var presentation: StructuredExplorerFilterPresentation
     public var focus: StructuredExplorerFocus
+    /// Migration Review: match only the folders and files that lead to detected sparse-storage items.
+    public var migrationReview: Bool
 
-    public init(minimumBytes: Int64 = 0, presentation: StructuredExplorerFilterPresentation = .dim, focus: StructuredExplorerFocus = .off) {
+    public init(minimumBytes: Int64 = 0, presentation: StructuredExplorerFilterPresentation = .dim, focus: StructuredExplorerFocus = .off, migrationReview: Bool = false) {
         self.minimumBytes = max(0, minimumBytes)
         self.presentation = presentation
         self.focus = focus
+        self.migrationReview = migrationReview
     }
 
-    public var isActive: Bool { minimumBytes > 0 || focus != .off || presentation != .dim }
+    public var isActive: Bool { minimumBytes > 0 || focus != .off || presentation != .dim || migrationReview }
+    /// Whether some nodes do not match (a size threshold or Migration Review).
+    public var narrows: Bool { minimumBytes > 0 || migrationReview }
 }
 
 public enum StructuredExplorerSizePreset: String, CaseIterable, Sendable {
@@ -83,18 +88,29 @@ public struct StructuredExplorerVisibility: Sendable {
     public let contextFolders: Int
     public let selectedBelowThreshold: Bool
     public let noMatches: Bool
+    /// Shown nodes that are, or most closely contain, a detected migration-review item (empty when the filter is off).
+    public let reviewHighlights: Set<LivingTreeKey>
+    /// Shown nodes on the path from the centre to a highlight, the highlights included (empty when the filter is off).
+    public let reviewPaths: Set<LivingTreeKey>
 
     private let filter: StructuredExplorerFilter
     private let selection: LivingTreeKey?
 
-    public init(layout: StructuredExplorerLayout, model: LivingTreeModel, filter: StructuredExplorerFilter, selection: LivingTreeKey?) {
+    /// - Parameter migrationTargets: each detected item's catalog chain, root first and the item last. Items outside the
+    ///   shown folder are ignored; an item that is not drawn is represented by its nearest shown ancestor. No catalog read.
+    public init(layout: StructuredExplorerLayout, model: LivingTreeModel, filter: StructuredExplorerFilter, selection: LivingTreeKey?,
+                migrationTargets: [[Int64]] = []) {
         self.filter = filter
         self.selection = selection
         let laidOut = Set(layout.nodes.map(\.key))
+        let review: Set<LivingTreeKey>? = filter.migrationReview ? Self.migrationKeys(migrationTargets, layout: layout) : nil
         var matching = Set<LivingTreeKey>()
         for key in laidOut {
-            guard key.nodeID != nil, let element = model[key] else { continue }
-            if filter.minimumBytes == 0 || element.bytes.map({ $0 >= filter.minimumBytes }) == true { matching.insert(key) }
+            guard let element = model[key] else { continue }
+            let large = filter.minimumBytes == 0 || element.bytes.map({ $0 >= filter.minimumBytes }) == true
+            // A grouped remainder matches only as Migration Review's stand-in for an item grouped in it.
+            guard key.nodeID != nil || review?.contains(key) == true else { continue }
+            if large && review.map({ $0.contains(key) }) ?? true { matching.insert(key) }
         }
         self.matching = matching
 
@@ -112,7 +128,7 @@ public struct StructuredExplorerVisibility: Sendable {
         self.context = context
         selectionExceptions = exceptions
 
-        if filter.presentation == .hide, filter.minimumBytes > 0 {
+        if filter.presentation == .hide, filter.narrows {
             visible = matching.union(context).union(exceptions)
         } else {
             visible = laidOut
@@ -127,7 +143,7 @@ public struct StructuredExplorerVisibility: Sendable {
             }
         }
         if !focusSet.isEmpty { prominent = focusSet.intersection(visible) }
-        else if filter.minimumBytes > 0 {
+        else if filter.narrows {
             var priority = matching.intersection(visible)
             if let selection, visible.contains(selection) { priority.insert(selection) }
             prominent = priority
@@ -138,15 +154,35 @@ public struct StructuredExplorerVisibility: Sendable {
         visibleFolders = visible.filter(isFolder).count
         matchingFolders = matching.filter(isFolder).count
         contextFolders = context.subtracting(matching).filter(isFolder).count
-        selectedBelowThreshold = filter.minimumBytes > 0 && (selection.map { laidOut.contains($0) && !matching.contains($0) } ?? false)
-        noMatches = filter.minimumBytes > 0 && matchingFolders == 0
+        let highlights = filter.migrationReview ? matching.intersection(visible) : []
+        var paths = Set<LivingTreeKey>()
+        for key in highlights { paths.formUnion(chain(key)) }
+        reviewHighlights = highlights
+        reviewPaths = paths.intersection(visible)
+        // With Migration Review alone, a folder on a review path is not "excluded" even though only the deepest node matches.
+        selectedBelowThreshold = filter.narrows && (selection.map { laidOut.contains($0) && !matching.contains($0)
+            && !(filter.migrationReview && filter.minimumBytes == 0 && paths.contains($0)) } ?? false)
+        noMatches = filter.narrows && (filter.migrationReview ? matching.isEmpty : matchingFolders == 0)
+    }
+
+    /// The deepest shown node on each chain that passes through the layout's root. When that is the centre itself, the
+    /// centre's grouped remainder stands in for the item when it is shown.
+    public static func migrationKeys(_ targets: [[Int64]], layout: StructuredExplorerLayout) -> Set<LivingTreeKey> {
+        guard let root = layout.rootKey.nodeID else { return [] }
+        var keys = Set<LivingTreeKey>()
+        for chain in targets {
+            guard let start = chain.firstIndex(of: root), let deepest = chain[start...].reversed().first(where: { layout.index[.node($0)] != nil }) else { continue }
+            if deepest != root { keys.insert(.node(deepest)) }
+            else if chain.count > start + 1, layout.index[.rest(root)] != nil { keys.insert(.rest(root)) }
+        }
+        return keys
     }
 
     public func opacity(_ key: LivingTreeKey) -> Double {
         guard visible.contains(key) else { return 0 }
         if key == selection { return 1 }
         if filter.focus != .off, selection != nil { return prominent.contains(key) ? 1 : 0.2 }
-        guard filter.minimumBytes > 0 else { return 1 }
+        guard filter.narrows else { return 1 }
         if matching.contains(key) { return 1 }
         if context.contains(key) { return 0.8 }
         return 0.2

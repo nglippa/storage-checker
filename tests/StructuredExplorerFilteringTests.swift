@@ -154,6 +154,47 @@ func structuredExplorerFilteringTests(_ test: (Bool, String) throws -> Void) thr
     try test(labels.allSatisfy { allowed.contains($0.key) } && labels.contains { $0.key == fixture.deep1 && $0.emphasized }
              && labels.enumerated().allSatisfy { i, a in !labels.dropFirst(i + 1).contains { a.footprint.intersects($0.footprint) } },
              "structured filtering: minimum-window labels exclude hidden geometry and prioritize preferred candidates without collisions")
+
+    // MARK: Migration Review (detected sparse-storage items, as catalog chains root-first)
+    let deepTarget: [Int64] = [1, 2, 6, 7, 8], undrawn: [Int64] = [1, 3, 999], outside: [Int64] = [42, 43]
+    let reviewOff = StructuredExplorerVisibility(layout: layout, model: model, filter: .init(), selection: nil, migrationTargets: [deepTarget])
+    try test(reviewOff.visible == baseline.visible && reviewOff.reviewHighlights.isEmpty && layout.nodes.allSatisfy { reviewOff.opacity($0.key) == 1 },
+             "migration review: targets have no effect while the filter is off")
+    let review = StructuredExplorerFilter(migrationReview: true)
+    try test(review.isActive && review.narrows && !StructuredExplorerFilter().narrows, "migration review: the filter counts as active and narrowing")
+    let reviewDim = StructuredExplorerVisibility(layout: layout, model: model, filter: review, selection: nil, migrationTargets: [deepTarget, undrawn, outside])
+    try test(reviewDim.matching == [fixture.selected, fixture.medium] && reviewDim.reviewHighlights == [fixture.selected, fixture.medium],
+             "migration review: a drawn item is highlighted itself; an undrawn one by its nearest shown folder; one outside the view is ignored")
+    try test(reviewDim.context.isSuperset(of: [fixture.root, fixture.large, fixture.deep1, fixture.deep2])
+             && reviewDim.opacity(fixture.selected) == 1 && reviewDim.opacity(fixture.deep1) == 0.8 && reviewDim.opacity(fixture.duplicateA) == 0.2
+             && reviewDim.visible.count == layout.nodes.count,
+             "migration review: dim keeps the real hierarchy, strengthens the path to each item and fades unrelated branches")
+    let shallow = StructuredExplorerLayout(model: model, depth: 2)
+    let reviewShallow = StructuredExplorerVisibility(layout: shallow, model: model, filter: review, selection: nil, migrationTargets: [deepTarget])
+    try test(reviewShallow.reviewHighlights == [fixture.deep1], "migration review: an item below the shown levels is represented by its deepest shown ancestor")
+    let reviewHide = StructuredExplorerVisibility(layout: layout, model: model, filter: .init(presentation: .hide, migrationReview: true), selection: nil, migrationTargets: [deepTarget])
+    try test(reviewHide.visible == [fixture.root, fixture.large, fixture.deep1, fixture.deep2, fixture.selected] && !reviewHide.noMatches,
+             "migration review: hide shows only the paths to detected items")
+    let reviewAndSize = StructuredExplorerVisibility(layout: layout, model: model, filter: .init(minimumBytes: 100_000_000, migrationReview: true), selection: nil, migrationTargets: [deepTarget, undrawn])
+    try test(reviewAndSize.matching == [fixture.medium], "migration review: combined with a size threshold, both must match")
+    let reviewNone = StructuredExplorerVisibility(layout: layout, model: model, filter: review, selection: fixture.duplicateA, migrationTargets: [])
+    try test(reviewNone.noMatches && reviewNone.selectedBelowThreshold && reviewNone.opacity(fixture.duplicateA) == 1,
+             "migration review: with no detected items it reports no matches and keeps the selection visible")
+    let isolatedReview = StructuredExplorerLayout(model: model, depth: 4, root: fixture.large)
+    let reviewIsolated = StructuredExplorerVisibility(layout: isolatedReview, model: model, filter: review, selection: nil, migrationTargets: [deepTarget, undrawn])
+    try test(reviewIsolated.reviewHighlights == [fixture.selected], "migration review: path isolation keeps only items beneath the isolated folder")
+    let focused = StructuredExplorerVisibility(layout: layout, model: model, filter: .init(focus: .path, migrationReview: true), selection: fixture.selected, migrationTargets: [deepTarget])
+    try test(focused.prominent == [fixture.root, fixture.large, fixture.deep1, fixture.deep2, fixture.selected],
+             "migration review: path focus on a detected item emphasizes exactly its path to the root")
+    try test(model[fixture.selected]?.bytes == 10_000_000 && layout[fixture.selected]?.radius == StructuredExplorerLayout(model: model, depth: 4)[fixture.selected]?.radius,
+             "migration review: node sizes keep their allocated-size semantics (logical capacity is not drawn)")
+    let ancestorSelected = StructuredExplorerVisibility(layout: layout, model: model, filter: review, selection: fixture.deep1, migrationTargets: [deepTarget])
+    try test(!ancestorSelected.selectedBelowThreshold && ancestorSelected.reviewPaths.isSuperset(of: [fixture.large, fixture.deep1, fixture.deep2, fixture.selected])
+             && !ancestorSelected.reviewHighlights.contains(fixture.deep1),
+             "migration review: a selected folder on a review path is not reported as excluded; only the deepest node is ringed")
+    let groupedAtCentre = StructuredExplorerVisibility(layout: isolatedReview, model: model, filter: review, selection: nil, migrationTargets: [[1, 2, 777]])
+    try test(groupedAtCentre.reviewHighlights == [fixture.rest] && !groupedAtCentre.noMatches && groupedAtCentre.matchingFolders == 0,
+             "migration review: an item grouped in the shown folder's own remainder highlights that group instead of reporting no matches")
 }
 
 #if STRUCTURED_FILTER_TEST_MAIN

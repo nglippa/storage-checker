@@ -4,6 +4,8 @@ import AppKit
 /// Presentation controls only; their state has no catalog or filesystem dependency.
 struct StructuredExplorerFilterControls: View {
     @ObservedObject var state: StructuredExplorerState
+    /// Detected Migration Readiness items (0: the Migration Review toggle is unavailable).
+    var reviewItems = 0
     let canFocus: Bool
     let canIsolate: Bool
     let isolate: () -> Void
@@ -18,9 +20,9 @@ struct StructuredExplorerFilterControls: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) { sizeMenu; presentation; focus; pathMenu; Spacer(minLength: 4); resetButton }
+            HStack(spacing: 12) { sizeMenu; presentation; focus; review; pathMenu; Spacer(minLength: 4); resetButton }
             VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 10) { sizeMenu; presentation; Spacer(minLength: 4) }
+                HStack(spacing: 10) { sizeMenu; presentation; review; Spacer(minLength: 4) }
                 HStack(spacing: 10) { focus; pathMenu; Spacer(minLength: 4); resetButton }
             }
         }
@@ -61,6 +63,15 @@ struct StructuredExplorerFilterControls: View {
             .accessibilityLabel("Focus on selected folder")
             .accessibilityValue(state.filter.focus == .off ? "Off" : state.filter.focus == .path ? "Path to root" : "Ancestors and descendants")
             .help("Emphasize the selected folder, its ancestors and descendants; unrelated branches fade. Select a folder first.")
+    }
+
+    private var review: some View {
+        Toggle("Migration Review", isOn: $state.filter.migrationReview)
+            .toggleStyle(.button).disabled(reviewItems == 0 && !state.filter.migrationReview)
+            .accessibilityLabel("Migration Review")
+            .accessibilityValue(state.filter.migrationReview ? "On, \(reviewItems) detected items" : "Off")
+            .help(reviewItems == 0 ? "No sparse-storage items were detected in the indexed locations." :
+                  "Highlight the paths to \(reviewItems == 1 ? "the detected sparse-storage item" : "\(reviewItems) detected sparse-storage items"); unrelated branches fade. Sizes still show allocated storage.")
     }
 
     private var pathMenu: some View {

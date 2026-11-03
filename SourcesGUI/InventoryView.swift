@@ -89,6 +89,12 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     lazy var structuredExplorer = StructuredExplorerState()
     /// A bounded review of this catalog, independent of the currently open folder.
     lazy var reviewQueue = CleanupReviewQueueController(database: database)
+    /// Migration Readiness: sparse-storage detection over this catalog (read-only; its own reader and actor).
+    lazy var migration: MigrationReadinessController = {
+        let controller = MigrationReadinessController(database: database)
+        controller.onReport = { [weak self] report in self?.structuredExplorer.setMigrationTargets(MigrationReadinessController.targets(report)) }
+        return controller
+    }()
     /// Cleanup Inspector evidence for the Inspector's subject (read-only; created on first use).
     lazy var cleanup: CleanupInspectorController = {
         var environment = ArtifactEnvironment.current(ownData: (database as NSString).deletingLastPathComponent)
@@ -388,6 +394,9 @@ struct DiskInventoryView: View {
         .onAppear { PerformanceTrace.mark("storage.appear") }
         // Reuse the viewer's one visible-window clock; inventory adds no scanner or loop.
         .onReceive(history.$inventoryRefreshTick.dropFirst()) { _ in model.refreshIfIdle() }
+        // Migration Readiness follows catalog changes; the controller coalesces passes (at most one per 30 s).
+        .task { model.migration.refresh() }
+        .onChange(of: model.status?.updatedAt) { _, _ in model.migration.refresh() }
         .onChange(of: indexingActive, initial: true) { _, active in history.setInventoryBusy(active) }
         .onChange(of: model.mode) { _, _ in model.offset = 0 }
         .onChange(of: model.search) { _, _ in model.offset = 0 }
@@ -420,6 +429,7 @@ struct DiskInventoryView: View {
             }
             initializationProgress
             summaryLine
+            MigrationReadinessSummary(controller: model.migration, browser: model)
             if let status = model.status, !(initialization.isVisible && status.generation == nil) {
                 let presentation = InventoryStatusPresentation(status: status)
                 if !initialization.isVisible {
