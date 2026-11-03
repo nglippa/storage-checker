@@ -145,6 +145,11 @@ public actor SparseStorageDetector {
         public var bundleReads = 0
         public var slowestChunkSeconds = 0.0
         public var lastPassSeconds = 0.0
+        /// Slices halved after the 0.25 s read deadline interrupted them, and reads retried after a lock or an interrupt.
+        public var sliceRetries = 0
+        public var readRetries = 0
+        /// The span of the last slice read (adaptive: about 50 ms per read).
+        public var lastSliceSpan: Int64 = 0
     }
 
     private struct Entry {
@@ -194,8 +199,8 @@ public actor SparseStorageDetector {
     /// stay cached: they are real lstat results keyed to the catalog values they were checked against).
     public func refresh(forceFull: Bool = false) async throws -> SparseStorageReport {
         let started = Date()
-        let status = try await reader.status()
-        let accounting = try await reader.accounting()
+        let status = try await withRetry { try await reader.status() }
+        let accounting = try await withRetry { try await reader.accounting() }
         var pass = SparseStorageReport.Pass.full
         var nextEntries = entries, nextCursor = cursor
         if !forceFull, generation != nil, generation == status.generation, let cursor, let change = try await changedFolders(since: cursor) {
@@ -242,7 +247,7 @@ public actor SparseStorageDetector {
     private func changedFolders(since cursor: InventoryChangeCursor) async throws -> (folders: Set<Int64>, subtree: Set<Int64>, next: InventoryChangeCursor)? {
         var folders = Set<Int64>(), subtree = Set<Int64>(), next = cursor
         for _ in 0..<8 {
-            let batch = try await reader.changes(since: next, limit: InventoryReader.maximumChangeRead)
+            let batch = try await withRetry { try await reader.changes(since: next, limit: InventoryReader.maximumChangeRead) }
             guard batch.available, !batch.mustResynchronize, let after = batch.next else { return nil }
             for change in batch.changes { folders.insert(change.directoryID); if change.subtree { subtree.insert(change.directoryID) } }
             next = after
@@ -253,12 +258,33 @@ public actor SparseStorageDetector {
 
     private func fullScan() async throws -> ([Int64: Entry], InventoryChangeCursor?) {
         // The journal position is taken first, so anything committed during the scan is replayed by the next pass.
-        let start = try await reader.changes(since: nil, limit: 8).next
+        let start = try await withRetry { try await reader.changes(since: nil, limit: 8).next }
         var ids = [Int64](), after: Int64 = 0
+        // Slices adapt to the catalog: on a cold or busy catalog a 50,000-id slice can take longer than the reader's
+        // 0.25 s deadline (measured 60–250 ms on a live 2.8 M-node catalog while the worker was writing). A slice cut
+        // off by the deadline is halved and read again; fast slices grow back. Target: about 50 ms per read, which also
+        // bounds how long a slice can hold back the worker's commits.
+        let minimumSpan = min(chunkSpan, 500)
+        var span = min(chunkSpan, 10_000), stuck = 0
         while true {
             try Task.checkCancellation()
             let began = Date()
-            let chunk = try await withBusyRetry { try await reader.sparseCandidateChunk(after: after, span: chunkSpan, thresholds: thresholds) }
+            let chunk: SparseCandidateChunk
+            do {
+                let current = span
+                chunk = try await withRetry(interrupts: false) { try await reader.sparseCandidateChunk(after: after, span: current, thresholds: thresholds) }
+            } catch let error as InventoryReaderError where Self.interrupted(error) && !Task.isCancelled {
+                statistics.sliceRetries += 1
+                if span > minimumSpan { span = max(minimumSpan, span / 2); continue }
+                stuck += 1
+                if stuck > 5 { throw error }
+                try await Task.sleep(nanoseconds: 200_000_000)
+                continue
+            }
+            stuck = 0
+            let elapsed = Date().timeIntervalSince(began)
+            statistics.lastSliceSpan = span
+            if elapsed < 0.03 { span = min(chunkSpan, span * 2) } else if elapsed > 0.08 { span = max(minimumSpan, span / 2) }
             statistics.chunkReads += 1
             statistics.slowestChunkSeconds = max(statistics.slowestChunkSeconds, Date().timeIntervalSince(began))
             statistics.idsSpanned += chunk.scannedThrough - after
@@ -270,18 +296,22 @@ public actor SparseStorageDetector {
         return (try await hydrate(ids), start)
     }
 
-    /// A slice that meets the worker's commit (SQLITE_BUSY after the reader's 100 ms busy timeout) is retried a few
-    /// times with a short pause instead of abandoning the whole pass. Cancellation is never retried.
-    private func withBusyRetry<T>(_ read: () async throws -> T) async throws -> T {
+    /// A read that meets the worker's commit (SQLITE_BUSY after the reader's 100 ms busy timeout), or that the reader's
+    /// 0.25 s deadline interrupted on a cold or busy catalog, is retried a few times with a short pause instead of
+    /// abandoning the whole pass. Cancellation of the calling task is never retried.
+    private func withRetry<T>(interrupts: Bool = true, _ read: () async throws -> T) async throws -> T {
         var attempt = 0
         while true {
             do { return try await read() }
-            catch let error as InventoryReaderError where attempt < 3 && !Task.isCancelled && error.description.lowercased().contains("locked") {
-                attempt += 1
+            catch let error as InventoryReaderError where attempt < 4 && !Task.isCancelled
+                    && (error.description.lowercased().contains("locked") || (interrupts && Self.interrupted(error))) {
+                attempt += 1; statistics.readRetries += 1
                 try await Task.sleep(nanoseconds: UInt64(attempt) * 100_000_000)
             }
         }
     }
+
+    static func interrupted(_ error: InventoryReaderError) -> Bool { error.description.lowercased().contains("interrupt") }
 
     private func incremental(_ current: [Int64: Entry], folders: Set<Int64>, subtree: Set<Int64>) async throws -> [Int64: Entry] {
         var result = current.filter { key, entry in
@@ -293,7 +323,8 @@ public actor SparseStorageDetector {
         let ordered = Array(folders).sorted()
         var ids = [Int64]()
         for start in stride(from: 0, to: ordered.count, by: 256) {
-            ids += try await reader.sparseCandidates(inDirectories: Array(ordered[start..<min(ordered.count, start + 256)]), thresholds: thresholds)
+            let group = Array(ordered[start..<min(ordered.count, start + 256)])
+            ids += try await withRetry { try await reader.sparseCandidates(inDirectories: group, thresholds: thresholds) }
             statistics.directoryReads += 1
         }
         for (key, entry) in try await hydrate(Array(Set(ids + reread))) { result[key] = entry }
@@ -302,7 +333,11 @@ public actor SparseStorageDetector {
 
     private func hydrate(_ ids: [Int64]) async throws -> [Int64: Entry] {
         guard !ids.isEmpty else { return [:] }
-        let records = try await reader.sparseCandidateRecords(ids: ids)
+        var records = [SparseCandidateRecord]()
+        for start in stride(from: 0, to: ids.count, by: 256) {
+            let group = Array(ids[start..<min(ids.count, start + 256)])
+            records += try await withRetry { try await reader.sparseCandidateRecords(ids: group) }
+        }
         statistics.candidatesHydrated += records.count
         var result = [Int64: Entry]()
         for record in records {
@@ -414,7 +449,7 @@ public actor SparseStorageDetector {
         var result = [SparseStorageCoverage.Location]()
         for location in SparseStorageKnownLocation.all {
             let path = home + "/" + location.relativePath
-            guard let found = try? await reader.locateDirectory(path: path) else { continue }
+            guard let found = try? await withRetry({ try await reader.locateDirectory(path: path) }) else { continue }
             let node = found.node
             let state: SparseStorageCoverage.LocationState?
             switch (found.exact, node.status) {
@@ -425,7 +460,7 @@ public actor SparseStorageDetector {
             }
             guard let state else { continue }
             var installed: Bool?
-            if let bundle = location.bundle, let app = try? await reader.locateDirectory(path: "/Applications/" + bundle) { installed = app.exact }
+            if let bundle = location.bundle, let app = try? await withRetry({ try await reader.locateDirectory(path: "/Applications/" + bundle) }) { installed = app.exact }
             // A protected parent hides whether the application stores anything there: skip it when known not installed.
             if !found.exact && installed == false { continue }
             result.append(.init(application: location.application, path: SparseStorageLocations.redacted(path, home: home), state: state, installed: installed))

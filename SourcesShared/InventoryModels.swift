@@ -990,13 +990,14 @@ extension InventoryReader {
     /// Uses the parent index; never reads unrelated branches.
     public func sparseCandidates(inDirectories directories: [Int64], thresholds: SparseStorageThresholds) throws -> [Int64] {
         guard !directories.isEmpty else { return [] }
-        let connection = try InventoryReadConnection(databasePath, deadline: Self.sparseScanDeadline)
-        guard let generation = try activeGeneration(connection) else { return [] }
         let predicate = Self.sparsePredicate(thresholds)
         var ids = [Int64]()
-        for start in stride(from: 0, to: directories.count, by: 64) {
+        // One connection (and so one 0.25 s deadline) per 32 folders.
+        for start in stride(from: 0, to: directories.count, by: 32) {
             try Task.checkCancellation()
-            let chunk = Array(directories[start..<min(directories.count, start + 64)])
+            let connection = try InventoryReadConnection(databasePath, deadline: Self.sparseScanDeadline)
+            guard let generation = try activeGeneration(connection) else { return [] }
+            let chunk = Array(directories[start..<min(directories.count, start + 32)])
             let marks = Array(repeating: "?", count: chunk.count).joined(separator: ",")
             let statement = try connection.statement("SELECT n.id FROM inventory_nodes n WHERE (n.parent_id IN (\(marks)) OR n.id IN (\(marks))) AND +n.generation_id=? AND " + predicate.sql, chunk + chunk + [generation] + predicate.values)
             defer { sqlite3_finalize(statement) }
@@ -1015,14 +1016,15 @@ extension InventoryReader {
     /// changes between slices: a partial record set is never returned as complete.
     public func sparseCandidateRecords(ids: [Int64]) throws -> [SparseCandidateRecord] {
         var result = [SparseCandidateRecord](), expected: Int64?
-        for start in stride(from: 0, to: ids.count, by: 64) {
+        // One connection (and so one 0.25 s deadline) per 16 candidates: each costs a path walk, slow on a cold catalog.
+        for start in stride(from: 0, to: ids.count, by: 16) {
             try Task.checkCancellation()
             let connection = try InventoryReadConnection(databasePath, deadline: Self.sparseScanDeadline)
             guard let generation = try activeGeneration(connection), expected == nil || expected == generation else {
                 throw InventoryReaderError.query("The inventory generation changed during the sparse-storage pass")
             }
             expected = generation
-            for id in ids[start..<min(ids.count, start + 64)] {
+            for id in ids[start..<min(ids.count, start + 16)] {
                 guard let node = try fetchOne(connection, sql: Self.baseSelect + " WHERE n.id=? AND n.generation_id=?", values: [id, generation]) else { continue }
                 // The catalog's totals, qualified or not: a stale measurement keeps its earlier values.
                 let indexed = SparseAllocation(logical: node.logicalBytes ?? node.previousLogicalBytes ?? 0, allocated: node.allocatedBytes ?? node.previousAllocatedBytes ?? 0)

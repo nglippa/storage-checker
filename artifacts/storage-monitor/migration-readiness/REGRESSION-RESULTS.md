@@ -54,6 +54,10 @@ After that run, one source change was made: a comment in `SparseStorageDetector.
 
 Also covered: classification of Docker Desktop, OrbStack, Parallels, VMware Fusion, UTM, Lima, Colima, Podman, Tart and unowned formats, for two different user names; protected and cloud locations; `~` redaction; iCloud skip; compression and placeholder exclusion; guidance wording (no failure prediction, no delete, prune, compact or exclude advice; data-safety warning present); request coalescing in the controller.
 
+## After the live-catalog fix
+
+The adaptive-slice and retry fix (see PERFORMANCE-RESULTS.md, "Live catalog under a busy worker") was followed by a full rerun of every suite: build exit 0; monitor self-test 235/235; inventory 379/379; viewer model 1,032/1,032; structured filtering 36/36; viewer build exit 0; headless browser 85/85. No failures, nothing skipped.
+
 ## Three-view agreement on one APFS image (follow-up)
 
 `tests/InventoryModelTests.swift`, "agreement": one image created by Apple's tools rather than this app's code. `/usr/sbin/mkfile -n 64g` makes a sparse 64 GiB file, then `/bin/dd if=/dev/urandom … bs=1m count=48 conv=notrunc` writes 48 MiB of real data. It sits in Docker Desktop's directory layout and is indexed by the real worker. Ground truth is `/usr/bin/stat -f '%z %b'`: 68.72 GB logical, 50.3 MB allocated. All 5 checks pass:

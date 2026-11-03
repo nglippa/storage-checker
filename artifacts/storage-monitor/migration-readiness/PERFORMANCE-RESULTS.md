@@ -54,6 +54,37 @@ Numbers above are from the run on the final code (after the code-review fixes); 
 - **Filter activation:** Migration Review is cheaper than the existing size filter pass. It is cached per layout, filter, selection and report.
 - **Memory:** the report keeps at most 500 items; the cache holds one entry per candidate.
 
+## Live catalog under a busy worker (found in native QA, fixed)
+
+The first native launch opened the dev viewer on the real catalog (2.8 M nodes, 1.4 GB) while the production worker was reconciling. It showed "Migration readiness: unavailable (interrupted)".
+
+A read-only probe of the live catalog, the same reads the viewer makes, found the cause:
+
+- 50,000-id slices took **60–250 ms**, not the 3–10 ms measured on a warm, idle clone. The file was partly cold, and the worker was writing.
+- **13 of 64 slices** hit the reader's 0.25 s deadline. One failed slice abandoned the whole pass.
+- `accounting()` took 178 ms, also close to the deadline.
+
+The clone benchmarks above did not show this because no worker was competing for the catalog.
+
+**Fix:**
+
+- Full-pass slices adapt: they start at 10,000 ids and aim for about 50 ms per read. A slice that hits the deadline is halved and re-read (minimum 500 ids); fast slices grow back to 50,000.
+- Hydration uses one connection per 16 candidates; changed-folder reads use one connection per 32 folders.
+- Status, accounting, change-journal, hydration and location reads are retried up to 4 times after a lock or a deadline interrupt (100–400 ms backoff). Real cancellation is never retried.
+
+**Result on the live catalog** (shipped settings, read-only, worker running):
+
+| Trial | Result | Time | Slices | Halved | Slowest slice |
+|---|---|---|---|---|---|
+| 1 | OK | 10.5 s | 173 | 0 | 201 ms |
+| 2 | OK | 12.0 s | 189 | 1 | 217 ms |
+| 3 | OK | 10.9 s | 175 | 0 | 174 ms |
+| 4 | OK | 11.0 s | 191 | 0 | 178 ms |
+
+The pass after trial 1 was incremental and took 109 ms. All four reported 3 REVIEW and 1 INFORMATIONAL: the native QA fixture under `/private/tmp`, which the production worker had indexed, and nothing else.
+
+A full pass on a busy live catalog takes about 11 s in the background. A single read can still hold the shared lock for up to about 0.2 s while the catalog is cold.
+
 ## Controlled indexing sample (follow-up)
 
 The first comparison had n = 3, and one run with a detector was 47 % above the slowest run without one. That cannot separate noise from a regression, so a controlled sample was run: `scripts/benchmark-migration-readiness.sh indexing 20`.
