@@ -1,0 +1,152 @@
+[
+  {
+    "appearance" : "dark",
+    "caption" : "A visual map of the files and folders on your Mac.",
+    "file" : "01-storage-overview-dark.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "See what’s taking up space."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Compare the biggest folders with Storage Atlas.",
+    "file" : "02-storage-atlas-light.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "A clearer view of your disk."
+  },
+  {
+    "appearance" : "dark",
+    "caption" : "Explore projects, build output and creative assets.",
+    "file" : "03-developer-workspace.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Find the weight in your workspace."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Follow your footage from camera originals to final exports.",
+    "file" : "04-media-library.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Explore your media library."
+  },
+  {
+    "appearance" : "dark",
+    "caption" : "See the files that account for the most indexed storage.",
+    "file" : "05-largest-files.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Spot your largest files."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Bring your largest folders to the top.",
+    "file" : "06-largest-folders.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Compare folders at a glance."
+  },
+  {
+    "appearance" : "dark",
+    "caption" : "Search your inventory and see each result in context.",
+    "file" : "07-find-movies.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1440,
+    "originalWidth" : 2400,
+    "title" : "Find files by name."
+  },
+  {
+    "appearance" : "dark",
+    "caption" : "Highlight folders of at least 1 GB while preserving the structure.",
+    "file" : "08-size-filter-dim.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Keep small files in context."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Hide smaller items with a minimum size filter.",
+    "file" : "09-size-filter-hide.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Show only what matters."
+  },
+  {
+    "appearance" : "dark",
+    "caption" : "Keep the selected folder and its ancestry in view.",
+    "file" : "10-path-to-root.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Follow the path to the root."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Make a selected branch easier to explore.",
+    "file" : "11-focus-on-folder.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Focus on one folder."
+  },
+  {
+    "appearance" : "dark",
+    "caption" : "Isolate a path, then return to the wider view.",
+    "file" : "12-isolate-a-branch.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Explore one branch at a time."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Review recorded capacity readings throughout the day.",
+    "file" : "13-storage-history.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "See how storage changes."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Inspect the details behind a recorded storage change.",
+    "file" : "14-recorded-change.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1920,
+    "originalWidth" : 2880,
+    "title" : "Understand what changed."
+  },
+  {
+    "appearance" : "light",
+    "caption" : "Explore your inventory in a compact layout.",
+    "file" : "15-compact-explorer.png",
+    "marketingHeight" : 2400,
+    "marketingWidth" : 3200,
+    "originalHeight" : 1560,
+    "originalWidth" : 2200,
+    "title" : "Keep your disk in view."
+  }
+]
