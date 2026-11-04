@@ -256,13 +256,28 @@ func backupDatabase(_ directory: URL, keep: Int = 3) throws -> URL? {
 // isolated home with a recording launch control, never the user's real LaunchAgents.
 struct MonitorInstallLayout {
     let home: URL
+    let qa: LifecycleQAScope?
+    init(home: URL, qa: LifecycleQAScope? = nil) { self.home = home; self.qa = qa }
     static let current = MonitorInstallLayout(home: fm.homeDirectoryForCurrentUser)
+    static var active: MonitorInstallLayout { LifecycleQAScope.active.map { MonitorInstallLayout(home: $0.home, qa: $0) } ?? .current }
+    var labels: [String] { qa?.labels ?? [label, baselineLabel, inventoryLabel] }
     var data: URL { home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor") }
     var app: URL { home.appendingPathComponent("Applications/MacBook Storage Monitor.app") }
     var executable: String { app.appendingPathComponent("Contents/MacOS/StorageMonitor").path }
     func agent(_ name: String) -> URL { home.appendingPathComponent("Library/LaunchAgents/\(name).plist") }
     var agents: [(label: String, url: URL, plist: [String: Any])] {
-        [(label, agent(label), agentPlist(executable, data.path)),
+        if let qa {
+            return zip(qa.labels, [agentPlist(executable, data.path), baselineAgentPlist(executable, data.path), inventoryAgentPlist(executable, data.path)]).enumerated().map { index, pair in
+                var plist = pair.1
+                plist["Label"] = pair.0
+                plist["ProgramArguments"] = qa.workerArguments(command: ["check", "initialize-baseline", "inventory-work"][index])
+                plist["StandardOutPath"] = qa.logs + "/agent-\(index).log"
+                plist["StandardErrorPath"] = qa.logs + "/agent-\(index)-errors.log"
+                plist["EnvironmentVariables"] = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TMPDIR": qa.temporary + "/", "SQLITE_TMPDIR": qa.temporary]
+                return (pair.0, agent(pair.0), plist)
+            }
+        }
+        return [(label, agent(label), agentPlist(executable, data.path)),
          (baselineLabel, agent(baselineLabel), baselineAgentPlist(executable, data.path)),
          (inventoryLabel, agent(inventoryLabel), inventoryAgentPlist(executable, data.path))]
     }
@@ -271,9 +286,9 @@ struct MonitorInstallLayout {
 /// missed calendar check once on wake). nil unless background monitoring is installed for this data
 /// directory, so disabling it stops maintenance. `kickstart` without `-k` never restarts a running
 /// worker, so wakes cannot overlap a run.
-func scheduledInventoryWake(directory: URL, layout: MonitorInstallLayout = .current) -> [String]? {
-    guard directory.standardizedFileURL == layout.data.standardizedFileURL, fm.fileExists(atPath: layout.agent(inventoryLabel).path) else { return nil }
-    return ["kickstart", "gui/\(getuid())/\(inventoryLabel)"]
+func scheduledInventoryWake(directory: URL, layout: MonitorInstallLayout = .active) -> [String]? {
+    guard directory.standardizedFileURL == layout.data.standardizedFileURL, fm.fileExists(atPath: layout.agent(layout.labels[2]).path) else { return nil }
+    return ["kickstart", "gui/\(getuid())/\(layout.labels[2])"]
 }
 typealias LaunchControl = (_ arguments: [String], _ acceptable: Bool) throws -> Void
 let systemLaunchControl: LaunchControl = { arguments, acceptable in _ = try launchctl(arguments, acceptable: acceptable) }
@@ -285,11 +300,17 @@ func isQuarantined(_ url: URL) -> Bool { getxattr(url.path, "com.apple.quarantin
 @discardableResult
 func install(layout: MonitorInstallLayout = .current, source: URL = Bundle.main.bundleURL, control: @escaping LaunchControl = systemLaunchControl,
              fault: (InstallJournal.Phase) throws -> Void = { _ in }, rollbackOnFailure: Bool = true) throws -> [String] {
+    try layout.validateQABoundary()
+    if let qa = layout.qa {
+        try qa.admit(command: "install")
+        try qa.validateBundle(source, roles: ["V1", "V2"])
+    }
+    let control = layout.guardedControl(control)
     guard source.pathExtension == "app" else { throw Failure("Build and run the bundled executable using bin/storage-monitor") }
     try privateDirectory(layout.data)
     var notes = try recoverInterruptedInstall(layout: layout, control: control)
     try fm.createDirectory(at: layout.app.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try fm.createDirectory(at: layout.agent(label).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try fm.createDirectory(at: layout.agent(layout.labels[0]).deletingLastPathComponent(), withIntermediateDirectories: true)
     var transaction = try InstallTransaction.begin(layout, control: control)
     do {
         // Stop only this monitor's agents (by label, whatever program a stale agent points at).
@@ -344,13 +365,15 @@ func install(layout: MonitorInstallLayout = .current, source: URL = Bundle.main.
     if isQuarantined(layout.app) {
         notes.append("This copy was downloaded, so macOS may block the background monitor without showing a prompt. If no readings appear, open ~/Applications/MacBook Storage Monitor.app once in Finder and allow it in System Settings → Privacy & Security.")
     }
-    notes.append("Installed \(layout.agent(label).path)\nRuns at login and every :00/:30 (calendar catch-up after sleep).")
+    notes.append("Installed \(layout.agent(layout.labels[0]).path)\n" + (layout.qa == nil ? "Runs at login and every :00/:30 (calendar catch-up after sleep)." : "Disposable fixture services registered. Private plists do not establish login persistence."))
     return notes
 }
 
 @discardableResult
 func uninstall(layout: MonitorInstallLayout = .current, control: @escaping LaunchControl = systemLaunchControl) throws -> [String] {
-    var notes = try recoverInterruptedInstall(layout: layout, control: control)
+    try layout.validateQABoundary()
+    let control = layout.guardedControl(control)
+    var notes = try recoverInterruptedInstall(layout: layout, control: control, restart: layout.qa == nil)
     for agent in layout.agents { try control(["bootout", "gui/\(getuid())/\(agent.label)"], true) }
     for url in layout.agents.map(\.url) + layout.duplicateAgents where fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
     notes.append("Background monitoring disabled; LaunchAgents removed. App and history retained: \(layout.data.path)")
@@ -365,7 +388,8 @@ func log(_ directory: URL, _ message: String) {
     if !fm.fileExists(atPath: url.path) { fm.createFile(atPath: url.path, contents: nil, attributes: [.posixPermissions: 0o600]) }
     if let file = try? FileHandle(forWritingTo: url) { defer { try? file.close() }; _ = try? file.seekToEnd(); try? file.write(contentsOf: Data("\(iso(Date().timeIntervalSince1970)) \(message.prefix(4096))\n".utf8)) }
 }
-func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications: Bool = false) throws {
+func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications: Bool = false, qa: LifecycleQAScope? = nil) throws {
+    if let qa { try qa.admit(command: "check"); try qa.validateFixtures(); try required(directory.path == qa.data.path, "Lifecycle QA check data mismatch") }
     try privateDirectory(directory)
     let lockFD = open(directory.appendingPathComponent("check.lock").path, O_RDWR | O_CREAT, 0o600)
     try required(lockFD >= 0, "Cannot open execution lock")
@@ -374,7 +398,7 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
     do {
         let db = try Database(directory.appendingPathComponent("history.sqlite3").path)
         let current = try measure()
-        let marker = currentEventMarker()   // FSEvents position at this reading
+        let marker = currentEventMarker(qa?.fixtures ?? home.path)   // FSEvents position at this reading
         let previousRow = try db.rows("SELECT id,timestamp FROM readings WHERE container=? AND timestamp < ? ORDER BY timestamp DESC,id DESC LIMIT 1", [current.container, current.timestamp]).first
         let previous = try db.rows("SELECT * FROM readings WHERE container=? AND timestamp < ? ORDER BY timestamp DESC,id DESC LIMIT 1", [current.container, current.timestamp]).first.flatMap(reading)
         let window = try db.rows("SELECT * FROM readings WHERE container=? AND timestamp >= ? AND timestamp < ?", [current.container, current.timestamp - 7200, current.timestamp]).compactMap(reading)
@@ -388,8 +412,8 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
             try plan.persist(db,current)
             try db.retain(current.timestamp); try db.exec("COMMIT")
         } catch { try? db.exec("ROLLBACK"); throw error }
-        var notification = "deduplicated"
-        if plan.needsNotification {
+        var notification = qa == nil ? "deduplicated" : "suppressed:lifecycle-qa"
+        if plan.needsNotification && qa == nil {
             let delta = evaluation.delta.map { size($0) } ?? "no previous reading"
             notification = notify("Storage \(evaluation.severity.uppercased())", "\(size(current.free)) free; change \(delta). \(evaluation.reasons.joined(separator: "; "))")
             try plan.notificationResult(db,current,notification)
@@ -403,14 +427,16 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         let prior = previousRow.flatMap { row in Int64(row["id"] ?? "").flatMap { id in Double(row["timestamp"] ?? "").map { (id: id, time: $0) } } }
         // Comprehensive coverage of the startup Data volume once established; until then (or with
         // {"mode":"folders"} in coverage.json) the predefined monitored folders.
-        let comprehensive = coverageMode(directory) == "comprehensive"
+        let comprehensive = qa == nil && coverageMode(directory) == "comprehensive"
         let region = comprehensive ? startupDataRegion(current) : (region: nil, reason: "Comprehensive coverage is turned off in coverage.json.")
         let lockPath = directory.appendingPathComponent("attribution.lock").path
         var evidence: [String: Any]
         if let coverageRegion = region.region, let wide = collectCoverageEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, region: coverageRegion, volumeAllocated: dataVolumeAllocated(current)?.allocated, lockPath: lockPath) {
             evidence = wide
         } else {
-            evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, roots: defaultMonitoredRoots() + configuredRoots(directory), lockPath: lockPath)
+            evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker,
+                roots: qa.map { [MonitoredRoot(path: $0.fixtures, label: "Disposable lifecycle fixtures")] } ?? (defaultMonitoredRoots() + configuredRoots(directory)),
+                within: qa?.root ?? home.path, includeProcesses: qa == nil, lockPath: lockPath)
             let lifecycle = decodeCoverageLifecycle(db)
             evidence["coverage"] = ["scope": "folders", "reason": region.reason ?? (lifecycle == nil ? "Comprehensive coverage has not started yet." : "Comprehensive coverage is still being established (\(lifecycle!.baselined) of \(lifecycle!.units) areas measured)."),
                                     "comprehensive_state": lifecycle?.state ?? "not_initialized"]
@@ -425,11 +451,12 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         catch { log(directory, "attribution not stored: \(error)") }
         let folders = evidence["folders"] as? [String: Any] ?? [:]
         log(directory, "attribution \((evidence["coverage"] as? [String: Any])?["scope"] ?? "folders") \(folders["status"] ?? "?") measured=\(folders["measured"] ?? 0) carried=\(folders["carried"] ?? 0) pending=\(folders["pending"] ?? 0) changes=\(folders["changes_total"] ?? 0) activity=\((evidence["file_activity"] as? [String: Any])?["status"] ?? "?") \(Int(Date().timeIntervalSince(evidenceStarted) * 1000))ms peakMB=\(peakMemoryBytes() / 1_048_576)")
-        if forceDiagnostics || !evaluation.growth.subtracting(plan.prior).isEmpty {
+        if qa == nil && (forceDiagnostics || !evaluation.growth.subtracting(plan.prior).isEmpty) {
             let snapshot = diagnosticSnapshot(current)
             try db.write("INSERT INTO diagnostics(timestamp,snapshot) VALUES(?,?)", [current.timestamp, snapshot])
         }
         try db.retain(current.timestamp)
+        if qa != nil { try db.state("lifecycle_qa_last_check_role", LifecycleQAScope.compiledFixtureRole) }
         let summary = "\(evaluation.severity.uppercased()) free=\(size(current.free)) used=\(size(current.used)) change=\(evaluation.delta.map(size) ?? "baseline") reasons=\(plan.signature.isEmpty ? "none" : plan.signature) notification=\(notification)"
         log(directory, summary); print(summary)
         // Inventory only wakes after capacity and attribution are durable. Its traversal and
@@ -439,7 +466,13 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         if directory.standardizedFileURL == defaultData.standardizedFileURL, Bundle.main.bundleIdentifier == "local.macbook.storage-monitor" {
             try? db.state("notification_authorization", notificationStatus().1)
         }
-        if let wake = scheduledInventoryWake(directory: directory) { _ = try? run("/bin/launchctl", wake, timeout: 2) }
+        if let wake = scheduledInventoryWake(directory: directory) {
+            if let qa { try MonitorInstallLayout(home: qa.home, qa: qa).guardedControl(systemLaunchControl)(wake, true) }
+            else { _ = try? run("/bin/launchctl", wake, timeout: 2) }
+        }
+        if let qa, needsInitializer, fm.fileExists(atPath: qa.agentURL(qa.labels[1]).path) {
+            try MonitorInstallLayout(home: qa.home, qa: qa).guardedControl(systemLaunchControl)(["kickstart", "gui/\(getuid())/\(qa.labels[1])"], true)
+        }
     } catch { log(directory, "ERROR \(error)"); throw error }
 }
 
@@ -590,6 +623,7 @@ func selfTest() throws {
 
 @MainActor func runMain() async throws {
     umask(0o077)
+    if try await runLifecycleQACommand(arguments: CommandLine.arguments) { return }
     if CommandLine.arguments.contains("--qa-runtime-root") || CommandLine.arguments.contains(where: { $0.hasPrefix("--qa-") }) {
         try await runNativeQAWorker(arguments: CommandLine.arguments); return
     }

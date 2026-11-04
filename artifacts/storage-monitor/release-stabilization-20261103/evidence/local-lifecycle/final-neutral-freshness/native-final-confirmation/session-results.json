@@ -1,0 +1,63 @@
+{
+  "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+  "viewer_sha256": "959eb1f699a9fb75c778fdcbc60986027c268420fce65841e96a0b3a872ef7f2",
+  "approval_announced_utc": "2026-11-04T09:10:33Z",
+  "hard_end_utc": "2026-11-04T09:20:00Z",
+  "guard_start_utc": "2026-11-04T09:11:25.839855+00:00",
+  "last_input_utc_upper_bound": "2026-11-04T09:16:17.028131Z",
+  "teardown_verified_utc": "2026-11-04T09:16:17.028131Z",
+  "guard_pid": 6502,
+  "guard_exited": true,
+  "system_settings_changed": false,
+  "synthetic_queue_injected": false,
+  "cases": [
+    {
+      "case": "current missing database first use",
+      "result": "VERIFIED: main showed setup/Enable/OpenSettings; setup button opened own Settings, actual Enable consent registered fixture jobs"
+    },
+    {
+      "case": "actual Enable",
+      "result": "VERIFIED: all3jobs loaded,1capacityreading,5nodes at exact fixture root",
+      "receipt": "enabled-jobs.json"
+    },
+    {
+      "case": "actual Disable with retained queue",
+      "result": "VERIFIED: all3jobs absent,1reading retained,natural1pendingjob; no database fixture edit",
+      "receipt": "disabled-retained-queue.json"
+    },
+    {
+      "case": "waiting presentation and recovery link",
+      "result": "VERIFIED: Folder updates are waiting,oldtree browseable,OpenSettings enabled,no first-pass/manual activity indicator",
+      "capture": "waiting-main.png",
+      "ax": "waiting-ax.json"
+    },
+    {
+      "case": "actual re-enable recovery",
+      "result": "VERIFIED: OpenSettings link opened own Settings,Enable registered3jobs,readings advanced1to2; main Inventory is up to date cleared waiting",
+      "capture": "re-enabled-main.png",
+      "ax": "re-enabled-ax.json",
+      "receipt": "re-enabled-jobs.json"
+    },
+    {
+      "case": "final Disable and teardown",
+      "result": "VERIFIED: exact app/workers gone,all3testlabels absent,protectedfiles equal,guard exited",
+      "receipt": "teardown.json"
+    }
+  ],
+  "launch_recipe_issue": {
+    "initial": "LaunchServices returned0 but viewer refused before window; direct log records temporary-path admission refusal",
+    "cause": "Artifact recipe omitted required TMPDIR and SQLITE_TMPDIR overrides",
+    "resolution": "Direct exact executable with validated scope and process-local temporary-directory overrides; no source/admission change",
+    "receipt": "direct-launch-scoped.json"
+  },
+  "not_tested": [
+    "VoiceOver",
+    "Reduce Motion",
+    "Increase Contrast",
+    "permissions/notification prompts",
+    "Trash UI",
+    "login/logout",
+    "sleep/wake",
+    "physical Intel/macOS14"
+  ]
+}

@@ -1,0 +1,3087 @@
+{
+  "all_tracked_records": {
+    ".DS_Store": {
+      "bytes": 10244,
+      "sha256": "eb40eefdeb4d5e7625e088a6c5fd78186a03a54918cb5f8b2366bb5e603f2c40"
+    },
+    ".gitignore": {
+      "bytes": 131,
+      "sha256": "9d395f8d3ec5f21a0ab6d21d5770eb2a26f3b8e658e65316adf28c8f2450f324"
+    },
+    ".ignore": {
+      "bytes": 180,
+      "sha256": "5b345696ac9daf0b07ce5b9c56d5ec914815e395286f4c9f9ac3ec8ec83bf507"
+    },
+    ".serena/.gitignore": {
+      "bytes": 26,
+      "sha256": "21d5dcb497df8b257d94919bdadcfe75b75d085d0f7b77ac2d8a813a9ca6e758"
+    },
+    ".serena/project.yml": {
+      "bytes": 11018,
+      "sha256": "d8a8fdcdd6b24bda5c1e4feb1f826d9daf738bc4b4bd5ccdc77d76e59857b634"
+    },
+    "AGENTS.md": {
+      "bytes": 3750,
+      "sha256": "bacb4103d369623bfbe5cb6e0a59c9a5be2f047640d392888446437afc766d7f"
+    },
+    "ATTRIBUTION.md": {
+      "bytes": 24653,
+      "sha256": "07e8e05014d895c630a4970a923e299529dbc4f72091c3470f5844c7ec15d998"
+    },
+    "Assets/AppIcon.png": {
+      "bytes": 1698254,
+      "sha256": "1dec82a9aa5832909f117abeefb240c005792c693e6795634d4d1fe7b8a94e95"
+    },
+    "CLAUDE.md": {
+      "bytes": 11,
+      "sha256": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+    },
+    "CLEANUP-INSPECTOR-SCROLL.md": {
+      "bytes": 5413,
+      "sha256": "513660931e3d5aa1280872c471baf6b4cd3699900686553f16532d64f78d7fc0"
+    },
+    "CLEANUP-INSPECTOR.md": {
+      "bytes": 32070,
+      "sha256": "a56813609db3dfb545ee5933d9a936b4dea11629d049b6f307e9288cfa2bfe8b"
+    },
+    "CLEANUP-REVIEW-QUEUE.md": {
+      "bytes": 33436,
+      "sha256": "488a77f7aeece4db50f2a765e169beba52edb2e13f8fc755903fab154eaedf43"
+    },
+    "CLEANUP-STABILIZATION-REPORT.md": {
+      "bytes": 28652,
+      "sha256": "82773d3f0eba6d61422e02a69e95f748bdd9071937cfbfcacb99e8348bae0032"
+    },
+    "CLEANUP-TRASH-SAFETY-AUDIT.md": {
+      "bytes": 17356,
+      "sha256": "b8c0ca134420a4530b9c9cc0661913aea0a2a14d2b15834a78c4eb96d1d62422"
+    },
+    "DATABASE-LIFECYCLE-FOLLOWUP.md": {
+      "bytes": 2168,
+      "sha256": "96e88e6df7904fe0667870e4c9aa0e4a30e8e17900549411c48434906380af50"
+    },
+    "DATABASE-LIFECYCLE.md": {
+      "bytes": 6792,
+      "sha256": "3ceecfb1e69b24cab85995717bb3dc43e1b6881492824aaab769d0e90a63cd7e"
+    },
+    "FINAL-RC-VALIDATION.md": {
+      "bytes": 35954,
+      "sha256": "f51e9abdf8a71bfc19b396d3e1ed08a2f4405c27185d7d083554310bfc85b6d6"
+    },
+    "GUI-VERIFICATION.md": {
+      "bytes": 15505,
+      "sha256": "7b29958ea598107cab734ccf5b09a565230cc8fbfc9433099f6a55c0019b883e"
+    },
+    "HANDOFF-RECONCILIATION.md": {
+      "bytes": 5920,
+      "sha256": "eace03aa8945b8a92c28084f1c9436c6b6ae3a9c9b611eeaccfe15a40131daf8"
+    },
+    "INVENTORY-BACKLOG-CAUSATION.md": {
+      "bytes": 10178,
+      "sha256": "2dbaf4a70610c4b070bc931834b9d82da2d5e2ff5c8b9a1b427e71c653b03219"
+    },
+    "INVENTORY-CHANGE-JOURNAL.md": {
+      "bytes": 26659,
+      "sha256": "09b80a443c8f12e46d39279dd517f81364bf8b81fcedc61e14dd0764a18856c3"
+    },
+    "INVENTORY-COMPLETION-LIFECYCLE.md": {
+      "bytes": 17934,
+      "sha256": "ba1da04b7f582423c708b8fd0a6dccd5feb027fcc0b9cfb051b8184924af9942"
+    },
+    "INVENTORY-EXPLORER.md": {
+      "bytes": 10343,
+      "sha256": "abb9a34dc6ed9060f91af810459e6babba4c2a8a0fe101c75f53334e1034649a"
+    },
+    "INVENTORY-MAP-POLISH.md": {
+      "bytes": 12986,
+      "sha256": "d20de0a6d5108d16c98ea5b7e8c813f205951a35f6d8f2219db741339c4dd48e"
+    },
+    "INVENTORY-PROGRESSIVE-EXPERIENCE.md": {
+      "bytes": 17663,
+      "sha256": "a7f30f99c519b34aecf8133492fb8b6de5bdb16bd476d5277bc9e52cb3274160"
+    },
+    "INVENTORY-REAL-VOLUME-STEADY-STATE.md": {
+      "bytes": 5764,
+      "sha256": "caeb38ec701a8a8c3a99e74784c302c2abecf2fe312bc8eb8530b682cb45abd6"
+    },
+    "INVENTORY-RECONCILIATION-FIX.md": {
+      "bytes": 28211,
+      "sha256": "6d9521b70187042caa924baf404cf8d00959b034647e964a760258b85aad8fc1"
+    },
+    "INVENTORY-RECONCILIATION-STEADY-STATE.md": {
+      "bytes": 9803,
+      "sha256": "a3b437fc90c546a18a50b8c2567048cd6b5254c1a48477c88c8a8b259b38d728"
+    },
+    "INVENTORY-STEADY-STATE-VERIFICATION.md": {
+      "bytes": 19138,
+      "sha256": "6ee5c29171cce327c25c14d858d944b07bbe9a648237524306c30da70f39d541"
+    },
+    "INVENTORY-STORAGE-MAP.md": {
+      "bytes": 11526,
+      "sha256": "468b1a9832820593f3878c6efc0f1af7d1d6767a222e3b0f664199ec1fbfa6ac"
+    },
+    "INVENTORY-VERIFICATION.md": {
+      "bytes": 45018,
+      "sha256": "3e57314dec8515b49c323979de91428fb924f29e0f8950432436a3cddbfd9dd5"
+    },
+    "INVENTORY.md": {
+      "bytes": 15846,
+      "sha256": "8e049d107e70a35acc49b332a6115e8ea4e35eef3fe2bb569c769aed4fa77e91"
+    },
+    "LIVING-TREE-3D.md": {
+      "bytes": 8961,
+      "sha256": "bfd39ef7bea72932f2de92dd4ba4a4547ef402dd41fbe37610b4588729cac6d0"
+    },
+    "LIVING-TREE-CAMERA.md": {
+      "bytes": 16152,
+      "sha256": "ab77663ef806feaee97c5d45537cacd92e2f9034e4a2cf34788f5403bdc8e510"
+    },
+    "LIVING-TREE.md": {
+      "bytes": 22143,
+      "sha256": "32c08ec2ed2e5607ab0d7130520581de0e88b1679b89109d860766431b58f4cc"
+    },
+    "NATIVE-ACCEPTANCE-AND-PERFORMANCE.md": {
+      "bytes": 26133,
+      "sha256": "f3e388e7d48abfbe03c96da358524a2be3fcafc2db082d6cb8ed1406cfe3cbdb"
+    },
+    "PACKAGING.md": {
+      "bytes": 15910,
+      "sha256": "4cd8f6ac083b885ebb7f15ca60f0393da3a782fb1698c025d65fea7a7cce314f"
+    },
+    "Prototypes/.DS_Store": {
+      "bytes": 6148,
+      "sha256": "2a9b7e296654e10a3a635fcd6384fe95bb83ed5a05232e77f52c703babdb5511"
+    },
+    "Prototypes/LivingTree/OrganicTree.swift": {
+      "bytes": 20910,
+      "sha256": "2a85ba45791803e78c1683e050f476ab65c1ea0129628f80edaff66f6a2abe2d"
+    },
+    "Prototypes/LivingTree/PrototypeCore.swift": {
+      "bytes": 14913,
+      "sha256": "f898fab535d07a0c0bdee9d30ed97a4c617a30ebd79ee6f51f95558448991002"
+    },
+    "Prototypes/LivingTree/PrototypeExplorerView.swift": {
+      "bytes": 17311,
+      "sha256": "63d6b109818b802d9d38999707c7e75065756496227f15a3bde11b0ab2ca18ed"
+    },
+    "Prototypes/LivingTree/PrototypeHarness.swift": {
+      "bytes": 31012,
+      "sha256": "fb35aec3af4bd68d312d69cde5b9b5ffe0dfd4feb914e4a8e3206c18ddbcac61"
+    },
+    "Prototypes/LivingTree/StructuredExplorer.swift": {
+      "bytes": 19461,
+      "sha256": "5b4d54e23af9921479145f6f4f64fab0723b0a45884761df343a27655b6fce37"
+    },
+    "Prototypes/Showcase/ShowcaseApp.swift": {
+      "bytes": 4469,
+      "sha256": "51661a2d419d73b49990c41b89e04977dc1dbade387ff13eae18f6901ec20bec"
+    },
+    "QA-EXECUTION-AUTHORIZATION.md": {
+      "bytes": 12567,
+      "sha256": "afcea354d85b52a35ab78fd014fee9f688e497dcc02bdf17f9f6c57ed17dedfb"
+    },
+    "QA-UPGRADE-APPROVAL.md": {
+      "bytes": 14997,
+      "sha256": "7af3ac076bd847a4f6f48a6b9c76593f45349da196c8351d1a1e627e2bbf1422"
+    },
+    "QA-WORK-STOPPED.md": {
+      "bytes": 8416,
+      "sha256": "490b10fec86df730c364062867a60793c3fed0c9c196c36713eac82ce6f4828d"
+    },
+    "README.md": {
+      "bytes": 26422,
+      "sha256": "999bad13c5638a15791b46cc89f37835220a16c26d8efc0f8deb3427125dc9e6"
+    },
+    "RELEASE-CANDIDATE-VALIDATION.md": {
+      "bytes": 39895,
+      "sha256": "7db000bd189287b42ea9bef8406f48437baae6b4ed3647225fde4353dde037a6"
+    },
+    "SOURCE-PROVENANCE.md": {
+      "bytes": 4216,
+      "sha256": "ad6e6aae55742efc7a6676fa0312bab21dafd27ba898f646703962b1e31b3cfa"
+    },
+    "STORAGE-ACCOUNTING-AUDIT.md": {
+      "bytes": 11767,
+      "sha256": "5d1b9a40b6da06d344156135dde4d36f44742021faa8079e392877aac075e9e6"
+    },
+    "STORAGE-ATLAS.md": {
+      "bytes": 12624,
+      "sha256": "e5910e80ba53ae908319c5cb3539409337919a9bd9abc69d38899f2fe1e3b5d3"
+    },
+    "STORAGE-MONITOR-1.0.1-TEST-RELEASE.md": {
+      "bytes": 18048,
+      "sha256": "8405bcd67933f4c6cb9973ed198d01d9c7bb311952de245202b798a01447166e"
+    },
+    "STORAGE-MONITOR-1.0.2-RELEASE.md": {
+      "bytes": 20423,
+      "sha256": "2b28302f1ac3a96b23fc910d8908fd31a9a69bfb66d48916f6c58ca5561ca3e1"
+    },
+    "STORAGE-MONITOR-1.0.3-STABILIZATION.md": {
+      "bytes": 13222,
+      "sha256": "6f247a22951b972e536df977a010491abfae7aab911a4a7f20c73591cb5e32a0"
+    },
+    "STORAGE-MONITOR-1.0.4-TEST-RELEASE.md": {
+      "bytes": 15521,
+      "sha256": "8be4364e4adf05e6cac1a79b8e97fa9abf99c47453af819dd494f3a89043a81f"
+    },
+    "STORAGE-MONITOR-1.0.5-TEST-RELEASE.md": {
+      "bytes": 8961,
+      "sha256": "186a678578e73927f21377e481fea28f4310aecced7af6d7b601fcc4232b189f"
+    },
+    "STORAGE-MONITOR-2.0.0-TEST-RELEASE.md": {
+      "bytes": 2602,
+      "sha256": "cc3582c2be6a024c7c70936d9460a884bc034ef67a934a379f4de4ed72972f17"
+    },
+    "STORAGE-MONITOR-2.1.0-LOCAL-TEST.md": {
+      "bytes": 2398,
+      "sha256": "6d3d16be582222f457ed1b9af91784df93016c430d9ad446dd9085dfdc20d851"
+    },
+    "STORAGE-MONITOR-2.2.0-RELEASE.md": {
+      "bytes": 5589,
+      "sha256": "7237566b3e67faca3050ea2fa49625576377b2c7af228f021463704a37b6292e"
+    },
+    "STORAGE-MONITOR-INSTALL-READINESS.md": {
+      "bytes": 19686,
+      "sha256": "38fbaecab653059a04c5584bc8f2a291b6dc732552578014869793db9cce164c"
+    },
+    "STORAGE-MONITOR-LIVING-TREE-TEST-DMG.md": {
+      "bytes": 2941,
+      "sha256": "488a82769040009bdfb1ea675083837fd3eb2dad32b11a4ac2117234d0a31892"
+    },
+    "STORAGE-SAFETY-NATIVE-VALIDATION.md": {
+      "bytes": 23059,
+      "sha256": "ddcb19ff72aa6d55735dcc2239ef5d815502b2a3af14fe3447f0b6f74a82b06f"
+    },
+    "Sources/Attribution.swift": {
+      "bytes": 79130,
+      "sha256": "8d70d1699405afb5e5d8492a0fd9a6449d4a07a22ac98b580f50c80c2312f7d5"
+    },
+    "Sources/Coverage.swift": {
+      "bytes": 93801,
+      "sha256": "33d65e6c90f200f38a4ed082ba542ad177d533972061e220e14ac0149d235b91"
+    },
+    "Sources/CoverageSelfTest.swift": {
+      "bytes": 29817,
+      "sha256": "5c9dfb5021c25311c914140ebe7deb48e8f9e2537837ef6062ae5318633add35"
+    },
+    "Sources/Diagnostics.swift": {
+      "bytes": 13117,
+      "sha256": "c7c9a3444ffa65f4d70ccf051b53bedef6fe7d10eded82e437d42cf28afa3fb1"
+    },
+    "Sources/InstallSelfTest.swift": {
+      "bytes": 19972,
+      "sha256": "aa3770a4c09337fef8e9c2b06c0f4cc4efe6364cfd2e946bb3683658b6377d71"
+    },
+    "Sources/InstallTransaction.swift": {
+      "bytes": 13210,
+      "sha256": "d1bb2dba902f38ec88976ad33fe55d4ea28129798edbb021f7f93dc80ceaa8a1"
+    },
+    "Sources/Inventory.swift": {
+      "bytes": 156152,
+      "sha256": "3732c91928067c4374897d307b9e626f9602865ebcd532d8aa09e39081d6f57e"
+    },
+    "Sources/InventoryChangeJournal.swift": {
+      "bytes": 12272,
+      "sha256": "bc0eae1eaf9acfe77c78b2ff2310ae174497e81e9318fa0a7f1f4b277defcf96"
+    },
+    "Sources/InventoryCommands.swift": {
+      "bytes": 26070,
+      "sha256": "a0b0aaa7307d0ffac66eba86bcaac27ed33f9659bc456868455abd6b163a46e1"
+    },
+    "Sources/InventoryProfile.swift": {
+      "bytes": 4194,
+      "sha256": "2c2c18dd2db2d9e8b5631af7357d0521313169e645c56151e346213c7fed85bb"
+    },
+    "Sources/MonitorSelfTestFixtures.swift": {
+      "bytes": 853,
+      "sha256": "3f7a7cde0de87fc62b082d01270c8affed358f22cbf871047862175640150846"
+    },
+    "Sources/NativeQAWorker.swift": {
+      "bytes": 1508,
+      "sha256": "cefc8a2d0bc194e5cd7cbffe44cddbae4dfb752a987793123a5a09a3c038017a"
+    },
+    "Sources/StorageMonitor.swift": {
+      "bytes": 63411,
+      "sha256": "dcaa3150be1a2561b762bcbf175ac943bf17ea6accc922867077ff1aba4dba31"
+    },
+    "SourcesGUI/CleanupInspectorView.swift": {
+      "bytes": 39265,
+      "sha256": "48036bb8857fa06873a16d5ac5d469031123505dfbd9c2f2a3e7dad9715ead17"
+    },
+    "SourcesGUI/CleanupReviewQueueView.swift": {
+      "bytes": 24282,
+      "sha256": "5c56e9a67ede8661dd3ec9f17908fe1b844647830f33fb557081efebe4f65b15"
+    },
+    "SourcesGUI/DiagnosticAnalysis.swift": {
+      "bytes": 42085,
+      "sha256": "23c3c24ad0cc3e68b0e6cca1da7417bea73a00cb0d878843cabd434586589e00"
+    },
+    "SourcesGUI/EventDetailView.swift": {
+      "bytes": 29204,
+      "sha256": "cf1e047987e5c88663d80e76123cc87673901a8d1c490d06860c45dbf686523b"
+    },
+    "SourcesGUI/EventPanelText.swift": {
+      "bytes": 8424,
+      "sha256": "41ee74f387fc8109adf20ef6cf2b741149705349e8c52be87aa0187547446216"
+    },
+    "SourcesGUI/HistoryReader.swift": {
+      "bytes": 5925,
+      "sha256": "a4515606aa5e69f4190fffebb2050ec7a9b55c4d579b88ddd5a531dc4eca3971"
+    },
+    "SourcesGUI/HistoryView.swift": {
+      "bytes": 25925,
+      "sha256": "d999674244a3edb85561c1cd693eba42674d1fec8bdb2261c95dcf5d556802c3"
+    },
+    "SourcesGUI/InventoryExplorerView.swift": {
+      "bytes": 37749,
+      "sha256": "749d523c078dd12b0e6bc722428e98df42db61ebf90902ee7b42827b02c368f6"
+    },
+    "SourcesGUI/InventoryNavigatorView.swift": {
+      "bytes": 20672,
+      "sha256": "faae44e7b3f466a9aeca541f20ee7297dfed0f1adcf27d5aa03d9988a06f5e77"
+    },
+    "SourcesGUI/InventoryView.swift": {
+      "bytes": 50379,
+      "sha256": "20ca6843935bfcef3078dd4f48d5f82ec1c4655b40d37ec233ac38af89143c8c"
+    },
+    "SourcesGUI/LiveCapacity.swift": {
+      "bytes": 5404,
+      "sha256": "9c50f3e03686ed415c0d230f15658fba30995cbf8747191afc29657a91bc0e3c"
+    },
+    "SourcesGUI/LivingTreeView.swift": {
+      "bytes": 102044,
+      "sha256": "0a9ff277243f9db722e22deebb835a2e7d6d1406f5882a1af3c1a7aa75efa555"
+    },
+    "SourcesGUI/MigrationReadinessView.swift": {
+      "bytes": 19165,
+      "sha256": "1f44917757b9ecf27fd54607d16d2b4e351451bd5f38c473dbcb236acef6dce7"
+    },
+    "SourcesGUI/Models.swift": {
+      "bytes": 54058,
+      "sha256": "1bc7767b83e2712e93b92b1b7fc1764cb3979b83c82181d5bb7c6693d8f444d8"
+    },
+    "SourcesGUI/MonitoringSetup.swift": {
+      "bytes": 14019,
+      "sha256": "33d06567317669a1eb6740b1ea2e753b462cac3c8a0df00e2bd9c1110e6e16a6"
+    },
+    "SourcesGUI/NativeQABootstrap.swift": {
+      "bytes": 8691,
+      "sha256": "6a15ff042710c9e70af99d3deea327c31192b396162464c55759161cc7a36e8f"
+    },
+    "SourcesGUI/OverviewView.swift": {
+      "bytes": 31247,
+      "sha256": "bed4645735c2ec13715cfe67bf3b913ed5dc71965e4fe509dd1864d6629147f6"
+    },
+    "SourcesGUI/PerformanceScript.swift": {
+      "bytes": 5561,
+      "sha256": "48b5d5d3f66c29979c8d5682dffffbeaced7ef90dd36755cb0fae1a8c1314d89"
+    },
+    "SourcesGUI/PerformanceTrace.swift": {
+      "bytes": 3836,
+      "sha256": "310dd3bac51a73a97c82a57f55915b9e16cc5029a894687e8d2bdea3ff6abc6d"
+    },
+    "SourcesGUI/StateCompatibility.swift": {
+      "bytes": 295,
+      "sha256": "9891fc892967b41c073e714dbd72a0b361a78fef8bf3aa0775041fa57c7396c1"
+    },
+    "SourcesGUI/StorageAtlasView.swift": {
+      "bytes": 32082,
+      "sha256": "05c9a7387a49027ee880368107e74e9068654a2e2c64c8e640f8537919c7b0dc"
+    },
+    "SourcesGUI/StorageDesign.swift": {
+      "bytes": 2189,
+      "sha256": "2701aa87d4b19bbeb139065df7e9aaf73f7037c6f4a485ab23e6c7e76e2c6db2"
+    },
+    "SourcesGUI/StorageMonitorApp.swift": {
+      "bytes": 26451,
+      "sha256": "0bec259d9315143f2c2f89ef5000ac2a8457fb4d979e2e10cffe5be5e3b9068a"
+    },
+    "SourcesGUI/StructuredExplorerFilterControls.swift": {
+      "bytes": 7284,
+      "sha256": "f044aec53f6c2a44a01291cb92832d338922ab5c7be30cc57e13d2ee638dee51"
+    },
+    "SourcesGUI/StructuredExplorerView.swift": {
+      "bytes": 63435,
+      "sha256": "18fb6908a7b4571b5b0f1179ac7854b0bf9ac5eab951fea1aca6b45f98565cdd"
+    },
+    "SourcesGUI/ViewerIdentity.swift": {
+      "bytes": 2904,
+      "sha256": "f51e97c27689bbe4993ab3105f0e2880db95fe1a9066d3fe736b50ecba40cf20"
+    },
+    "SourcesShared/CleanupAssessment.swift": {
+      "bytes": 21503,
+      "sha256": "e5f30da63a4417182c2c6899bf1113c4d75ea527dcff3a4f02ba3305672a90b0"
+    },
+    "SourcesShared/CleanupDetectors.swift": {
+      "bytes": 56393,
+      "sha256": "028709be2e57ceba5c1be72fa6b2155ea9aacb42b20c5d67c05a5cd3234e94ab"
+    },
+    "SourcesShared/CleanupEvidence.swift": {
+      "bytes": 33960,
+      "sha256": "a064b1c0fd20d3a115fa3bfc4f7a3378bafabd62ebb5c4a7a2ad861698e88557"
+    },
+    "SourcesShared/CleanupModel.swift": {
+      "bytes": 11698,
+      "sha256": "f5d2257c9262a5f0b7ab3a28ac1be02ddcedff37513d61f9e188ab42a51201e3"
+    },
+    "SourcesShared/CleanupPresentation.swift": {
+      "bytes": 8378,
+      "sha256": "8a74cb6fcb39e1270c8cd0e2b4b7638ee6b41d71190093e92db6486f7d1770c5"
+    },
+    "SourcesShared/CleanupReviewQueue.swift": {
+      "bytes": 31960,
+      "sha256": "7e7fa4fd2aed7203350807c52904bf58d71e9dc492a217caf403ae5b1ddc671b"
+    },
+    "SourcesShared/CleanupTrash.swift": {
+      "bytes": 7503,
+      "sha256": "328f28503fb7b516b7630e2f6b7f6c599fab6fa91d397a66657e4eb21420c90e"
+    },
+    "SourcesShared/CleanupTrashSafety.swift": {
+      "bytes": 36952,
+      "sha256": "bafd9a07a15aa7f33a6874b4af4eccf86ac03d7f0071c803d5bd992f7f051aae"
+    },
+    "SourcesShared/InventoryChanges.swift": {
+      "bytes": 11684,
+      "sha256": "91023068cdaba5ee900bc0179576512f63eee1ac77966274108ead2042d8bec6"
+    },
+    "SourcesShared/InventoryExplorer.swift": {
+      "bytes": 18179,
+      "sha256": "f3b3799a09eb1c6e5838a4176fd156a3d562e0c01e990f42604b2a8bfc6f2735"
+    },
+    "SourcesShared/InventoryMap.swift": {
+      "bytes": 8095,
+      "sha256": "d1d6ab535628e20447aa1d8c9de729495fa181f5afe1fde387af9a2cfd374fcb"
+    },
+    "SourcesShared/InventoryMetadata.swift": {
+      "bytes": 2437,
+      "sha256": "41d4edcd00f7d8a0a31c7ce457aff967f3c6f263ff96d57c6cdc7ca8f852ea3b"
+    },
+    "SourcesShared/InventoryModels.swift": {
+      "bytes": 78723,
+      "sha256": "f9fa0d755a636a420268ca18108ceb113be52eb9d431e8e5e0dbe3608c189f9b"
+    },
+    "SourcesShared/InventoryPresentation.swift": {
+      "bytes": 31899,
+      "sha256": "85cf72e125be3f470ca994289ef3f0461590fb9dd841237eb428772e8e469858"
+    },
+    "SourcesShared/InventoryReloadPolicy.swift": {
+      "bytes": 1252,
+      "sha256": "29bb10c12a5127dd9f295de4ff257a0a188f85f0c11a5cedc604eead7e4efab0"
+    },
+    "SourcesShared/InventoryRequests.swift": {
+      "bytes": 5129,
+      "sha256": "0c173f55254de860412a3c127971b648c55c3685b310b37861fdd395f716b187"
+    },
+    "SourcesShared/LivingTree.swift": {
+      "bytes": 53718,
+      "sha256": "c0ca558a2b5b6b63d08e800a2223c8000e97ac80e5838bc5e02f07875759edec"
+    },
+    "SourcesShared/LivingTree3D.swift": {
+      "bytes": 17559,
+      "sha256": "bd167aff0c8266d3c70a1db1b4f69aa6e4416480728a57ecdba5f8b860e05b18"
+    },
+    "SourcesShared/LivingTreeCamera.swift": {
+      "bytes": 35801,
+      "sha256": "5ecb2e08fa067c181f70e60a1dbc2c8602e9655f5237690f9033fdb3cb34beb0"
+    },
+    "SourcesShared/LivingTreeColor.swift": {
+      "bytes": 9405,
+      "sha256": "c09ef61c909182d31169160513ff3dc128ef6553eeacb210133925d6c50b16a1"
+    },
+    "SourcesShared/NativeQARuntime.swift": {
+      "bytes": 19126,
+      "sha256": "547d463a4451d18910cd71ce68e1cb219acf71d726c6e6c4de7169b9cdcfbcb9"
+    },
+    "SourcesShared/SparseStorage.swift": {
+      "bytes": 22752,
+      "sha256": "62d67b223198e1769b0db268ff95b11df966d78564141d21ae162f2b0927eb33"
+    },
+    "SourcesShared/SparseStorageDetector.swift": {
+      "bytes": 29235,
+      "sha256": "2f5a04e3ef4d3553c60a9597af8ff2dcea7344506f28f47bbcc9e3963b370d6f"
+    },
+    "SourcesShared/SparseStorageGuidance.swift": {
+      "bytes": 5668,
+      "sha256": "3440740259247a9a31376610e94cebc6912f4b773709ad38b5c022209cc7057e"
+    },
+    "SourcesShared/StorageAtlas.swift": {
+      "bytes": 11602,
+      "sha256": "b87ef90f988a1e0436e381b90272c56cee13219d08c7cc885e07bbc24cdf3e9b"
+    },
+    "SourcesShared/StructuredExplorer.swift": {
+      "bytes": 38761,
+      "sha256": "c7da8a1e27b6c824171f72debd82294047599d72213bb0599043ef6a3e659652"
+    },
+    "SourcesShared/StructuredExplorerFiltering.swift": {
+      "bytes": 9229,
+      "sha256": "9a4cda6861bddae43cb3f2e45c07ff20f2371f61fcd7909caab9337256ea4548"
+    },
+    "THIRD-PARTY-NOTICES.md": {
+      "bytes": 1118,
+      "sha256": "19e0c5d23abf55269dd124fd72046643e8845affacf0ee7cebd463d8dcea064c"
+    },
+    "UX-REFINEMENT-MILESTONE.md": {
+      "bytes": 23344,
+      "sha256": "cfd57e766c433cd1a4163410eb6ce1133221b9949751bfacfbeab99b6f126562"
+    },
+    "VERIFICATION.md": {
+      "bytes": 14802,
+      "sha256": "366ab997342cd6f5e0e1ed9c7a543da0be2642b916a4ba51ee6e433b678ef808"
+    },
+    "artifacts/.DS_Store": {
+      "bytes": 6148,
+      "sha256": "48f90c8c8bb6380d69b2079185ef327506493e538de330ebe57bc1840f095eee"
+    },
+    "artifacts/Storage-Monitor-2.3.0-Marketing-Kit.zip": {
+      "bytes": 18183914,
+      "sha256": "0dd02affde4d25884b7aeb8af041c7ee3354ed498848f95f1f18b4e79498b73c"
+    },
+    "artifacts/Storage-Monitor-2.3.0-Marketing-Kit.zip.sha256": {
+      "bytes": 106,
+      "sha256": "1b3fe44e58075f16b9d6b7e2aca8b4a33b4af39376b4c7351d64d08131df8cb4"
+    },
+    "artifacts/marketing-2.3.0/README.md": {
+      "bytes": 5402,
+      "sha256": "73995b6551f417da1ae5e336dac48512b41bc1e99178df1874d8d820e97c1c3b"
+    },
+    "artifacts/marketing-2.3.0/asset-manifest.json": {
+      "bytes": 7800,
+      "sha256": "1d6ba217df63bb0c45e6c716968e70d563908cfc48da3cc64649e28ccaa8ed2d"
+    },
+    "artifacts/marketing-2.3.0/capture/build-and-render.sh": {
+      "bytes": 1509,
+      "sha256": "254387e97b73dd3c0aa2ffbf70e602860deb275de89c931d4ce40e4649cff0be"
+    },
+    "artifacts/marketing-2.3.0/capture/compose.swift": {
+      "bytes": 5976,
+      "sha256": "b4752aedac6f20970c84b3a7aa35555d2e119ac27109fa44292b5335f07dda38"
+    },
+    "artifacts/marketing-2.3.0/capture/demo-inventory.json": {
+      "bytes": 8555,
+      "sha256": "8208ac74e9d34fa9f088807c5afc3a50383bb632db14b8bfa1106c24e04d3603"
+    },
+    "artifacts/marketing-2.3.0/capture/demo-schema.sql": {
+      "bytes": 23224,
+      "sha256": "7e8378a6441bc6c6a1b8990ef58574e041bd9b62f72d1dfa8d35f33f6e64fb3e"
+    },
+    "artifacts/marketing-2.3.0/capture/make-demo.py": {
+      "bytes": 6546,
+      "sha256": "71c827afdd1c1fb99c8db326353962f7299ca49d47546b0f825772d3cbcd2515"
+    },
+    "artifacts/marketing-2.3.0/capture/package-receipt.json": {
+      "bytes": 1294,
+      "sha256": "c8a71099182fc532557a231825ff623da4731538dafadc259da547ec37fa1c36"
+    },
+    "artifacts/marketing-2.3.0/capture/package.py": {
+      "bytes": 1375,
+      "sha256": "bbb361836cd0cd77463e7d7c7ba1b23c69493de60ef41333c5cf453644f58dd2"
+    },
+    "artifacts/marketing-2.3.0/capture/prepare-source.py": {
+      "bytes": 643,
+      "sha256": "b1c2048f61b911e3d2c4a5fc949a6e7dd3debf58869c52b53eb2327e0cf54dcd"
+    },
+    "artifacts/marketing-2.3.0/capture/render.swift": {
+      "bytes": 6796,
+      "sha256": "8ae165ce09f11c725c94d2685a698592b4dc8eff6e63eacee6bd2b15d6c48bbe"
+    },
+    "artifacts/marketing-2.3.0/capture/set-demo-identities.swift": {
+      "bytes": 2478,
+      "sha256": "4b2ad8c85fa96fdde82945951712b9791f5aa72da0e18efc1272bb30faee6a1d"
+    },
+    "artifacts/marketing-2.3.0/capture/source-wiring.patch": {
+      "bytes": 1060,
+      "sha256": "9b0c79a750ab78cbe27c726e1511477723b4411ef64af1e2d662f555735fd1b4"
+    },
+    "artifacts/marketing-2.3.0/capture/verification.json": {
+      "bytes": 1180,
+      "sha256": "3f013265e56c1491c96a169e3a4b313fdcfd6534500af7ab7fdcd559d8b21525"
+    },
+    "artifacts/marketing-2.3.0/capture/verify-assets.py": {
+      "bytes": 1310,
+      "sha256": "7d6065003c596acf64a5c1d4f544c227c1ea724280c924648dafefb0b47a0dad"
+    },
+    "artifacts/marketing-2.3.0/contact-sheet.png": {
+      "bytes": 1112859,
+      "sha256": "154a3d72ed308403360e6929f4d14d47e2be025a856699dbe5ed25e93d44c63a"
+    },
+    "artifacts/marketing-2.3.0/marketing/01-storage-overview-dark.png": {
+      "bytes": 883530,
+      "sha256": "2163115b77def5865b2e93aa67730d32155940b76041c3d88cee4d5596b2057d"
+    },
+    "artifacts/marketing-2.3.0/marketing/02-storage-atlas-light.png": {
+      "bytes": 1241061,
+      "sha256": "bfdc2349939f90717e0313ebeef51aa21294128e6be1f3a02e504d034309c717"
+    },
+    "artifacts/marketing-2.3.0/marketing/03-developer-workspace.png": {
+      "bytes": 878221,
+      "sha256": "6ad5bccef53ab1cd3f95cedb774c288535e486cefff2018056c6d454a1efcc45"
+    },
+    "artifacts/marketing-2.3.0/marketing/04-media-library.png": {
+      "bytes": 702760,
+      "sha256": "1513ae48e092f2ffd2e509f5064dab3c7a75bac7073b0e801429820901548ef4"
+    },
+    "artifacts/marketing-2.3.0/marketing/05-largest-files.png": {
+      "bytes": 797384,
+      "sha256": "8f6588965a429b76f1d518308517420ca6bf868326313579f66f967476d5c6cf"
+    },
+    "artifacts/marketing-2.3.0/marketing/06-largest-folders.png": {
+      "bytes": 687570,
+      "sha256": "b2d5eaaaa2c383656e01fbbfc52fdaca8d6c97a13157e222421be02652eda06d"
+    },
+    "artifacts/marketing-2.3.0/marketing/07-find-movies.png": {
+      "bytes": 493120,
+      "sha256": "d3a1c2155a043311b9578be6b694840d5a51c0b59d08b6d7f1dd447b914dd577"
+    },
+    "artifacts/marketing-2.3.0/marketing/08-size-filter-dim.png": {
+      "bytes": 872496,
+      "sha256": "65561af7d57cc1568e9dbb1d59fadc0d094b5bfc01d2258aeffa33aaf0d5dc43"
+    },
+    "artifacts/marketing-2.3.0/marketing/09-size-filter-hide.png": {
+      "bytes": 699636,
+      "sha256": "57aa75bdeb87d866a8e0bf9df02ac71d358c040e66aa1080bc54e496f1726453"
+    },
+    "artifacts/marketing-2.3.0/marketing/10-path-to-root.png": {
+      "bytes": 806217,
+      "sha256": "f44eed6aef8a9fa12888330f4182b91cc315a0a0f43688907a5167457b8ec8ce"
+    },
+    "artifacts/marketing-2.3.0/marketing/11-focus-on-folder.png": {
+      "bytes": 827394,
+      "sha256": "7cdbcf158b668216381e87dc3f7461e187351a12cd97ca71f3b7b62504995966"
+    },
+    "artifacts/marketing-2.3.0/marketing/12-isolate-a-branch.png": {
+      "bytes": 790422,
+      "sha256": "6544eb3277dc8f7392925493a16835c047cb5fc5961ecfc7d932f2f12d9d0062"
+    },
+    "artifacts/marketing-2.3.0/marketing/13-storage-history.png": {
+      "bytes": 650139,
+      "sha256": "58de9a450bdd10f98cbef12f1168c9598b40684110f50943b5c924b2f72c5e53"
+    },
+    "artifacts/marketing-2.3.0/marketing/14-recorded-change.png": {
+      "bytes": 871804,
+      "sha256": "872e233d63228bbaff8be35e1abc177d6211c8b4751bcb8a043a98e2bb2f6f74"
+    },
+    "artifacts/marketing-2.3.0/marketing/15-compact-explorer.png": {
+      "bytes": 799454,
+      "sha256": "6b9e2e584b949c5f0603fc5fba93c9af030106fb18de12ea7310f689251a3155"
+    },
+    "artifacts/marketing-2.3.0/originals/01-storage-overview-dark.png": {
+      "bytes": 583321,
+      "sha256": "377efb5f33401506135de726bec7a24ef6278b8777610713889455829e7bb223"
+    },
+    "artifacts/marketing-2.3.0/originals/02-storage-atlas-light.png": {
+      "bytes": 965988,
+      "sha256": "e89e7ab70cbf77d2e290f5640bc01296965a5bb683a0f17d7eed6ae264de363f"
+    },
+    "artifacts/marketing-2.3.0/originals/03-developer-workspace.png": {
+      "bytes": 585778,
+      "sha256": "65e01968c475e07a0e43e2e164db24a8582e111bd55b183c82c39592445f3ebd"
+    },
+    "artifacts/marketing-2.3.0/originals/04-media-library.png": {
+      "bytes": 459509,
+      "sha256": "5d75067c2d76d49f5b52f46e1f1708caa245869b3e6c3f931cd39bae468b0fe7"
+    },
+    "artifacts/marketing-2.3.0/originals/05-largest-files.png": {
+      "bytes": 514520,
+      "sha256": "e769761657613fd8562a2b5671c51908a3fbd2b33d08e8fb155b9de0dae37169"
+    },
+    "artifacts/marketing-2.3.0/originals/06-largest-folders.png": {
+      "bytes": 478622,
+      "sha256": "45b4f83685b32f9a7af6a5bc1426aad8c387b7b8e46adfea2ccc107b83a9de60"
+    },
+    "artifacts/marketing-2.3.0/originals/07-find-movies.png": {
+      "bytes": 237060,
+      "sha256": "8b2860be3320a344c39b6c493ad583ee22fbe3888372892667eac63c11fb8592"
+    },
+    "artifacts/marketing-2.3.0/originals/08-size-filter-dim.png": {
+      "bytes": 587491,
+      "sha256": "d72cc9058f8596d99b316d98688124a729a7771436f909dc496c25e0b52af942"
+    },
+    "artifacts/marketing-2.3.0/originals/09-size-filter-hide.png": {
+      "bytes": 467434,
+      "sha256": "8263ac7074c949174ece05e98979befc697111b5d49e8b2779cdfce7ef0bdb6d"
+    },
+    "artifacts/marketing-2.3.0/originals/10-path-to-root.png": {
+      "bytes": 554924,
+      "sha256": "f3fb3d65d5ea71cb3a634e034634e06ecd9168630eac78bbc28c295ddd3db0fe"
+    },
+    "artifacts/marketing-2.3.0/originals/11-focus-on-folder.png": {
+      "bytes": 575765,
+      "sha256": "81b58b7c6be8d2b4335e2e7ffd139380feebb36d7cb06a44750e763274afd78a"
+    },
+    "artifacts/marketing-2.3.0/originals/12-isolate-a-branch.png": {
+      "bytes": 516349,
+      "sha256": "b50872a7d8eafa143f3b4761957b4369eba9c6dbd0875f67c43f022c26dff93e"
+    },
+    "artifacts/marketing-2.3.0/originals/13-storage-history.png": {
+      "bytes": 412355,
+      "sha256": "6797a6874d632b5f457a198c879adfbc6e6785eacbeaea05133044e36c6452e2"
+    },
+    "artifacts/marketing-2.3.0/originals/14-recorded-change.png": {
+      "bytes": 580054,
+      "sha256": "3350fca81987c1ad5156fbe9b5715104b10684efd88e47f6d3ff1456765f5ccb"
+    },
+    "artifacts/marketing-2.3.0/originals/15-compact-explorer.png": {
+      "bytes": 391916,
+      "sha256": "4a08c9b83d92ab35949c5bef6b7d5e324c4c7b8c782fd897091c323c4137859e"
+    },
+    "artifacts/marketing-2.3.0/shots.json": {
+      "bytes": 4576,
+      "sha256": "6feb7f1f66627dbd253d20328f0ef7d5c89734dbbe7de02fed534a67ccdb1e8d"
+    },
+    "artifacts/storage-monitor-v2/.DS_Store": {
+      "bytes": 6148,
+      "sha256": "b340ed2c599a21f89a347d8c7eb177ecbf41faae1faff76e1f2709217f26cdad"
+    },
+    "artifacts/storage-monitor-v2/baseline/source-hashes.json": {
+      "bytes": 6794,
+      "sha256": "59bddb656b3a491ce48ef5d2c675eceb3e8134d368780de488d11256365d6134"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/CleanupInspectorView.swift.txt": {
+      "bytes": 38466,
+      "sha256": "dfbc3861918e9138fc253ecd4bf344a84e809d58a21c477f0a3bd2fbc8b0d8d8"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/CleanupReviewQueueView.swift.txt": {
+      "bytes": 23620,
+      "sha256": "79c48d65cd79dfee964f727d61648c3716d3e0683f4368d9ba10e45bb870d4c3"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/DiagnosticAnalysis.swift.txt": {
+      "bytes": 42085,
+      "sha256": "23c3c24ad0cc3e68b0e6cca1da7417bea73a00cb0d878843cabd434586589e00"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/EventDetailView.swift.txt": {
+      "bytes": 27442,
+      "sha256": "0eb6bdbde36b9590874859666118b0019b398f59808b72801d22514c072912af"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/EventPanelText.swift.txt": {
+      "bytes": 8424,
+      "sha256": "41ee74f387fc8109adf20ef6cf2b741149705349e8c52be87aa0187547446216"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/HistoryReader.swift.txt": {
+      "bytes": 5925,
+      "sha256": "a4515606aa5e69f4190fffebb2050ec7a9b55c4d579b88ddd5a531dc4eca3971"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/HistoryView.swift.txt": {
+      "bytes": 17786,
+      "sha256": "8611c97a94d9b2705f085f195829cccb08b54871de312a9864605c20fe4d88d5"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/InventoryExplorerView.swift.txt": {
+      "bytes": 34888,
+      "sha256": "cba26ea67c16a4d6ff5d5be320243557dd3d5dd1adf51f8fa00b299f82dcd1b8"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/InventoryNavigatorView.swift.txt": {
+      "bytes": 15704,
+      "sha256": "1b9567e2fdd43313b565ff1d381db368179476437eea7678093f4e5082f4a6fd"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/InventoryView.swift.txt": {
+      "bytes": 48045,
+      "sha256": "4c0edfd438e36d2fa55ca0d919847cfaa1280975a1d033ab087cf3d76b09a324"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/LiveCapacity.swift.txt": {
+      "bytes": 5404,
+      "sha256": "9c50f3e03686ed415c0d230f15658fba30995cbf8747191afc29657a91bc0e3c"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/LivingTreeView.swift.txt": {
+      "bytes": 97676,
+      "sha256": "4cd62d2d2c8fa3197ebca0a53734288489aaaf55983c3d2b4c19ee5e351ab21e"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/Models.swift.txt": {
+      "bytes": 49916,
+      "sha256": "7940747a3d00a4ddd2a6c51fe81be2cda64157058af41f839cb1df59c270d678"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/MonitoringSetup.swift.txt": {
+      "bytes": 14019,
+      "sha256": "33d06567317669a1eb6740b1ea2e753b462cac3c8a0df00e2bd9c1110e6e16a6"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/NativeQABootstrap.swift.txt": {
+      "bytes": 8691,
+      "sha256": "6a15ff042710c9e70af99d3deea327c31192b396162464c55759161cc7a36e8f"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/OverviewView.swift.txt": {
+      "bytes": 20480,
+      "sha256": "f5f4d0e3870c4f8e4cb929f266ea727b29c90a5a74b146a1986de7b0e1973dc8"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/StateCompatibility.swift.txt": {
+      "bytes": 295,
+      "sha256": "9891fc892967b41c073e714dbd72a0b361a78fef8bf3aa0775041fa57c7396c1"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/StorageAtlasView.swift.txt": {
+      "bytes": 31569,
+      "sha256": "be9b4e70d28162702cef84c98af95b063ac16ea40f778ee0c5e13b3f64a6c7b3"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesGUI/StorageMonitorApp.swift.txt": {
+      "bytes": 24597,
+      "sha256": "868bdde400faaad535cfcd3108d0a6fd2380e7218b76770fa32b507ce57e29e4"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupAssessment.swift.txt": {
+      "bytes": 21503,
+      "sha256": "e5f30da63a4417182c2c6899bf1113c4d75ea527dcff3a4f02ba3305672a90b0"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupDetectors.swift.txt": {
+      "bytes": 56393,
+      "sha256": "028709be2e57ceba5c1be72fa6b2155ea9aacb42b20c5d67c05a5cd3234e94ab"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupEvidence.swift.txt": {
+      "bytes": 33913,
+      "sha256": "746b83a42ab7d3603a22d3391f58186a9af67c39dc2a574d5024ca39e320d787"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupModel.swift.txt": {
+      "bytes": 11698,
+      "sha256": "f5d2257c9262a5f0b7ab3a28ac1be02ddcedff37513d61f9e188ab42a51201e3"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupPresentation.swift.txt": {
+      "bytes": 7656,
+      "sha256": "064e07f7ac1f07f73399cf81766566f496240042a1b1e5aca895696e44231235"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupReviewQueue.swift.txt": {
+      "bytes": 31960,
+      "sha256": "7e7fa4fd2aed7203350807c52904bf58d71e9dc492a217caf403ae5b1ddc671b"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupTrash.swift.txt": {
+      "bytes": 7503,
+      "sha256": "328f28503fb7b516b7630e2f6b7f6c599fab6fa91d397a66657e4eb21420c90e"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/CleanupTrashSafety.swift.txt": {
+      "bytes": 36659,
+      "sha256": "cf413ffc00afb560b2754da0da1f9a10c0a7742456d09ddceee3b46b46d9c129"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryChanges.swift.txt": {
+      "bytes": 11684,
+      "sha256": "91023068cdaba5ee900bc0179576512f63eee1ac77966274108ead2042d8bec6"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryExplorer.swift.txt": {
+      "bytes": 18179,
+      "sha256": "f3b3799a09eb1c6e5838a4176fd156a3d562e0c01e990f42604b2a8bfc6f2735"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryMap.swift.txt": {
+      "bytes": 8095,
+      "sha256": "d1d6ab535628e20447aa1d8c9de729495fa181f5afe1fde387af9a2cfd374fcb"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryMetadata.swift.txt": {
+      "bytes": 2437,
+      "sha256": "41d4edcd00f7d8a0a31c7ce457aff967f3c6f263ff96d57c6cdc7ca8f852ea3b"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryModels.swift.txt": {
+      "bytes": 70741,
+      "sha256": "3597bede531837c6335ace8c04d6a63459c6d97f13ff6094fae3bdc32210b7da"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryPresentation.swift.txt": {
+      "bytes": 31899,
+      "sha256": "85cf72e125be3f470ca994289ef3f0461590fb9dd841237eb428772e8e469858"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryReloadPolicy.swift.txt": {
+      "bytes": 1252,
+      "sha256": "29bb10c12a5127dd9f295de4ff257a0a188f85f0c11a5cedc604eead7e4efab0"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/InventoryRequests.swift.txt": {
+      "bytes": 5129,
+      "sha256": "0c173f55254de860412a3c127971b648c55c3685b310b37861fdd395f716b187"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/LivingTree.swift.txt": {
+      "bytes": 53308,
+      "sha256": "43d25538f672e2c07ecbdc0de276ab346ec82214df164e1aedde1cd596525c4a"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/LivingTree3D.swift.txt": {
+      "bytes": 17534,
+      "sha256": "a0068d2e5b2c6afbf2485d9b8c792e7a66b302e35b494250789c32a34d76982f"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/LivingTreeCamera.swift.txt": {
+      "bytes": 33579,
+      "sha256": "6ed56d5cbaa0549cdf1ab2dda329699470adca3b843ff2912dba31db110bac0b"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/LivingTreeColor.swift.txt": {
+      "bytes": 9405,
+      "sha256": "c09ef61c909182d31169160513ff3dc128ef6553eeacb210133925d6c50b16a1"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/NativeQARuntime.swift.txt": {
+      "bytes": 19126,
+      "sha256": "547d463a4451d18910cd71ce68e1cb219acf71d726c6e6c4de7169b9cdcfbcb9"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/SourcesShared/StorageAtlas.swift.txt": {
+      "bytes": 11602,
+      "sha256": "b87ef90f988a1e0436e381b90272c56cee13219d08c7cc885e07bbc24cdf3e9b"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/CleanupInspectorTests.swift.txt": {
+      "bytes": 48400,
+      "sha256": "b892b31b1d94fb20ca0554808666000fce37a55e91556375d63384fd87af3170"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/CleanupReviewQueueTests.swift.txt": {
+      "bytes": 38358,
+      "sha256": "f8f1bd6beb8b2ab806af4dccdcd330c409c76733b49e5a0f47df84a15cb95686"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/CleanupTrashSafetyTests.swift.txt": {
+      "bytes": 66769,
+      "sha256": "1926dcc796fc69d6219b84ffe39362741868f864b2937820f09dd056588e302a"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/GUIAXTests.swift.txt": {
+      "bytes": 15931,
+      "sha256": "6e2b26baa1f718fa7d2620321fad4598edb982efb16e4241c31e925d3bc0966c"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/GUIModelTests.swift.txt": {
+      "bytes": 148201,
+      "sha256": "21c7c803ddecd1f90a919b3fb16e1173812599ade69b3b7f171243063c326598"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryBoundaryTests.swift.txt": {
+      "bytes": 12352,
+      "sha256": "18a64a15a123bda3cff3d4c4147e98d1b67ad25a26e07f98fdf5d10e5295899c"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryChangeJournalTests.swift.txt": {
+      "bytes": 31894,
+      "sha256": "5ddcb3db4d12ce55f67e7625ef0ade311b1613b3a5e115580bbcc60289cc2e58"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryCompletionTests.swift.txt": {
+      "bytes": 28674,
+      "sha256": "20808fdfd854ed75f17abe74fb8ea29191261052431d5c8483237dd24570803d"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryExplorerTests.swift.txt": {
+      "bytes": 13360,
+      "sha256": "b6659fec533618cae01447c62fb882bc64b8eccab03df0ef1ef3f10cc3e894b6"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryIntegrationTests.swift.txt": {
+      "bytes": 71702,
+      "sha256": "4e6a22ac93077ffaed13bd13acfe911024802872daa61bdbd9ae1e8daefe6703"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryLifecycleTests.swift.txt": {
+      "bytes": 20145,
+      "sha256": "3851b851326ea03673724e9e4ee083e0ea560ffd5c626c8ccbeefa7224012ab0"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryModelTests.swift.txt": {
+      "bytes": 54213,
+      "sha256": "3cfa4934aa46315c53412f0a562d48b980227eaaf0a1f54cba2c82e7019525c3"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryProgressiveTests.swift.txt": {
+      "bytes": 19022,
+      "sha256": "0e047b4aa54deaf6435f26ab25d611af0b13d5f35d8542b7da583554c3e46acf"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryReconciliationScenarios.swift.txt": {
+      "bytes": 10749,
+      "sha256": "cebd9a52c5ade5292276003838cfc36f2aec44d025d1d6cae16c2cb096a3084f"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryReconciliationTests.swift.txt": {
+      "bytes": 63675,
+      "sha256": "0c7699903500d8db1672c1b830358e7a91d91101e350cca9b487d42defbf2f2b"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/InventoryTests.swift.txt": {
+      "bytes": 11991,
+      "sha256": "a4194fe1a7d14c831f7f377b3f6e3fbf69cb0aa2ee0e35f833da5317e4917b3a"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/LivingTreeCatalogTests.swift.txt": {
+      "bytes": 10818,
+      "sha256": "e87e13e3e673f5ebe0c34f1a005cb478178e9ef87918f4c73b77af98cb9703e8"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/LivingTreeTests.swift.txt": {
+      "bytes": 77634,
+      "sha256": "62e904b23b4a168a3d57057d3797bd4975ef00343dc4695470fbff9dff658399"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/MonitorFixtureLifecycleTests.swift.txt": {
+      "bytes": 1681,
+      "sha256": "e0b4fd96a98eb28791c8c0c3425fe0a43d7873bbf6a1c8e09f4d47e1d7acda71"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/MonitorSupplement.swift.txt": {
+      "bytes": 2807,
+      "sha256": "2e01e81f5806234161a5c44f217e8e86183bf37ee4511f6d647da8ff0faa1fc9"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/NativeQARuntimeTests.swift.txt": {
+      "bytes": 15879,
+      "sha256": "afe8370c557c888190e82461fa68f9ca1653cddb1bb65478b1b5ea0933f4d557"
+    },
+    "artifacts/storage-monitor-v2/baseline/source/tests/verify-icon.swift.txt": {
+      "bytes": 2550,
+      "sha256": "96c56dff7a913dc040283426cfe518be6ac32aa341ab13577b33b485daa2a579"
+    },
+    "artifacts/storage-monitor-v2/baseline/status.txt": {
+      "bytes": 692,
+      "sha256": "507dc31317b3d95ce61c65b4a97ea845ba1d04c16db85485fb023a947aa9d137"
+    },
+    "artifacts/storage-monitor-v2/baseline/working-tree.patch": {
+      "bytes": 125254,
+      "sha256": "27fae4fd613d3b0f45a319bead7f6204f02a3a1566b0f19fdf036e71e4da78d4"
+    },
+    "artifacts/storage-monitor-v2/native-acceptance/CHECKLIST.md": {
+      "bytes": 3296,
+      "sha256": "f8fcb557d8a9994d19b029dcd6f844be223bae72ce98871dcb8c5d98d525c09c"
+    },
+    "artifacts/storage-monitor-v2/native-acceptance/RESULTS.md": {
+      "bytes": 5100,
+      "sha256": "e57fb2249f61e8d732982972f83267d25f4b98ff0bd3b95f6dda66a1aeb05e0f"
+    },
+    "artifacts/storage-monitor-v2/pass-c-evidence/i01-storage-default-atlas-light.png": {
+      "bytes": 891536,
+      "sha256": "e144d0e62d3aa146f72ff5675254de1816a70731e859d5658d2a91ce4cdb6296"
+    },
+    "artifacts/storage-monitor-v2/pass-c-evidence/i04-living-tree-overview-dark.png": {
+      "bytes": 2149108,
+      "sha256": "5f2f804466a9ac2917db91d0a4abc8ea1c4c27c210600ef6bc2ffa73d5b4cf6a"
+    },
+    "artifacts/storage-monitor-v2/pass-c-evidence/i05-living-tree-3d-dark.png": {
+      "bytes": 2420437,
+      "sha256": "89b664991be89d0f0e07503bbc08a34bf5df4bfff700751f64e0cee54ff9ff8a"
+    },
+    "artifacts/storage-monitor-v2/pass-c-evidence/i13-cleanup-candidate-selected-dark.png": {
+      "bytes": 396635,
+      "sha256": "7eb4762080578ad71a1d1d50100214d9d0cd19c4ef6dbcd63457bd98183aeb50"
+    },
+    "artifacts/storage-monitor-v2/pass-c-evidence/provenance.json": {
+      "bytes": 4996,
+      "sha256": "2e37330d7a267401cb92288aa9b9172f4456c0fe62e29783bbc854b940ee3876"
+    },
+    "artifacts/storage-monitor-v2/performance/FINDINGS.md": {
+      "bytes": 16367,
+      "sha256": "b99f8047c4adee863f9da7de1b89d65759e8175362b3f15e5257ab406579fb4a"
+    },
+    "artifacts/storage-monitor-v2/performance/after-run1.json": {
+      "bytes": 23831,
+      "sha256": "44c4958ab943619bff7f0b39bb9f2f720d5ec8b19eb26c0db219ef66a548ec30"
+    },
+    "artifacts/storage-monitor-v2/performance/after-run1.txt": {
+      "bytes": 7095,
+      "sha256": "7b9651849f1774a6200d2ac44e2ca0155d029c3901b22a53b9db323b2af77196"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i01-storage-default-atlas-light.png": {
+      "bytes": 875344,
+      "sha256": "b55289dfc2c2bd65cc69b6d42495543152d8f72f2d10350f1795da0b2ca53fa2"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i02-storage-minimum-atlas-dark.png": {
+      "bytes": 477256,
+      "sha256": "a02b86c0e77505f198af9ce27b2ec951ceb0492b867b7afb5c17f05246240238"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i03-expanded-hierarchy-folder-details-light.png": {
+      "bytes": 893137,
+      "sha256": "eff48b88ebdd9a9c4ba40cbba0b9ebd5e4bcdcad5f3682cf78c4cfd85c8d463a"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i04-living-tree-overview-dark.png": {
+      "bytes": 2134622,
+      "sha256": "b832480a7d38bfe21aba1c9a4a26484bc7716ab8100cf1e0f0a90bab0db7663e"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i05-living-tree-3d-dark.png": {
+      "bytes": 2408920,
+      "sha256": "57de5799678d1a65427672aef94eb27605fb32d5b9ab6cc1b9389abba3c3a291"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i06-living-tree-selected-folder-dark.png": {
+      "bytes": 1563309,
+      "sha256": "d820bd7fc046032c56f1d82bf3c33e720206f9dfed23e1d8d1c8de63651e8a88"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i07-living-tree-selection-light.png": {
+      "bytes": 2156587,
+      "sha256": "6927fa14bc96bcc089d1dbc26c3d2819110ca9272433a60bb7f36946e12c2b81"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i08-living-tree-navigation-help-component.png": {
+      "bytes": 106960,
+      "sha256": "5581251c5b8f5896601b1e9a7457bcb74a24e715d278cf9730c4065fc2e3c265"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i09-atlas-open-home-light.png": {
+      "bytes": 1124090,
+      "sha256": "a5e1d48ddd949af4fdb13e83115606ccce60074e0557776091ed359054810fe1"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i10-largest-files-dark.png": {
+      "bytes": 552334,
+      "sha256": "99166367ae80a5806735a7c18ddc59feefde2187987dbb19f0f123dc29e9d485"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i11-largest-folders-light.png": {
+      "bytes": 432590,
+      "sha256": "84e21731403ed20c9021b9561c7650098b35f46c28846e77d51cf420a0569550"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i12-cleanup-review-candidates-dark.png": {
+      "bytes": 252719,
+      "sha256": "dbb9ebc9b5993eac7cf361e4de1f513e23237d761ad7ef0eca4f7e956efa7b84"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i13-cleanup-candidate-selected-dark.png": {
+      "bytes": 386706,
+      "sha256": "06519f7ef6e6316d552feb7c20c0d7eeb000c4a11dde35630f8ac633ad143667"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i14-cleanup-item-full-details-light.png": {
+      "bytes": 294864,
+      "sha256": "20748aa55e9350640f258b48463de389123d7aca11b005ebe862666439151da0"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i15-cleanup-all-assessments-dark.png": {
+      "bytes": 101875,
+      "sha256": "883b641c84807f8b554af53b767066e3ff99b5855e58829f38555effba4bb727"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i16-cleanup-other-item-details-dark.png": {
+      "bytes": 337971,
+      "sha256": "14c20bfc2a288c0f2069cd2b7a68186ed1ae60c6918f563b75b9998fec6e009f"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/i17-storage-inspector-expanded-light.png": {
+      "bytes": 1152341,
+      "sha256": "f03c471065cee89e80b670dccce3c4cce32c2e75683b044debad6169d183369d"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/m-empty-state-minimum-light.png": {
+      "bytes": 187744,
+      "sha256": "28ad7ca5a93d4ea8a865c98843e10a21d2c0499aaa6ea13a3033a0393cfabfe1"
+    },
+    "artifacts/storage-monitor-v2/performance/after-screens/provenance.json": {
+      "bytes": 5215,
+      "sha256": "1396d401e750b341508f16d4ac9bead2d41697cccf9e3552e74536ace1428ba8"
+    },
+    "artifacts/storage-monitor-v2/performance/baseline-run1.json": {
+      "bytes": 21749,
+      "sha256": "9e1b2a63f1b0a253e8c8cde4f1fbbd9c27ac91765fd1af1e683f6d6aa94459e4"
+    },
+    "artifacts/storage-monitor-v2/performance/bench/Bench.swift": {
+      "bytes": 16571,
+      "sha256": "de44de4b9691da98fcd64ca5c95dcff2ecb6d6a4f2eda1b816285967e525e4b1"
+    },
+    "artifacts/storage-monitor-v2/performance/bench/analyze.py": {
+      "bytes": 2593,
+      "sha256": "6a6482289063af9b40b8e73947ba2c434da0688f7e4cb0029077d7b12f9b5326"
+    },
+    "artifacts/storage-monitor-v2/performance/bench/prepare.py": {
+      "bytes": 3969,
+      "sha256": "01dd0ac94af72cc3ebc6371e174ccb4d99912f82b8d3b810cdd23b0492eec2a1"
+    },
+    "artifacts/storage-monitor-v2/performance/headless-script-baseline.summary.json": {
+      "bytes": 8449,
+      "sha256": "8c20bf78c0f0e4b50058bd59f9ed35c856bb2fb517dc9794b733e2a042e2ea29"
+    },
+    "artifacts/storage-monitor-v2/performance/native-after-run1.summary.json": {
+      "bytes": 9232,
+      "sha256": "a083dc7d8a9a22047edca9858828379f45db2478005b90f61d4808e91a47ffd9"
+    },
+    "artifacts/storage-monitor-v2/performance/native-baseline-run1-sections.sample.txt": {
+      "bytes": 28480410,
+      "sha256": "043d983efbcb63b7a0c9096407027999d1ab8ae057b4b4593cedc0b6d2fce663"
+    },
+    "artifacts/storage-monitor-v2/performance/native-baseline-run1.summary.json": {
+      "bytes": 9508,
+      "sha256": "ddd36e4adf639d5a89ee88bdf2f46305ec925c54cbd6d8760e5e137bd4df693a"
+    },
+    "artifacts/storage-monitor-v2/performance/native-final-run.summary.json": {
+      "bytes": 9253,
+      "sha256": "94acc0af6f4f4b920441df799c122f3556bfe2519b1d84a289ead030e9cd0784"
+    },
+    "artifacts/storage-monitor-v2/performance/native-final-run.summary.txt": {
+      "bytes": 1548,
+      "sha256": "a7cb07d4a8b32e51d3495fd1e641afb5305715059b0942f294c1c662ac19804d"
+    },
+    "artifacts/storage-monitor-v2/performance/probe-ax.json": {
+      "bytes": 10545,
+      "sha256": "663444c84f76675782466695e87acb26b541882edf4bb674a10b532eff8acba6"
+    },
+    "artifacts/storage-monitor-v2/performance/probe-liveloop.json": {
+      "bytes": 9850,
+      "sha256": "d6710b8b0ad2e3bf3c932ec2cc97eb87605b528624249912a4d8f6d3d81cd1d7"
+    },
+    "artifacts/storage-monitor-v2/performance/probe-render.json": {
+      "bytes": 9743,
+      "sha256": "6538ffba3c877e59d6b357d70e04d4df8e7c2a2ed71284f20e9372a2779e2cf9"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-after-fix.json": {
+      "bytes": 5059,
+      "sha256": "1b1f35939408179d945780f55a9c5edc531683740766b4c4208054d6a5064e31"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-baseline.json": {
+      "bytes": 4839,
+      "sha256": "cae5353e46d40d72d42d7c6f69949743647767a95324dbb6907c7e3ed6385194"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-empty.json": {
+      "bytes": 5055,
+      "sha256": "a3ea869894fbbd5ce46dda9fb10046fcd8f9c9c5daec3f9fc475aa7183b98ddc"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-layout-after.json": {
+      "bytes": 5062,
+      "sha256": "20468bb359b42958f482b4978c7933950eb9c31db622a47f891d487a112366ba"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-layout-after2.json": {
+      "bytes": 5063,
+      "sha256": "f672c364eec583cd6cdaa9437b1f1becd66d74bf08b913bbaf0c0822370a630c"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-layout.json": {
+      "bytes": 5056,
+      "sha256": "8334762d4b725fb3fb012475017dc51cb1f40da186d9eb9cacd39821313b9fd5"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-probe-ax.json": {
+      "bytes": 4839,
+      "sha256": "1aa30f78772081d71715adf2da8cf14a1260685e6ac70a545ee95bbb35edfbf1"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-probe.json": {
+      "bytes": 4836,
+      "sha256": "c55524c6ae14f0b3b5aa6c0e77b3f27d5e06f18724f514e2274a57cfd3b1b057"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-rc9.json": {
+      "bytes": 5160,
+      "sha256": "7e6b060f0ec4221d5cb1cecad57326a527c4e02f390adf9314579eab2e880eaf"
+    },
+    "artifacts/storage-monitor-v2/performance/provenance-script-headless.json": {
+      "bytes": 5065,
+      "sha256": "544dcd446572f4f25d6393a1844aa71ecd5509a06fef1cc87801749267789f3d"
+    },
+    "artifacts/storage-monitor-v2/performance/rc9-run1.json": {
+      "bytes": 23269,
+      "sha256": "cdd20ab8826f5881ece682069dea83bd1e3ec4d32997435db26c50b314dadd15"
+    },
+    "artifacts/storage-monitor-v2/performance/rc9-run2.json": {
+      "bytes": 23307,
+      "sha256": "7f06c99ccf11c8385a3cf7e432234a0a77ef2a746d402a5453538ef4549905bc"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/INSTALL-ROLLBACK-PLAN.md": {
+      "bytes": 9500,
+      "sha256": "9692bc530e8f5518f418e7a28635ca6588a0517dbfad05114e1e6f3bc86f99f3"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/PACKAGING-HANDOFF.md": {
+      "bytes": 8781,
+      "sha256": "3c789adc7a9d5df640f78bd4cd84489a571a7435f497292b54c90d357bbac420"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/PACKAGING-REPORT.md": {
+      "bytes": 10886,
+      "sha256": "79cc2afc57722e101de8640b4b798bd154dbdc002fef0ec2a6ab44cdf2ce38ba"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/RELEASE-READINESS.md": {
+      "bytes": 20505,
+      "sha256": "c38e565246cff071c00a95c4c4f379c69e0b1eb26c05857761859cda1f53e6bf"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/accounting-differential-fuzz.py": {
+      "bytes": 2495,
+      "sha256": "1d234ddbdcfa1edecefc0f147e068d7de22fd10b19af4374c2aba30b767a702c"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/native/front.sh": {
+      "bytes": 277,
+      "sha256": "c252f36697acfdd5c82591589356988b6a3f6a67c52e5b47e912dfb2583a3062"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/native/perf-run1.summary.json": {
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/probe/PreferenceProbe.swift": {
+      "bytes": 2586,
+      "sha256": "58946e20adf4ed15c2c501aa8f4a4219ed4381a79a8d600f68c54aba6d965eb3"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/probe/build-probe.sh": {
+      "bytes": 1595,
+      "sha256": "d79ec96fc6254e3eae93c86925c8f043da4e2d587d8d7ae5c771c5d091d36c47"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/probe/run-matrix.sh": {
+      "bytes": 1533,
+      "sha256": "ed41c9bdef1f936a2e6cd478d519728e45d4cfcce7e96ddc94f3477a119f0654"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/probe/run-probe.sh": {
+      "bytes": 2747,
+      "sha256": "4aab98edf25d093f25c32d972e2266c469655dd314749b11c94443813ed454d8"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/probe/workdir-dist.txt": {
+      "bytes": 52,
+      "sha256": "53c4700c91076cfd5377f8bae3cfcf7c79e01f538cfc18a3ee048a452ba7d361"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/probe/workdir.txt": {
+      "bytes": 47,
+      "sha256": "38f5a715ded2660c47ac7621e52f9e6f40d8b5fb853b7e630956c23bca9f6d29"
+    },
+    "artifacts/storage-monitor-v2/release-readiness/release-bundle-inspection.txt": {
+      "bytes": 2020,
+      "sha256": "8cbc5de2da59e833ec72046b3f39fd100dba05bb77d5dbca4dfbea9c6f74befb"
+    },
+    "artifacts/storage-monitor-v2/visual-review/README.md": {
+      "bytes": 3670,
+      "sha256": "50757b5d7579f15226d10c07d9581668693409fcd5bdfa1c5cf7045aac4792d9"
+    },
+    "artifacts/storage-monitor-v2/visual-review/capture-tools/Capture.swift": {
+      "bytes": 12932,
+      "sha256": "1174b45eb50b6c82bcba2cfeccc48dfab0f0c289cc25867dd12371b7107a3934"
+    },
+    "artifacts/storage-monitor-v2/visual-review/capture-tools/Compose.swift": {
+      "bytes": 5332,
+      "sha256": "32272f16830ef53c7ec3edbead14fcd70232d16ef0e16b4924bc024efc0edc44"
+    },
+    "artifacts/storage-monitor-v2/visual-review/capture-tools/Split.swift": {
+      "bytes": 2378,
+      "sha256": "78e8a89f2f6cd61ee6740c2c8af1a061b3850a679a2456c8eeb53d37a30866da"
+    },
+    "artifacts/storage-monitor-v2/visual-review/capture-tools/prepare.py": {
+      "bytes": 3301,
+      "sha256": "345ef27618e89743e7827f92afee43370c50e1b88d3491fcd1bcc13a35f561f9"
+    },
+    "artifacts/storage-monitor-v2/visual-review/layout-compact.json": {
+      "bytes": 5712,
+      "sha256": "303c279de1590c518b16d63e5784f4f59403e74fb10ec001ee644405801359e8"
+    },
+    "artifacts/storage-monitor-v2/visual-review/layout.json": {
+      "bytes": 7812,
+      "sha256": "6361f2895f61082e54aa86ca8509f73ebcf684018dcfa63d2bbaebcd5b0298f2"
+    },
+    "artifacts/storage-monitor-v2/visual-review/provenance.json": {
+      "bytes": 4996,
+      "sha256": "e8b940eb971c6109a7dd2aa1f5648bc584ceaa03055ea971d38948ad64a7d622"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/before-i01-storage-default-atlas-light.png": {
+      "bytes": 1080407,
+      "sha256": "14b17ec0b4fe0b057f1f525ed67990565c7c022942b1ced6f3d4d4ff3216ee0a"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/before-i03-expanded-hierarchy-folder-details-light.png": {
+      "bytes": 1063308,
+      "sha256": "9a08e2356fd4a23b1a4eece58eefbdc994fe391b76dfc1e1106448bc299343f3"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/before-i04-living-tree-overview-dark.png": {
+      "bytes": 1878456,
+      "sha256": "9c11ca0081d8e39a9002d05ded0d60d90dd84c20da9361f57e54a749760810fa"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/before-i12-cleanup-review-candidates-dark.png": {
+      "bytes": 317741,
+      "sha256": "2ee3bf5c767c520ba94b14c61fda3705345393dc09778d86fcacde610d81458e"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/before-m01-monitoring-default-large-dark.png": {
+      "bytes": 542109,
+      "sha256": "5e5e062552dd0d306387157a1b2d262b23398d1fad0ab897c9100ff932483fe4"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/before-m02-monitoring-minimum-dark.png": {
+      "bytes": 402290,
+      "sha256": "0d5d423ecc795cca716a616a8965c4589ae634a8246e7f3f7fe7ba5c4cb3f87f"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/before-m06-explanation-complete-dark.png": {
+      "bytes": 211266,
+      "sha256": "de9b6192965eadba729b9c78fd6e82534456da1c25a6ef1a2212f4faac15a0c9"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i01-storage-default-atlas-light.png": {
+      "bytes": 873976,
+      "sha256": "964a98e85ae8d4c841faecd86c04ae72538e505d7e697e1881db359ce79f6d6e"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i02-storage-minimum-atlas-dark.png": {
+      "bytes": 475716,
+      "sha256": "a0b2efd1df89afde6c6a38e6c319a7f83dd8af2657d7254c88842ac2abd75601"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i03-expanded-hierarchy-folder-details-light.png": {
+      "bytes": 891430,
+      "sha256": "e4e261d383176af44ebb9f0af85edb99580ed70bfaaec460c9156508329e01c8"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i04-living-tree-overview-dark.png": {
+      "bytes": 2127112,
+      "sha256": "3c1f5de2257348e93b18d4d72a7d028fe7607dfcde42f76624357d771dd0de71"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i05-living-tree-3d-dark.png": {
+      "bytes": 2386651,
+      "sha256": "1e6203953670e6c7e4b26062418111b293ce4a0037347ca39dc5bddd835c901a"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i06-living-tree-selected-folder-dark.png": {
+      "bytes": 1556006,
+      "sha256": "0ce88cc951bf30c7aec967af72b41fc709e68e5070ffc8bfd6cb274fc5b3cdbb"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i07-living-tree-selection-light.png": {
+      "bytes": 2143139,
+      "sha256": "e0709c55234e747a053619cf5a5f32e52760f34959fe000e35f29d56db3c2697"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i08-living-tree-navigation-help-component.png": {
+      "bytes": 106960,
+      "sha256": "5581251c5b8f5896601b1e9a7457bcb74a24e715d278cf9730c4065fc2e3c265"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i09-atlas-open-home-light.png": {
+      "bytes": 1122603,
+      "sha256": "40345914e7136a4b1557caf66d85a4e3fce9f93c9524370b93b0263d6d153519"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i10-largest-files-dark.png": {
+      "bytes": 550521,
+      "sha256": "217154d2c1b5f20bd71070a89218a829eb5946e93b7b83b70fad15ae5c1f584a"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i11-largest-folders-light.png": {
+      "bytes": 431113,
+      "sha256": "272fcc29ac8bd45e38092f7de75f926379123f4890e93561786009e3b52074fa"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i12-cleanup-review-candidates-dark.png": {
+      "bytes": 250642,
+      "sha256": "a015dfe0a139921944627a1b49f832294dadcc1af486f9dd50664959833755e0"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i13-cleanup-candidate-selected-dark.png": {
+      "bytes": 385233,
+      "sha256": "6ccba1d267b4ef902ed4afc718ed0bd0d337ea8f78724718d3a560da5d105557"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i14-cleanup-item-full-details-light.png": {
+      "bytes": 294875,
+      "sha256": "a31c0dc5f15433471ef22f8c95eb5a1f4e860915f172727ce6e406102f120f75"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i15-cleanup-all-assessments-dark.png": {
+      "bytes": 101875,
+      "sha256": "883b641c84807f8b554af53b767066e3ff99b5855e58829f38555effba4bb727"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i16-cleanup-other-item-details-dark.png": {
+      "bytes": 338101,
+      "sha256": "4c0997baea1cdb972ecb2694439eb25ba88c66effc5da99821c22a17ed2d0fb2"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/i17-storage-inspector-expanded-light.png": {
+      "bytes": 1151025,
+      "sha256": "fae5b228ae07bedaf12a721e4816022e25f21a61db854fef6b0ab24b810cdc2a"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m01-monitoring-default-large-dark.png": {
+      "bytes": 342099,
+      "sha256": "f7cef4d69e5531af206e176da4eb37d2239a9ca4f0f008052833a56387b0d5cc"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m02-monitoring-minimum-dark.png": {
+      "bytes": 241132,
+      "sha256": "acd2219beedac18c4806e08d3f1df81d733d048a054301a106a503ac0c1b6481"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m03-monitoring-minimum-light.png": {
+      "bytes": 234934,
+      "sha256": "072ad34afd5597a3d0d62d4544676806abb82bdb161e6556ef8df81f3aa07fab"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m04-monitoring-selected-event-large-light.png": {
+      "bytes": 520041,
+      "sha256": "e88e428ed79b412af56c92589feb3d8c2eb6f3fc6c2eae9e95362f5b2839e5d0"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m05-monitoring-selected-event-minimum-dark.png": {
+      "bytes": 340758,
+      "sha256": "788fbcb661301f2c548e23b6c556d6c97bad8f66358baf21aeed3c374d0198b4"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m06-explanation-complete-dark.png": {
+      "bytes": 171698,
+      "sha256": "17c28215496ba57a88037663d77d0b7bf98b236bc5287965ee0abb49e9587435"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m07-details-and-evidence-expanded-light.png": {
+      "bytes": 615009,
+      "sha256": "5725e0b9210ff04b18c0fb83725f67c93fb4e15f6c5306d524726071c91c5b64"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m08-latest-notable-explanation-light.png": {
+      "bytes": 154339,
+      "sha256": "31c65a93b1a69cec6596e30eb5da471bda3cc3d844aff87358d0a1b7de9bc8e5"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m09-settings-dark.png": {
+      "bytes": 129783,
+      "sha256": "5cf93d59e03baf43f11b46f004e784db0677407ef4a4a96c5248d340ca36e059"
+    },
+    "artifacts/storage-monitor-v2/visual-review/source-screenshots/m10-monitoring-minimum-summary-scrolled-light.png": {
+      "bytes": 225558,
+      "sha256": "dac9f458c932fcaf55db1ae18616e4a7ced51c7e1eea0d32e94d8a0b720efe2b"
+    },
+    "artifacts/storage-monitor-v2/visual-review/storage-monitor-v2-collage-1-inventory-cleanup.png": {
+      "bytes": 19138224,
+      "sha256": "7f842d3e8d8b22dd1e12884a8f616bf48ad621ef413c4d57382c07f0205a1646"
+    },
+    "artifacts/storage-monitor-v2/visual-review/storage-monitor-v2-collage-2-monitoring-experience.png": {
+      "bytes": 6153517,
+      "sha256": "d3af8847e357e858870e6622f24eac632fa14c82c59efdb3e7ce95c056e255a4"
+    },
+    "artifacts/storage-monitor-v2/visual-review/storage-monitor-v2-compact-collage-1-inventory-cleanup.png": {
+      "bytes": 9678927,
+      "sha256": "0e41c7cbc43d0af65053d947d86ac2b682dcd9c03d1132148b33e5d6511e3adc"
+    },
+    "artifacts/storage-monitor-v2/visual-review/storage-monitor-v2-compact-collage-2-monitoring-experience.png": {
+      "bytes": 4267176,
+      "sha256": "01a8b76ce046ac2848f812ee7a11d862896592f13cd99c91ae288edd492eabea"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-1-part-01.jpg": {
+      "bytes": 1336572,
+      "sha256": "7c6087ef8bbe1bbfce5a8316f5a81dab0e3f897c6d5418aa0942e35b45181035"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-1-part-02.jpg": {
+      "bytes": 1173815,
+      "sha256": "78bcde7a740f3a16d803e6b567517f9b4fbb9fc03cb2d6900615d903ba88f3dc"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-1-part-03.jpg": {
+      "bytes": 1989565,
+      "sha256": "f85af1b6fbeb2ba27d115e1f7e25a199185fc4bf4e2812cb5fe41bba54e4a0d6"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-1-part-04.jpg": {
+      "bytes": 1242406,
+      "sha256": "bdfb5a6ea56933666bc746ec9bfe17e04cafe955c96f592eac572590c371ab1a"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-1-part-05.jpg": {
+      "bytes": 1415980,
+      "sha256": "a5797f05f09eae566993a594842776e2f65538abeaa42d3324ffdd195ccb0907"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-1-part-06.jpg": {
+      "bytes": 1459997,
+      "sha256": "7ff5b1379c6d9708fa8bdf9eb4f4163d99f8b13477200c2e1d90da6bcfc79a29"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-1-part-07.jpg": {
+      "bytes": 1135441,
+      "sha256": "8a9a606092484a946138541e45ff5c8e6f2dab773692968a012e6a91c0bbf787"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-2-part-01.jpg": {
+      "bytes": 1341529,
+      "sha256": "66e4c8262e702d2fe3538a259b289a25ea0ff2784fe8e0dab7555feb956d8bc7"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-2-part-02.jpg": {
+      "bytes": 1172163,
+      "sha256": "5f1408ffea3bac065314a0c9a76749beb19d598a51f7900fb0a8d55bd163d494"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-2-part-03.jpg": {
+      "bytes": 1658240,
+      "sha256": "ba14fb6028305c48eac25753f6807d7ec7627f38ba8a9950d9103e6fb770366b"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-2-part-04.jpg": {
+      "bytes": 1940829,
+      "sha256": "9669d45c87c3379a3e89cdf836bd2322be58b21676317edb3cfcf1645aa06152"
+    },
+    "artifacts/storage-monitor-v2/visual-review/upload/v2-collage-2-part-05.jpg": {
+      "bytes": 346114,
+      "sha256": "a336fe91d20265e350c281a2f26986ab44148c8d38a02d88fc402e350459d0c4"
+    },
+    "artifacts/storage-monitor/migration-readiness/DETECTION-MODEL.md": {
+      "bytes": 12157,
+      "sha256": "3f73d50b68fd551a3affc883dfae05812f3cb5665f458d777a8c44a90df52797"
+    },
+    "artifacts/storage-monitor/migration-readiness/FILESYSTEM-ACCOUNTING.md": {
+      "bytes": 6032,
+      "sha256": "32e98b506b347418b5c60ed267b3dbd6ac2d45f10f42729f45833d44b4e1dd1a"
+    },
+    "artifacts/storage-monitor/migration-readiness/IMPLEMENTATION-REPORT.md": {
+      "bytes": 17397,
+      "sha256": "141b6760c2c0ced373817a9194220203c8cfbe5b3ba7ccb4bdbc37e48ac911e2"
+    },
+    "artifacts/storage-monitor/migration-readiness/MIGRATION-GUIDANCE.md": {
+      "bytes": 7672,
+      "sha256": "25740c2cfae47f5198e03ff2cce28becd1eab803784b962fe0af4a8d9cb7ecec"
+    },
+    "artifacts/storage-monitor/migration-readiness/NATIVE-QA-PLAN.md": {
+      "bytes": 7159,
+      "sha256": "31d4609217541246317f87158838ae868a96184cc8d6e875edeaf7959a2cfe5a"
+    },
+    "artifacts/storage-monitor/migration-readiness/PERFORMANCE-RESULTS.md": {
+      "bytes": 12569,
+      "sha256": "3de1f2eebb7ea1d019f3b4cf18251be09214a94b46a3b3b0ccc4fc5ad5432817"
+    },
+    "artifacts/storage-monitor/migration-readiness/REGRESSION-RESULTS.md": {
+      "bytes": 10135,
+      "sha256": "324df02983df59699c832696ae2393983ef39ab8ae27d0e7ec4863abf712abf5"
+    },
+    "artifacts/storage-monitor/migration-readiness/evidence/sqlite-same-process-repro.c": {
+      "bytes": 3856,
+      "sha256": "989ad7c8812a3157f4b3aeadde349e0bd993f0f878e5957c1bbcbc9388cff1c8"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/explorer-filter-off-light.png": {
+      "bytes": 631943,
+      "sha256": "64b16f9ab154efe06255e1e86962f04355bad5b7e197827e5ebd0cf3f25af47b"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/explorer-migration-review-dark.png": {
+      "bytes": 638441,
+      "sha256": "5020a5d823cf7374900676b326cc83fc41d556b9c7e92a6deea88955f1a97eae"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/explorer-migration-review-hide-light.png": {
+      "bytes": 605522,
+      "sha256": "c4c9fc12baa8c2a164bdf9c5c844ede0b14b14f674eb75079684f7ba2bdfb859"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/explorer-migration-review-light.png": {
+      "bytes": 639207,
+      "sha256": "033fd34407e205b6d2ba68c39aea81dcd3ba464b6d68db313116886dcb46d8b8"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/explorer-migration-review-small-light.png": {
+      "bytes": 402936,
+      "sha256": "2a6571b84dcf3cb1609c6631742a6b37517f9c2130f9701ff3273c60175e8dd1"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/inspector-informational-diskImage.png": {
+      "bytes": 119882,
+      "sha256": "cbc80bae894391681dfda4ff4991a811929f03bf53be04bc2bec75ba84c5be57"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/inspector-review-docker-desktop.png": {
+      "bytes": 154568,
+      "sha256": "be86c5097dab68fe78d76191a664ad4d58ece1081e13aafe80cf04d25b778972"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/inspector-review-orbstack.png": {
+      "bytes": 152177,
+      "sha256": "50701d6608860d7471c036497c407221e86face534be8a0ec941ed8b44684767"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/inspector-review-parallels-desktop.png": {
+      "bytes": 156057,
+      "sha256": "69e3bf3cb71539e6ddc85db2294395dd0a09a117ab2c43582a295269a06a9e75"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/overview-details-dark.png": {
+      "bytes": 152600,
+      "sha256": "4faeb8692b45775595ad27ec3be07aec56c8951ce5c2be3f8356a01b53cbfc38"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/overview-details-light.png": {
+      "bytes": 150152,
+      "sha256": "ea831215ccb7942cb90664270804f00d423afa2a7672bb35d252fbe770c26d20"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/overview-summary-dark.png": {
+      "bytes": 15066,
+      "sha256": "1dc4a683ab1e6b929597ae452c304cf7dd0488cf981c19ffe6425451d3e34a25"
+    },
+    "artifacts/storage-monitor/migration-readiness/renders/overview-summary-light.png": {
+      "bytes": 14604,
+      "sha256": "94d7001d2d506d8b440724e296d685536620305b47117743793232b77558d80d"
+    },
+    "artifacts/structured-explorer-integration/INTEGRATION-REPORT.md": {
+      "bytes": 22733,
+      "sha256": "27f4ca73f7ab171548a8169637e16d5b44534beae44bde98ff1a8a4716bc92d9"
+    },
+    "artifacts/structured-explorer-integration/NATIVE-QA.md": {
+      "bytes": 2351,
+      "sha256": "e4d35d701465bd1e0ce5289f00735541a79776f200b1ca74ba73962cdc97a8a4"
+    },
+    "artifacts/structured-explorer-integration/PLAN.md": {
+      "bytes": 2646,
+      "sha256": "a01de1f58862345c8608094a4c8f6c508f62bc625413a721671f3b0fd8f6b9a7"
+    },
+    "artifacts/structured-explorer-integration/README.md": {
+      "bytes": 2372,
+      "sha256": "fac95183fa345b24019077ddff90fafd84db0ead35a165babcdc6f95a3c9df49"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/ARTIFACT-MANIFEST.json": {
+      "bytes": 9019,
+      "sha256": "be80fa290d3bff613ef033c9e863af2c9de05cdbdaf97252c52ced472fb86140"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/FILTER-SEMANTICS.md": {
+      "bytes": 4089,
+      "sha256": "7cd79991957412e31a9a19de925813b2a679c872c81dddd9d95a23e8ad000596"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/IMPLEMENTATION-PLAN.md": {
+      "bytes": 3966,
+      "sha256": "a554e529d6005d3b7dd62e56f951e5365602d02624c133ed43ade1e7a49716a6"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/IMPLEMENTATION-REPORT.md": {
+      "bytes": 6345,
+      "sha256": "425fde628d47934238b5ded670989a031a9b1b580cb95f9fcecece7d581f3e07"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/NATIVE-QA-PLAN.md": {
+      "bytes": 4677,
+      "sha256": "4d53ca0de312d93340adad658dce21069ddc4366a6b6c814a478a0a2a58901e0"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/PERFORMANCE-RESULTS.md": {
+      "bytes": 4907,
+      "sha256": "aa3e559194360a9f1baabb2e93e8b75f669f72b72bb7ef0df7625ed55bf5ea1d"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/REGRESSION-RESULTS.md": {
+      "bytes": 10128,
+      "sha256": "193cfbd14c8a18b0064c982f34b40019ae9b18cc593f486a6358a20ed986d768"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/SCREENSHOTS.md": {
+      "bytes": 3345,
+      "sha256": "63d19994724e4739e90fc7b8a8cb83c4d59c349b06c075cd211c4576fa68327c"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/build-evidence.json": {
+      "bytes": 727,
+      "sha256": "f150a1ff2cda9dbf6f13c7727fac02d59af3977008a12f5e4eeb23868c8f3f62"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/01-all-nodes.png": {
+      "bytes": 565777,
+      "sha256": "e3853826d7ebe55d074021b3d8f442732831cebdcf22c4e439efb9ae8205e7e1"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/02-at-least-500-MB-dim.png": {
+      "bytes": 557418,
+      "sha256": "bc915a2d6d7ff0e886d073ee5a0e5ad55e644a2058b6866d6de76e43be3ba969"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/03-at-least-1-GB-dim.png": {
+      "bytes": 555801,
+      "sha256": "45593f70e60dd9e3a11c38415c4df67d9a5a347c30191f266d0aa8bd7427ed05"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/04-at-least-1-GB-hide.png": {
+      "bytes": 541935,
+      "sha256": "f0c49a458a3c463e7a6fdea46275fa5457f8b41ba6984a2d789a833f3ea5cd09"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/05-selected-below-filter.png": {
+      "bytes": 514193,
+      "sha256": "d7ddfbcf8c1a1debb9c6e55cfefff24a4180423724fe7a460867edd2ceb81903"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/06-isolated-folder.png": {
+      "bytes": 535976,
+      "sha256": "095b240d3679f30efbfdfa7c194c203743842d7b16f4fefac761f7d61b1a3d4d"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/07-path-to-root.png": {
+      "bytes": 503253,
+      "sha256": "0b4216b14e68d0eac551807974c6f407c58c2c9a1baa4d4fa9b10e136787c573"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/08-focus-subtree.png": {
+      "bytes": 514934,
+      "sha256": "17d3c17aac19fd1d31186c6b3a0ed041cb7ece3572bb5123ff4bc95d8b50edb9"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/09-minimum-window-dark.png": {
+      "bytes": 359332,
+      "sha256": "d8d8a769e9ba8576950d473299799a349fef9f8f51a89f28bc35e240826c229c"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/10-minimum-window-light.png": {
+      "bytes": 353794,
+      "sha256": "5f222a27b5646d4a073608f0defb1dc766891cd6ebbfe386194e0828c679674e"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/11-minimum-window-hide-light.png": {
+      "bytes": 351965,
+      "sha256": "180907a6c3d271846f82a8beeb58e0fabda8583648e034a77c99eb3749f91caf"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/12-classic-fallback.png": {
+      "bytes": 2054100,
+      "sha256": "f4ab9d4213aee97ed178c9c1a4df60b346f0f39f0100a3851b4d75ccf0ff39c4"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-01-all-nodes.png": {
+      "bytes": 539549,
+      "sha256": "2d99fa6c315d8f75ace3f231c4f6bb1a29466ec38b3889972347ade257f53548"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-02-at-least-500-MB-dim.png": {
+      "bytes": 512008,
+      "sha256": "aafd115185b5ad49387cc0327f6e4b8e2e1a4478ac856c9c8e1520853bdff4cc"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-03-at-least-1-GB-dim.png": {
+      "bytes": 509766,
+      "sha256": "7c0ceb2a177a65fccd4b7f3d25bc25b3af3fd0ec5f43c0abe6d08f9ac11b43ba"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-04-at-least-1-GB-hide.png": {
+      "bytes": 391536,
+      "sha256": "2c6d958d77ceee0089114a9779c811c23b16a4fe43c1ad273fd08c022ff7ffe8"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-05-selected-below-filter.png": {
+      "bytes": 396808,
+      "sha256": "e18b114e3d455142f9768ef0118ab26ca40d41bca3d5bb973d0c50034353c012"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-06-isolated-folder.png": {
+      "bytes": 434958,
+      "sha256": "7a82cfb1e7f949086af178897c8423c914901dcf3099a6021fd87ce20fcadfb8"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-07-path-to-root.png": {
+      "bytes": 476786,
+      "sha256": "baa2efc20e63f5bf8cd90907a6c7cd64fd2010346a99d08e36c3d7abc3c8c49c"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-08-focus-subtree.png": {
+      "bytes": 484635,
+      "sha256": "fafaaa246ecb3794c7c17c0999232e55deb1c176dddd9bee236bec0f0b0127c7"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-09-minimum-window-dark.png": {
+      "bytes": 212002,
+      "sha256": "2a0a7971348365788456e0d243951c7c0897eb2ec6fb9066d8d014259ad397e1"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-10-minimum-window-light.png": {
+      "bytes": 210366,
+      "sha256": "7cc9e5d27726e5796ad91c713d90e5e57cb3d25a96ca1801cb94d7a354352640"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-11-minimum-window-hide-light.png": {
+      "bytes": 203329,
+      "sha256": "0c19d21d050cac86cab374f017baa04d944bfc2dea1d39007a181992ca14cca2"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/headless-renders/explorer-12-classic-fallback.png": {
+      "bytes": 2287204,
+      "sha256": "400f9e40f4a6e6aecc9ae634611ad3657a5eff980db3fbd06ca4243b472098ee"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/bundle-id.log": {
+      "bytes": 41,
+      "sha256": "d264c2a07f4ab06d04b2c4f038bfb3c25225453a67ec6caf4fe1d07a88b2623b"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/chart-input.log": {
+      "bytes": 8216,
+      "sha256": "d77ca3bae08df8c0faa81541a20abd96349e77b05adadadb9772a0cb44e2db56"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/cleanup-scroll.log": {
+      "bytes": 2396,
+      "sha256": "c229e799d0e644db93c44ff34278271bec59790a1ef2e192e13e12e70e03bcfd"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/codesign.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/diff-check.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/final-commands.json": {
+      "bytes": 3010,
+      "sha256": "1afffea3cf13e62a8967237ce6e11e409da97d554fa61e878415f2e4dbbe1d6e"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/focus-filter-benchmark.log": {
+      "bytes": 6786,
+      "sha256": "3301422308d62d620740d01648f31e9ab50fee578b9be65a9b129a1a79ed9ec4"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/gui.log": {
+      "bytes": 79196,
+      "sha256": "b7c0da48dac37e03d075e91fef0abfbea299d58d9dbc2f36c702babf64ee069f"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/initial-benchmark-compile.log": {
+      "bytes": 4022,
+      "sha256": "1a466016d139cb550fe9d4970ffeb148590db453ab89a4bb755c7f89edc93693"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/initial-benchmark-scroll-assertion.log": {
+      "bytes": 6043,
+      "sha256": "b4b1ff6561e223543e1949c0ed9be4f3a57fa8db09677fdce626bb6485648603"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/initial-chart-one-point-failure.log": {
+      "bytes": 7979,
+      "sha256": "a8be9d230cd7b71c3150288517c71154f0de92024c14ba8f79c4069a214a4801"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/initial-hosted-compile.log": {
+      "bytes": 2341,
+      "sha256": "72ba66efe7e8ad459fa3b842419611a4229090d2d11a7bda019b381a006b367d"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/initial-shared-state-red.log": {
+      "bytes": 13028,
+      "sha256": "73c22a29a06414fc0c88efdd10cd49933a99d1c51c64cb025fca1db697e24ad2"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/intermediate-benchmark.log": {
+      "bytes": 6786,
+      "sha256": "a88140e3334ea7d8d7b67b145e2351b88b1a50d42263d5f5691370cc43ed8857"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/inventory-integration.log": {
+      "bytes": 34262,
+      "sha256": "feda56b48446cfe961005365c027662038131b01c562bd0f9610ecf49e0153e0"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/inventory-model.log": {
+      "bytes": 8099,
+      "sha256": "a6c0e3f80f0c2e692c4769eb4d0419c9eeb7a72e8b50a65332c91272f31a1c9f"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/monitor-build.log": {
+      "bytes": 178,
+      "sha256": "38054fc730cbf6d8dcb5315b0ea24c90c1bf18e0b88164292c3df34dde2ce470"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/monitor-self-test.log": {
+      "bytes": 16248,
+      "sha256": "ce7b6492f5b3c021248dcccbacba8133a3578677d235d704e3c94e875434ccde"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/native-runtime.log": {
+      "bytes": 17622,
+      "sha256": "fb96c6301651e7778141b9d05351c6182cf2e4d0a2ff8bb9b98926886042c149"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/navigation-benchmark.log": {
+      "bytes": 2469,
+      "sha256": "abbb96410421fe05432d72ba38461bf30226e7001b43b25d4a901310eb38c3ca"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/shared.log": {
+      "bytes": 2455,
+      "sha256": "a40b41a80f93dc4102eb877d6b702d83dc136204502981d1621258212590629f"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/viewer-build.log": {
+      "bytes": 1591,
+      "sha256": "277d72dd792ad6d5ff82395539fcf35a44a5859f2c150e2f79a5189cc64e7ca6"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/worker-inventory-integration.log": {
+      "bytes": 325,
+      "sha256": "18cbe5ce6346f59bf48d3502a10adb0c83b5010449512da3d8b38c064d3f6ac9"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/worker-inventory-model.log": {
+      "bytes": 1562,
+      "sha256": "95c461d4b111f2c9d9c37998fde8bd63532ff40d3a9746dc55bdc8b6db31049e"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/worker-native-script-permission.log": {
+      "bytes": 52,
+      "sha256": "7c58fd97a7a6866e990e06312c2d500c1b702f1541a8919db63401281961921d"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/worker-self-test-rerun.log": {
+      "bytes": 2237,
+      "sha256": "c66c901c1429d9cb406a0ea94ed89b5922e072a1c90cc678adc10986f2382c03"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/logs/worker-self-test.log": {
+      "bytes": 2237,
+      "sha256": "c66c901c1429d9cb406a0ea94ed89b5922e072a1c90cc678adc10986f2382c03"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/measurements.json": {
+      "bytes": 24673,
+      "sha256": "11e102fc9c86fe87ff2e9096bf59eeae8e5829276d2cedec740084987769ad70"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/navigation.json": {
+      "bytes": 5207,
+      "sha256": "2d7211c29d812b9f5a4c36d09f63256fe2e8bd7f37f7d4ac450bb44291c6fe55"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/MANIFEST.json": {
+      "bytes": 1557,
+      "sha256": "99d2fe715406cca090c85d8b5e0e1947bcf1b2f5b4f6e9a2f0a2642355cddf5a"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/PACKAGING-RESULTS.md": {
+      "bytes": 4570,
+      "sha256": "33bdc025bb07f86fbaf08287bc0efc4786dc89beb5e78d280ed4e85ee7663910"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/build-monitor.log": {
+      "bytes": 218,
+      "sha256": "e74490dfa945354e90c93e7c834e1e6f47dbe26e7b884418bcd846d11ddf2a50"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/chart-input.log": {
+      "bytes": 8236,
+      "sha256": "fa87d8015623cf901d74d2c15afd51377bb57441a991caa79c132dcf3cecf3d6"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/clean-source-test-results.json": {
+      "bytes": 1736,
+      "sha256": "bc263076a57a1fedf3560e1795c752416c81cb2464295ddfda701feebf2e0347"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/gui.log": {
+      "bytes": 79054,
+      "sha256": "cda3e7dcb33cf513ce398459ade53b574bc2d15c8925d5f869e295a0d1bb2201"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/inventory-integration.log": {
+      "bytes": 34262,
+      "sha256": "ec8fa684d12dc5f50b0bd1362ecaec692081a4c0be6e6cddf5c2fae2bc56ddaa"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/inventory-model.log": {
+      "bytes": 8019,
+      "sha256": "22322738bd32dd805221eaa18950a9da8839e1141cb22060152cc216937a4c17"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/package-result.json": {
+      "bytes": 747,
+      "sha256": "7ce26d86fcae3af899c45e982b5d440398b5a3b11bb766351725089c4bf040e1"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/package.log": {
+      "bytes": 5485,
+      "sha256": "4a91f22495f9538a68bf28c8d6162862707f1e1ae9ee2d165be8e342cd468335"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/receipt.json": {
+      "bytes": 1294,
+      "sha256": "c8a71099182fc532557a231825ff623da4731538dafadc259da547ec37fa1c36"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/source-scope.json": {
+      "bytes": 687,
+      "sha256": "2ec93b8ab23f4c646b09520557a83c6dbde3e6d3b6383d35a2bd5c6b6a67f49c"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/package-2.3.0/viewer-libraries.log": {
+      "bytes": 6335,
+      "sha256": "674f89d503fde32a30bc8e1bd8c71186bc0949223825383246890485d268ca33"
+    },
+    "artifacts/structured-explorer-integration/focus-filtering/preservation.json": {
+      "bytes": 1487,
+      "sha256": "a79d90675679fee22953bac3dd9a220aa0f8f53eab33d1a640767936e448797a"
+    },
+    "artifacts/structured-explorer-integration/native-qa/NATIVE-RESULTS.md": {
+      "bytes": 7211,
+      "sha256": "43423f42e562a19584e37d0fb70fb8ad494392743fcc70d24aa80ada68256eee"
+    },
+    "artifacts/structured-explorer-integration/stabilization/INPUT-ACCEPTANCE.md": {
+      "bytes": 5775,
+      "sha256": "54189c84600012fc3ae61677f06520e8e3852012da7608454bc07463b3d33b12"
+    },
+    "artifacts/structured-explorer-integration/stabilization/LABEL-LAYOUT.md": {
+      "bytes": 4467,
+      "sha256": "8a7d001457460ef9c2894d732992449b73a75cfa9c3fe170c6febed5d20c8a31"
+    },
+    "artifacts/structured-explorer-integration/stabilization/MONITORING-HOVER.md": {
+      "bytes": 5700,
+      "sha256": "b2c20bfa52526a3d7c7c4e7315af20a9737cc97ed9052b6048b27e4fc5730150"
+    },
+    "artifacts/structured-explorer-integration/stabilization/NATIVE-QA.md": {
+      "bytes": 4294,
+      "sha256": "5a17bd3193ace3f5ccdaa0c6ea7a40392a053ec47523f4421fa3221447bf0217"
+    },
+    "artifacts/structured-explorer-integration/stabilization/PERFORMANCE-FINDINGS.md": {
+      "bytes": 7954,
+      "sha256": "3a9b3544a38d96cc2987a0f8a8909461b13eeddde7c55b577e0cbb0793e5cf21"
+    },
+    "artifacts/structured-explorer-integration/stabilization/REGRESSION-RESULTS.md": {
+      "bytes": 6358,
+      "sha256": "10f2ac1b15fc6fe0461ef15743bd98d49da6ce0a0979ebcff5eaf1893239dbed"
+    },
+    "artifacts/structured-explorer-integration/stabilization/native-qa-20261029T172929/NATIVE-RESULTS.md": {
+      "bytes": 8735,
+      "sha256": "6de55c024354c5a2c9b8cc30ba4bb107191d77fed38e68ed1f23462dbbe59e6b"
+    },
+    "artifacts/structured-explorer-integration/visual-comparison/README.md": {
+      "bytes": 1181,
+      "sha256": "c8408c9d60add7cfd688fa00f3324445f96501ac5615b49ebadb33464e547326"
+    },
+    "artifacts/visual-review/EDITORIAL-DIRECTION.md": {
+      "bytes": 1169,
+      "sha256": "38b39c724d8acb96faebd2ad7ea5020cf98a540e52c92f1b4ed5f4cd0fe5d006"
+    },
+    "artifacts/visual-review/README.md": {
+      "bytes": 9189,
+      "sha256": "2bd9caeac545681e76d5e13d9d01191132068aee0ecaddd2bf79f1221599a0c9"
+    },
+    "artifacts/visual-review/capture-tools/Capture.swift": {
+      "bytes": 12109,
+      "sha256": "e05e56b5b25307d059af37b141e2b8767ddc2801bfd019d12184edeb369df67d"
+    },
+    "artifacts/visual-review/capture-tools/Compose.swift": {
+      "bytes": 5210,
+      "sha256": "aacea355a68f2ef8b2745ff238e5a8e0820897e3ab66c8c4973666c1dc877cdc"
+    },
+    "artifacts/visual-review/capture-tools/OCR.swift": {
+      "bytes": 503,
+      "sha256": "7879031f99b6c21c8b71871a050858f571ab34a06f3da5cadcf02f52675fd9f6"
+    },
+    "artifacts/visual-review/capture-tools/diagnostics/ocr-check.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "artifacts/visual-review/capture-tools/layout.py": {
+      "bytes": 5948,
+      "sha256": "14c6dec8bc02dcb5517d0a3a47ac6b52c9b46a2e3bde8d676c375f2f92407675"
+    },
+    "artifacts/visual-review/capture-tools/prepare.py": {
+      "bytes": 1977,
+      "sha256": "f48b969e779c6be637a7081f0af80bb14d610207db8e058ff0ac7098b2b45bb2"
+    },
+    "artifacts/visual-review/capture-tools/verify.py": {
+      "bytes": 2171,
+      "sha256": "eae9dc3ece6632caa951f9b87b1047d44899e5129ae720235859e42471d2d882"
+    },
+    "artifacts/visual-review/layout.json": {
+      "bytes": 9268,
+      "sha256": "4067dfdf784d0e8613d37e0c54ed8e0de8c518c387eb0de8726ec6c8a3263d32"
+    },
+    "artifacts/visual-review/provenance.json": {
+      "bytes": 4769,
+      "sha256": "1444180e13d8a7d89629108c1178f6e7a75a75d276ae40d1852b5dd1b8a58545"
+    },
+    "artifacts/visual-review/source-screenshots/i01-storage-default-atlas-light.png": {
+      "bytes": 1080407,
+      "sha256": "14b17ec0b4fe0b057f1f525ed67990565c7c022942b1ced6f3d4d4ff3216ee0a"
+    },
+    "artifacts/visual-review/source-screenshots/i02-storage-minimum-atlas-dark.png": {
+      "bytes": 646113,
+      "sha256": "0f4c8b0bc9403637805107093c19c56970ce3fe54ed073bdeacedc843f64f302"
+    },
+    "artifacts/visual-review/source-screenshots/i03-expanded-hierarchy-folder-details-light.png": {
+      "bytes": 1063308,
+      "sha256": "9a08e2356fd4a23b1a4eece58eefbdc994fe391b76dfc1e1106448bc299343f3"
+    },
+    "artifacts/visual-review/source-screenshots/i04-living-tree-overview-dark.png": {
+      "bytes": 1878456,
+      "sha256": "9c11ca0081d8e39a9002d05ded0d60d90dd84c20da9361f57e54a749760810fa"
+    },
+    "artifacts/visual-review/source-screenshots/i05-living-tree-3d-dark.png": {
+      "bytes": 1944596,
+      "sha256": "d11015cf51836b6de44f729c51dcd81a13af9944d7f40a9aa0f0535f4e96deef"
+    },
+    "artifacts/visual-review/source-screenshots/i06-living-tree-selected-folder-dark.png": {
+      "bytes": 1953214,
+      "sha256": "3d250f90fc5b590e2347508f0f9a6ab123c4d5b582ba31dbb7e5bad7643d9cd8"
+    },
+    "artifacts/visual-review/source-screenshots/i07-living-tree-selection-light.png": {
+      "bytes": 1876036,
+      "sha256": "faa28f23d964068cde310419cde413e7abb2d9d5678bef3c8ad9b7342001b398"
+    },
+    "artifacts/visual-review/source-screenshots/i08-living-tree-navigation-help-component.png": {
+      "bytes": 147827,
+      "sha256": "35e3d41199c0b529085d35102331165b843860951bbd5b3fd1a347a32caf67b9"
+    },
+    "artifacts/visual-review/source-screenshots/i09-atlas-open-home-light.png": {
+      "bytes": 1333436,
+      "sha256": "cfec8fd7b38a39f9af025bce812bf3504672ef91c9a97d3ba208f9891d2ae836"
+    },
+    "artifacts/visual-review/source-screenshots/i10-largest-files-dark.png": {
+      "bytes": 810462,
+      "sha256": "2d9467d2fa055b8aef3a1ed085f05e89b382052c6416ee11cb15ae0e7e0f4bc1"
+    },
+    "artifacts/visual-review/source-screenshots/i11-largest-folders-light.png": {
+      "bytes": 663087,
+      "sha256": "6f317f286377d5791d2aa93c5f9edd1be5dec065dad3b28a19fe3dcfbdd7f501"
+    },
+    "artifacts/visual-review/source-screenshots/i12-cleanup-review-candidates-dark.png": {
+      "bytes": 317741,
+      "sha256": "2ee3bf5c767c520ba94b14c61fda3705345393dc09778d86fcacde610d81458e"
+    },
+    "artifacts/visual-review/source-screenshots/i13-cleanup-candidate-selected-dark.png": {
+      "bytes": 637680,
+      "sha256": "6ceeee0f6aa444de797726a183f4beb052e99cd0dec1170b43c5dd69e4213e8d"
+    },
+    "artifacts/visual-review/source-screenshots/i14-cleanup-item-full-details-light.png": {
+      "bytes": 293203,
+      "sha256": "269440587fe0ea35a32023bd07a8ff7d10841b03c5141c95727d8f7a9856e9ab"
+    },
+    "artifacts/visual-review/source-screenshots/i15-cleanup-all-assessments-dark.png": {
+      "bytes": 137594,
+      "sha256": "9ccbe83c1795c3758670eb1e9cea271337999198efd64e8af6ab8e2ee8cb2005"
+    },
+    "artifacts/visual-review/source-screenshots/i16-cleanup-other-item-details-dark.png": {
+      "bytes": 348745,
+      "sha256": "d2481d2a8cdab3a89bfc79e4917f72eae36bcd791e58d37bc3d55e421a7fc27a"
+    },
+    "artifacts/visual-review/source-screenshots/m01-monitoring-default-large-dark.png": {
+      "bytes": 542109,
+      "sha256": "5e5e062552dd0d306387157a1b2d262b23398d1fad0ab897c9100ff932483fe4"
+    },
+    "artifacts/visual-review/source-screenshots/m02-monitoring-minimum-dark.png": {
+      "bytes": 402290,
+      "sha256": "0d5d423ecc795cca716a616a8965c4589ae634a8246e7f3f7fe7ba5c4cb3f87f"
+    },
+    "artifacts/visual-review/source-screenshots/m03-monitoring-minimum-light.png": {
+      "bytes": 392694,
+      "sha256": "c1ce1bd90b123b34feed3f7a0bb75d31ca903e60e2966516caa59a0e387fa6cf"
+    },
+    "artifacts/visual-review/source-screenshots/m04-monitoring-selected-event-large-light.png": {
+      "bytes": 722445,
+      "sha256": "91c2d8d3dcfc0cf6d11c14c9210572bf91343bb6843f156c65b22f8192896572"
+    },
+    "artifacts/visual-review/source-screenshots/m05-monitoring-selected-event-minimum-dark.png": {
+      "bytes": 453347,
+      "sha256": "f623f39174fcc13bffe225e71a87402c53f2e4dc0a6fbf86718de92c1c0cb0f5"
+    },
+    "artifacts/visual-review/source-screenshots/m06-explanation-complete-dark.png": {
+      "bytes": 211266,
+      "sha256": "de9b6192965eadba729b9c78fd6e82534456da1c25a6ef1a2212f4faac15a0c9"
+    },
+    "artifacts/visual-review/source-screenshots/m07-details-and-evidence-expanded-light.png": {
+      "bytes": 801335,
+      "sha256": "e66436c17af88453caf350c7a21b61450bda7cc4857d3a8d67b8b4e692bb161b"
+    },
+    "artifacts/visual-review/source-screenshots/m08-latest-notable-explanation-light.png": {
+      "bytes": 183656,
+      "sha256": "dd6bacc55b498f09bb66a524342754a1d0042e3253290522c6e1980fb0ad2343"
+    },
+    "artifacts/visual-review/source-screenshots/m09-settings-dark.png": {
+      "bytes": 255051,
+      "sha256": "e942be311a2f73d2cba53b392c996297d99e9d63c373f349582cd4f8512b0f6d"
+    },
+    "artifacts/visual-review/source-screenshots/m10-monitoring-minimum-summary-scrolled-light.png": {
+      "bytes": 359678,
+      "sha256": "9be6920c106993e4090e6c477d09a30f0d56285185cbb872efe6f2fcbc36560c"
+    },
+    "artifacts/visual-review/storage-monitor-collage-1-inventory-cleanup.png": {
+      "bytes": 15741948,
+      "sha256": "272f09436265c87152a7feb4051b83aa1c5f45a12a12b53cd0c88b56dc5f7eb8"
+    },
+    "artifacts/visual-review/storage-monitor-collage-2-monitoring-experience.png": {
+      "bytes": 5595147,
+      "sha256": "b6b61e61d33aec9a395419f62625e523238018ce22feb3c061c41c2271f19f80"
+    },
+    "artifacts/visual-review/verification.json": {
+      "bytes": 6361,
+      "sha256": "7ce42eac9570b8f6f7c6fcd2faabc91a154fda77b953872bb9ea44aaedd0c88f"
+    },
+    "bin/storage-monitor": {
+      "bytes": 548,
+      "sha256": "288f6c32369765eb0feaf5a8fef1052755aae435bbf537831fc5f4a28a246290"
+    },
+    "docs/superpowers/plans/2026-10-28-storage-monitor-v2.md": {
+      "bytes": 7228,
+      "sha256": "2b3f9a493e7f597db08ea0d425412f8f1172fcc43decbf0cff2729d095d2992f"
+    },
+    "scripts/benchmark-change-journal.sh": {
+      "bytes": 1921,
+      "sha256": "21aea298c0c6b4bef66823948999d37af3bc8d1059336434b1a576990a19db4e"
+    },
+    "scripts/benchmark-change-journal.swift": {
+      "bytes": 23999,
+      "sha256": "8d466f4db6052fdab6e3d9abd7080609047fff63e056d189af41235802eb1803"
+    },
+    "scripts/benchmark-cleanup-inspector.sh": {
+      "bytes": 2043,
+      "sha256": "4089bc3b224d2359f7fdd307e12adde4d76596b1d39bd90a6153ce0d5cd7b5e0"
+    },
+    "scripts/benchmark-cleanup-review-queue.sh": {
+      "bytes": 1144,
+      "sha256": "ac2ac86973070f6a6fd9594bb44adc8a5100c00ce15a07d6651ad9a9074e8322"
+    },
+    "scripts/benchmark-inventory-initial.py": {
+      "bytes": 8210,
+      "sha256": "05d6b8888b58a30e72b33f6c11be3385ff220685f050e2f4a467baf2bd5e4b1c"
+    },
+    "scripts/benchmark-inventory.py": {
+      "bytes": 3092,
+      "sha256": "0c8d8de4899ee99435fb512878a8b92f7f9205d0e2c7feea279c199c30779f8b"
+    },
+    "scripts/benchmark-living-tree-camera.sh": {
+      "bytes": 2391,
+      "sha256": "d70e7f73c1f495c84ede5430766e92bd886e1be49f7a7510572a85c4f2891ab4"
+    },
+    "scripts/benchmark-living-tree.sh": {
+      "bytes": 2471,
+      "sha256": "3db20699684c04cfcdf74d360e42726f89eb0b591e89dc3555fa67206bee2d72"
+    },
+    "scripts/benchmark-living-tree.swift": {
+      "bytes": 19198,
+      "sha256": "c5a04d8dd53162c0d353b9d0038c802ef152458d995d92c6ddde392b20643109"
+    },
+    "scripts/benchmark-migration-readiness.sh": {
+      "bytes": 2292,
+      "sha256": "ddcb22bb56dec63726c98c696cea1a0b4c6e6fb1ca1e72a7885bae15c2aa1be4"
+    },
+    "scripts/benchmark-migration-readiness.swift": {
+      "bytes": 18327,
+      "sha256": "586ee5131e0af4bb05493e4e4808a7649669c0190c42ebf93f6129d7d8556488"
+    },
+    "scripts/benchmark-navigation.sh": {
+      "bytes": 2465,
+      "sha256": "531212b9c3d9a3ed96e2efd6be955eb6bd32224013925ef9ace98b854895569f"
+    },
+    "scripts/benchmark-navigation.swift": {
+      "bytes": 12962,
+      "sha256": "d761e7c18d8056579d737a0d181f8a237ced8d3354ee708c6451e045cde2a0d4"
+    },
+    "scripts/benchmark-structured-explorer.sh": {
+      "bytes": 1939,
+      "sha256": "29e30da24507acb6123b26280c70582c3b0e815301056aada5583c1c0e17b0c9"
+    },
+    "scripts/benchmark-structured-explorer.swift": {
+      "bytes": 34627,
+      "sha256": "5024b62b480ff598567308d5d4ab14ca83e362506f71b9a7608ac40e04d17f61"
+    },
+    "scripts/benchmark-structured-filtering.sh": {
+      "bytes": 1621,
+      "sha256": "4367e73fb57b77e63c6d75788a47c74dca2690a8d5b8ed27ebdca70772df995a"
+    },
+    "scripts/benchmark-structured-filtering.swift": {
+      "bytes": 26447,
+      "sha256": "59557dc293b7f3a888189259639408bd076a1e24c05719bbbca0d047e505e555"
+    },
+    "scripts/build-dmg.sh": {
+      "bytes": 7958,
+      "sha256": "eae3b0d6a4cc4ba6c405108c424648ac4f5a2b030c0c3ec8b5d770e1067af537"
+    },
+    "scripts/build-gui-ax-tests.sh": {
+      "bytes": 580,
+      "sha256": "388fd820780a635d5267c898e92bd6aa9f7b4b349f0267b161cc6cfb14ca6862"
+    },
+    "scripts/build-gui.sh": {
+      "bytes": 3103,
+      "sha256": "4966c2e0118a99e868b25920184721d5811c812add3697807e52d096fac2ea8f"
+    },
+    "scripts/build-inventory-verification.sh": {
+      "bytes": 464,
+      "sha256": "327ee54be904be21d1cb0e3545d23f56563888952e42ce7ab76bdd71b2bf6816"
+    },
+    "scripts/build-progressive-verification.sh": {
+      "bytes": 539,
+      "sha256": "42b7cf5c029ad804d129f94da44f8a347b10e178aeb7ded31ab70818eb9533ce"
+    },
+    "scripts/build-prototype-showcase.sh": {
+      "bytes": 2337,
+      "sha256": "56b80596e4d564b7552fad10eb83e29d9e0eee30accc778290980ee68a7a42a0"
+    },
+    "scripts/build.sh": {
+      "bytes": 2685,
+      "sha256": "0a6ae4b8709d18e83b6baa9866f7d29f61336b011f5274dd532aec35d066ccba"
+    },
+    "scripts/camera-living-tree.swift": {
+      "bytes": 36778,
+      "sha256": "fcdb95f8e703169c4b55b974de5b24ec4b0a62614d6f1f543b4e569fbbf598ea"
+    },
+    "scripts/cleanup-inspector-benchmark.swift": {
+      "bytes": 12346,
+      "sha256": "620f8e81e7a85a406ae66cb3a9c2ad3382a90b26afff4a0c41c0d928cfa2425b"
+    },
+    "scripts/cleanup-inspector-scroll-tests.swift": {
+      "bytes": 12814,
+      "sha256": "aa70e87b7ff3b08834b2ee2489c167e15bd747d48fddf06471f541a2aa9d8e5e"
+    },
+    "scripts/cleanup-review-queue-benchmark.swift": {
+      "bytes": 6916,
+      "sha256": "7801a7b97f45f146bc829cf1ac64831fe7cd44fd9391feeb0fdbb06f99509498"
+    },
+    "scripts/cleanup-trash-validation.swift": {
+      "bytes": 9002,
+      "sha256": "29826b4f8e92eacdc5173fbb8678e80fbf8a50f226b3bb2872e7659262449039"
+    },
+    "scripts/completion-migration-verification.swift": {
+      "bytes": 3901,
+      "sha256": "8f9a4794c54df72ffa9a4b2c8b28990ee806c1a386a1fc7793ed2f5e1eb48714"
+    },
+    "scripts/inspector-scroll-probe.swift": {
+      "bytes": 6367,
+      "sha256": "037d6772ab40421db12db3e25d848cd4498f452468d789aaec0e9c895e780832"
+    },
+    "scripts/install-gui.sh": {
+      "bytes": 1696,
+      "sha256": "285fdd7c90fe459c06b207a8381868e5f62b82e287e66ce0d379bb293f726b8d"
+    },
+    "scripts/inventory-verification.swift": {
+      "bytes": 10992,
+      "sha256": "ba6612056a4dec699a41e881d00685e0f716fb546e1f5ca585a49ddf323b50bb"
+    },
+    "scripts/pack-icon.swift": {
+      "bytes": 1479,
+      "sha256": "106dfaa1c8e713019d0ef62d7200660a1d3a4c2d529bbfeb3737fa8d8c2c7d07"
+    },
+    "scripts/prepare-icon.swift": {
+      "bytes": 1024,
+      "sha256": "b39fa9864ed47c6915bd9eb3c3c45a977e2eecf305ee01c8e136901fde51a54a"
+    },
+    "scripts/prepare-native-qa.py": {
+      "bytes": 4042,
+      "sha256": "fbcbe56f80b900b10447b90617a1941369c6804f5af91704a1d4a01900913f29"
+    },
+    "scripts/probe-inspector-scroll.sh": {
+      "bytes": 1367,
+      "sha256": "e34725dc34a024ce6415d2883ddef324be098080801f727f54784d844aad4dbd"
+    },
+    "scripts/progressive-experience-verification.swift": {
+      "bytes": 741,
+      "sha256": "0dd939fd5315e7aeb6e8e73750909a44a525e3b6abde616b2875c7524941db30"
+    },
+    "scripts/prototype-living-tree.sh": {
+      "bytes": 2044,
+      "sha256": "83cbab11657b42d427105ec5f05a9ce48d4ef06e04efbbdd140f1b735ba1e7b0"
+    },
+    "scripts/reconciliation-steady-state-verification.swift": {
+      "bytes": 725,
+      "sha256": "6f1f0c073ddbc9d613342dd8d120b61c43107233d1f833fecd8353a4bd413e65"
+    },
+    "scripts/render-living-tree.swift": {
+      "bytes": 14366,
+      "sha256": "49cbadab961e13c54ddb105b23caa3f4c0ecf97bf564a03c62e5638b250f9434"
+    },
+    "scripts/render-migration-readiness.sh": {
+      "bytes": 2859,
+      "sha256": "7bfc2be2d34dea050cab11ef54f0cce3cafb2c20ca0b11b63e7e1408ae70eb59"
+    },
+    "scripts/render-migration-readiness.swift": {
+      "bytes": 6425,
+      "sha256": "66c793131cb46788daf4fd37c9343719c654b4d9754a95fe9aa537d37bfa9916"
+    },
+    "scripts/test-chart-geometry.sh": {
+      "bytes": 1332,
+      "sha256": "ad5e689093e140f3eb1162937ccdc0df2eb85bb35ee008b823e05f0715416b27"
+    },
+    "scripts/test-cleanup-inspector-scroll.sh": {
+      "bytes": 2096,
+      "sha256": "51ad6abe21aeb0d3115d3cc8cdc23f8adea8b2c11443ad902142b6e4f4972e3d"
+    },
+    "scripts/test-gui.sh": {
+      "bytes": 1710,
+      "sha256": "7df83d21787a94f2345be217cbf96453eab8506df378733e8a6a8ee54a9119c5"
+    },
+    "scripts/test-inventory-model.sh": {
+      "bytes": 1330,
+      "sha256": "6a0d61b13b732ce7b907458611a099affad12575609bb1924b7226c6c29d76ce"
+    },
+    "scripts/test-inventory.sh": {
+      "bytes": 1021,
+      "sha256": "d4df2342685dba27e5c7c112c4790f8707a5618a5d12f85320aaf67d11a9899e"
+    },
+    "scripts/test-monitor-supplement.sh": {
+      "bytes": 499,
+      "sha256": "b21f19be76800a677e07d8441dba772207e3c9ea88fe282c6faeb359273051c0"
+    },
+    "scripts/test-native-qa.sh": {
+      "bytes": 583,
+      "sha256": "29bf62f3cd8a6ea57ca85b6823f08ff22a80329e37c8139e64f6e2ae9be6d1c5"
+    },
+    "scripts/test-structured-filtering.sh": {
+      "bytes": 971,
+      "sha256": "adbb787602b3a3197b0c32f5cb5f8842c081a17d0e7e94dc092a5807cf9b106b"
+    },
+    "scripts/verify-dmg.sh": {
+      "bytes": 5475,
+      "sha256": "dd27e105549f9b29bb978f36ddaa640760188981061f9545a6c3c7a039661721"
+    },
+    "scripts/verify-native-qa.py": {
+      "bytes": 7327,
+      "sha256": "d1b64cfb2b3366b0974662b1af329f480f085b7e55aac445740ca9030ffc8275"
+    },
+    "scripts/version.env": {
+      "bytes": 379,
+      "sha256": "37a20e271efc4b0ceb4fc01bcfe27994eddfcfbedaa078e821c616dc3e302e41"
+    },
+    "tests/CapacityChartGeometryTests.swift": {
+      "bytes": 12729,
+      "sha256": "0d6d6e3e730f726d5642a2960eff89fec51027aead9e46bd5d8d8ce1af843543"
+    },
+    "tests/CleanupInspectorTests.swift": {
+      "bytes": 48400,
+      "sha256": "b892b31b1d94fb20ca0554808666000fce37a55e91556375d63384fd87af3170"
+    },
+    "tests/CleanupReviewQueueTests.swift": {
+      "bytes": 38358,
+      "sha256": "f8f1bd6beb8b2ab806af4dccdcd330c409c76733b49e5a0f47df84a15cb95686"
+    },
+    "tests/CleanupTrashSafetyTests.swift": {
+      "bytes": 68830,
+      "sha256": "b26582fbc10a0d19e73f1844ec3fa357f6753ae441e29aa13ce7e2fd78f82d7f"
+    },
+    "tests/GUIAXTests.swift": {
+      "bytes": 15931,
+      "sha256": "6e2b26baa1f718fa7d2620321fad4598edb982efb16e4241c31e925d3bc0966c"
+    },
+    "tests/GUIModelTests.swift": {
+      "bytes": 157310,
+      "sha256": "aa171697cb8b2e8d48c362bf024295ba6ef7ebfeb0a2aceb6843e86a9b1a59a1"
+    },
+    "tests/InventoryBoundaryTests.swift": {
+      "bytes": 12352,
+      "sha256": "18a64a15a123bda3cff3d4c4147e98d1b67ad25a26e07f98fdf5d10e5295899c"
+    },
+    "tests/InventoryChangeJournalTests.swift": {
+      "bytes": 31894,
+      "sha256": "5ddcb3db4d12ce55f67e7625ef0ade311b1613b3a5e115580bbcc60289cc2e58"
+    },
+    "tests/InventoryCompletionTests.swift": {
+      "bytes": 28674,
+      "sha256": "20808fdfd854ed75f17abe74fb8ea29191261052431d5c8483237dd24570803d"
+    },
+    "tests/InventoryExplorerTests.swift": {
+      "bytes": 13360,
+      "sha256": "b6659fec533618cae01447c62fb882bc64b8eccab03df0ef1ef3f10cc3e894b6"
+    },
+    "tests/InventoryIntegrationTests.swift": {
+      "bytes": 71757,
+      "sha256": "9ec34197bb5497df58898c59839139b699cc5a4b5366ed71b2fb48c4725dc5a0"
+    },
+    "tests/InventoryLifecycleTests.swift": {
+      "bytes": 20145,
+      "sha256": "3851b851326ea03673724e9e4ee083e0ea560ffd5c626c8ccbeefa7224012ab0"
+    },
+    "tests/InventoryModelTests.swift": {
+      "bytes": 69274,
+      "sha256": "96d3247d5663d9fa66ee4f83550dde4af2a9095ff0f345ef7e367aaa5c57e012"
+    },
+    "tests/InventoryProgressiveTests.swift": {
+      "bytes": 19022,
+      "sha256": "0e047b4aa54deaf6435f26ab25d611af0b13d5f35d8542b7da583554c3e46acf"
+    },
+    "tests/InventoryReconciliationScenarios.swift": {
+      "bytes": 10749,
+      "sha256": "cebd9a52c5ade5292276003838cfc36f2aec44d025d1d6cae16c2cb096a3084f"
+    },
+    "tests/InventoryReconciliationTests.swift": {
+      "bytes": 64901,
+      "sha256": "eaca7e38c376fe475ab965454ef61cb17146f53aa8c94b84493497a8835ee652"
+    },
+    "tests/InventoryTests.swift": {
+      "bytes": 11991,
+      "sha256": "a4194fe1a7d14c831f7f377b3f6e3fbf69cb0aa2ee0e35f833da5317e4917b3a"
+    },
+    "tests/LivingTreeCatalogTests.swift": {
+      "bytes": 10818,
+      "sha256": "e87e13e3e673f5ebe0c34f1a005cb478178e9ef87918f4c73b77af98cb9703e8"
+    },
+    "tests/LivingTreeScrollRoutingTests.swift": {
+      "bytes": 14920,
+      "sha256": "f6f1819b29fb11009ff7f616f1a8290989d84f1bf88baa940c3b25b4c6b0ea05"
+    },
+    "tests/LivingTreeTests.swift": {
+      "bytes": 106383,
+      "sha256": "d348ec80c64db66591ee991f677550257cd21cc057d96afa335c9776a53bb444"
+    },
+    "tests/MonitorFixtureLifecycleTests.swift": {
+      "bytes": 1681,
+      "sha256": "e0b4fd96a98eb28791c8c0c3425fe0a43d7873bbf6a1c8e09f4d47e1d7acda71"
+    },
+    "tests/MonitorSupplement.swift": {
+      "bytes": 2807,
+      "sha256": "2e01e81f5806234161a5c44f217e8e86183bf37ee4511f6d647da8ff0faa1fc9"
+    },
+    "tests/NativeQARuntimeTests.swift": {
+      "bytes": 15879,
+      "sha256": "afe8370c557c888190e82461fa68f9ca1653cddb1bb65478b1b5ea0933f4d557"
+    },
+    "tests/SparseStorageCatalogTests.swift": {
+      "bytes": 17853,
+      "sha256": "aa376e3b2a8beb7d02cde5b9ec17f6534d3b915a55928938712e000faabfb6c0"
+    },
+    "tests/SparseStorageTests.swift": {
+      "bytes": 21571,
+      "sha256": "08416b030557df1481461a483d7ab64e5ff1d4025962ad5ac919730ce048cefb"
+    },
+    "tests/StructuredExplorerFilteringTests.swift": {
+      "bytes": 19074,
+      "sha256": "cd8eea30b268400c2dd8ec491a82825b58a52fa8e2e8d7af37c258d91764c001"
+    },
+    "tests/ViewerIdentityTests.swift": {
+      "bytes": 8202,
+      "sha256": "c56a446ed8587851a54a2c3354471e23ca289597d544480c2de305cac0a0bedb"
+    },
+    "tests/fixtures/2026-10-21-0400-event.json": {
+      "bytes": 74313,
+      "sha256": "672d0508bb3371430ae1fc86a4462959032ba2c30d2998050a377202583415ab"
+    },
+    "tests/verify-icon.swift": {
+      "bytes": 2550,
+      "sha256": "96c56dff7a913dc040283426cfe518be6ac32aa341ab13577b33b485daa2a579"
+    },
+    "tests/verify-launchd-notification.sh": {
+      "bytes": 1503,
+      "sha256": "61e4f6c86decc6051318ca174337f62c5f43c67bdd28c2fa82fd114a2a5dd8e4"
+    }
+  },
+  "audit_counts": {
+    "browser": 69,
+    "filtering": 23,
+    "inventory": 350,
+    "monitor": 235,
+    "viewer": 960
+  },
+  "audit_head": "8ba2e0001da95c55a9a079daf8b082aa853bad59",
+  "branch": "migration-readiness",
+  "build": "10",
+  "fingerprint_definition": "sha256 of canonical sorted JSON mapping tracked Sources/, SourcesGUI/, SourcesShared/, tests/, scripts/ to sha256+bytes",
+  "git_tree": "6326fdaf71fb45802e930ee3b667392cc606864f",
+  "head": "6981c2da5ef1c4a1c528332eb0b1be1948721c39",
+  "historical_counts": {
+    "browser": 85,
+    "filtering": 36,
+    "inventory": 379,
+    "monitor": 235,
+    "viewer": 1032
+  },
+  "initial_tracked_dirty": false,
+  "initial_untracked": [],
+  "migration_commits": [
+    "715f3b6",
+    "6981c2d"
+  ],
+  "recorded_at": "2026-11-03T10:46:31.092506+00:00",
+  "repository": "/Users/nicholaslippa/storage-checker-structured-explorer",
+  "scope_exclusions": [
+    "Gatekeeper/signing/hardened runtime/notarization/distribution security",
+    "packaging/install/release/deploy",
+    "production state and GUI input",
+    "new worktrees, commits, merges, resets, stashes, cherry-picks, cleanup of user changes"
+  ],
+  "source_fingerprint_sha256": "ab510ca3608df8a602965083da14c7921b5d8bc78dae9f3f44a7126b5288e1aa",
+  "test_evidence_status": "historical Migration Readiness report only; no fresh tests run in baseline node",
+  "tracked_source_records": {
+    "Sources/Attribution.swift": {
+      "bytes": 79130,
+      "sha256": "8d70d1699405afb5e5d8492a0fd9a6449d4a07a22ac98b580f50c80c2312f7d5"
+    },
+    "Sources/Coverage.swift": {
+      "bytes": 93801,
+      "sha256": "33d65e6c90f200f38a4ed082ba542ad177d533972061e220e14ac0149d235b91"
+    },
+    "Sources/CoverageSelfTest.swift": {
+      "bytes": 29817,
+      "sha256": "5c9dfb5021c25311c914140ebe7deb48e8f9e2537837ef6062ae5318633add35"
+    },
+    "Sources/Diagnostics.swift": {
+      "bytes": 13117,
+      "sha256": "c7c9a3444ffa65f4d70ccf051b53bedef6fe7d10eded82e437d42cf28afa3fb1"
+    },
+    "Sources/InstallSelfTest.swift": {
+      "bytes": 19972,
+      "sha256": "aa3770a4c09337fef8e9c2b06c0f4cc4efe6364cfd2e946bb3683658b6377d71"
+    },
+    "Sources/InstallTransaction.swift": {
+      "bytes": 13210,
+      "sha256": "d1bb2dba902f38ec88976ad33fe55d4ea28129798edbb021f7f93dc80ceaa8a1"
+    },
+    "Sources/Inventory.swift": {
+      "bytes": 156152,
+      "sha256": "3732c91928067c4374897d307b9e626f9602865ebcd532d8aa09e39081d6f57e"
+    },
+    "Sources/InventoryChangeJournal.swift": {
+      "bytes": 12272,
+      "sha256": "bc0eae1eaf9acfe77c78b2ff2310ae174497e81e9318fa0a7f1f4b277defcf96"
+    },
+    "Sources/InventoryCommands.swift": {
+      "bytes": 26070,
+      "sha256": "a0b0aaa7307d0ffac66eba86bcaac27ed33f9659bc456868455abd6b163a46e1"
+    },
+    "Sources/InventoryProfile.swift": {
+      "bytes": 4194,
+      "sha256": "2c2c18dd2db2d9e8b5631af7357d0521313169e645c56151e346213c7fed85bb"
+    },
+    "Sources/MonitorSelfTestFixtures.swift": {
+      "bytes": 853,
+      "sha256": "3f7a7cde0de87fc62b082d01270c8affed358f22cbf871047862175640150846"
+    },
+    "Sources/NativeQAWorker.swift": {
+      "bytes": 1508,
+      "sha256": "cefc8a2d0bc194e5cd7cbffe44cddbae4dfb752a987793123a5a09a3c038017a"
+    },
+    "Sources/StorageMonitor.swift": {
+      "bytes": 63411,
+      "sha256": "dcaa3150be1a2561b762bcbf175ac943bf17ea6accc922867077ff1aba4dba31"
+    },
+    "SourcesGUI/CleanupInspectorView.swift": {
+      "bytes": 39265,
+      "sha256": "48036bb8857fa06873a16d5ac5d469031123505dfbd9c2f2a3e7dad9715ead17"
+    },
+    "SourcesGUI/CleanupReviewQueueView.swift": {
+      "bytes": 24282,
+      "sha256": "5c56e9a67ede8661dd3ec9f17908fe1b844647830f33fb557081efebe4f65b15"
+    },
+    "SourcesGUI/DiagnosticAnalysis.swift": {
+      "bytes": 42085,
+      "sha256": "23c3c24ad0cc3e68b0e6cca1da7417bea73a00cb0d878843cabd434586589e00"
+    },
+    "SourcesGUI/EventDetailView.swift": {
+      "bytes": 29204,
+      "sha256": "cf1e047987e5c88663d80e76123cc87673901a8d1c490d06860c45dbf686523b"
+    },
+    "SourcesGUI/EventPanelText.swift": {
+      "bytes": 8424,
+      "sha256": "41ee74f387fc8109adf20ef6cf2b741149705349e8c52be87aa0187547446216"
+    },
+    "SourcesGUI/HistoryReader.swift": {
+      "bytes": 5925,
+      "sha256": "a4515606aa5e69f4190fffebb2050ec7a9b55c4d579b88ddd5a531dc4eca3971"
+    },
+    "SourcesGUI/HistoryView.swift": {
+      "bytes": 25925,
+      "sha256": "d999674244a3edb85561c1cd693eba42674d1fec8bdb2261c95dcf5d556802c3"
+    },
+    "SourcesGUI/InventoryExplorerView.swift": {
+      "bytes": 37749,
+      "sha256": "749d523c078dd12b0e6bc722428e98df42db61ebf90902ee7b42827b02c368f6"
+    },
+    "SourcesGUI/InventoryNavigatorView.swift": {
+      "bytes": 20672,
+      "sha256": "faae44e7b3f466a9aeca541f20ee7297dfed0f1adcf27d5aa03d9988a06f5e77"
+    },
+    "SourcesGUI/InventoryView.swift": {
+      "bytes": 50379,
+      "sha256": "20ca6843935bfcef3078dd4f48d5f82ec1c4655b40d37ec233ac38af89143c8c"
+    },
+    "SourcesGUI/LiveCapacity.swift": {
+      "bytes": 5404,
+      "sha256": "9c50f3e03686ed415c0d230f15658fba30995cbf8747191afc29657a91bc0e3c"
+    },
+    "SourcesGUI/LivingTreeView.swift": {
+      "bytes": 102044,
+      "sha256": "0a9ff277243f9db722e22deebb835a2e7d6d1406f5882a1af3c1a7aa75efa555"
+    },
+    "SourcesGUI/MigrationReadinessView.swift": {
+      "bytes": 19165,
+      "sha256": "1f44917757b9ecf27fd54607d16d2b4e351451bd5f38c473dbcb236acef6dce7"
+    },
+    "SourcesGUI/Models.swift": {
+      "bytes": 54058,
+      "sha256": "1bc7767b83e2712e93b92b1b7fc1764cb3979b83c82181d5bb7c6693d8f444d8"
+    },
+    "SourcesGUI/MonitoringSetup.swift": {
+      "bytes": 14019,
+      "sha256": "33d06567317669a1eb6740b1ea2e753b462cac3c8a0df00e2bd9c1110e6e16a6"
+    },
+    "SourcesGUI/NativeQABootstrap.swift": {
+      "bytes": 8691,
+      "sha256": "6a15ff042710c9e70af99d3deea327c31192b396162464c55759161cc7a36e8f"
+    },
+    "SourcesGUI/OverviewView.swift": {
+      "bytes": 31247,
+      "sha256": "bed4645735c2ec13715cfe67bf3b913ed5dc71965e4fe509dd1864d6629147f6"
+    },
+    "SourcesGUI/PerformanceScript.swift": {
+      "bytes": 5561,
+      "sha256": "48b5d5d3f66c29979c8d5682dffffbeaced7ef90dd36755cb0fae1a8c1314d89"
+    },
+    "SourcesGUI/PerformanceTrace.swift": {
+      "bytes": 3836,
+      "sha256": "310dd3bac51a73a97c82a57f55915b9e16cc5029a894687e8d2bdea3ff6abc6d"
+    },
+    "SourcesGUI/StateCompatibility.swift": {
+      "bytes": 295,
+      "sha256": "9891fc892967b41c073e714dbd72a0b361a78fef8bf3aa0775041fa57c7396c1"
+    },
+    "SourcesGUI/StorageAtlasView.swift": {
+      "bytes": 32082,
+      "sha256": "05c9a7387a49027ee880368107e74e9068654a2e2c64c8e640f8537919c7b0dc"
+    },
+    "SourcesGUI/StorageDesign.swift": {
+      "bytes": 2189,
+      "sha256": "2701aa87d4b19bbeb139065df7e9aaf73f7037c6f4a485ab23e6c7e76e2c6db2"
+    },
+    "SourcesGUI/StorageMonitorApp.swift": {
+      "bytes": 26451,
+      "sha256": "0bec259d9315143f2c2f89ef5000ac2a8457fb4d979e2e10cffe5be5e3b9068a"
+    },
+    "SourcesGUI/StructuredExplorerFilterControls.swift": {
+      "bytes": 7284,
+      "sha256": "f044aec53f6c2a44a01291cb92832d338922ab5c7be30cc57e13d2ee638dee51"
+    },
+    "SourcesGUI/StructuredExplorerView.swift": {
+      "bytes": 63435,
+      "sha256": "18fb6908a7b4571b5b0f1179ac7854b0bf9ac5eab951fea1aca6b45f98565cdd"
+    },
+    "SourcesGUI/ViewerIdentity.swift": {
+      "bytes": 2904,
+      "sha256": "f51e97c27689bbe4993ab3105f0e2880db95fe1a9066d3fe736b50ecba40cf20"
+    },
+    "SourcesShared/CleanupAssessment.swift": {
+      "bytes": 21503,
+      "sha256": "e5f30da63a4417182c2c6899bf1113c4d75ea527dcff3a4f02ba3305672a90b0"
+    },
+    "SourcesShared/CleanupDetectors.swift": {
+      "bytes": 56393,
+      "sha256": "028709be2e57ceba5c1be72fa6b2155ea9aacb42b20c5d67c05a5cd3234e94ab"
+    },
+    "SourcesShared/CleanupEvidence.swift": {
+      "bytes": 33960,
+      "sha256": "a064b1c0fd20d3a115fa3bfc4f7a3378bafabd62ebb5c4a7a2ad861698e88557"
+    },
+    "SourcesShared/CleanupModel.swift": {
+      "bytes": 11698,
+      "sha256": "f5d2257c9262a5f0b7ab3a28ac1be02ddcedff37513d61f9e188ab42a51201e3"
+    },
+    "SourcesShared/CleanupPresentation.swift": {
+      "bytes": 8378,
+      "sha256": "8a74cb6fcb39e1270c8cd0e2b4b7638ee6b41d71190093e92db6486f7d1770c5"
+    },
+    "SourcesShared/CleanupReviewQueue.swift": {
+      "bytes": 31960,
+      "sha256": "7e7fa4fd2aed7203350807c52904bf58d71e9dc492a217caf403ae5b1ddc671b"
+    },
+    "SourcesShared/CleanupTrash.swift": {
+      "bytes": 7503,
+      "sha256": "328f28503fb7b516b7630e2f6b7f6c599fab6fa91d397a66657e4eb21420c90e"
+    },
+    "SourcesShared/CleanupTrashSafety.swift": {
+      "bytes": 36952,
+      "sha256": "bafd9a07a15aa7f33a6874b4af4eccf86ac03d7f0071c803d5bd992f7f051aae"
+    },
+    "SourcesShared/InventoryChanges.swift": {
+      "bytes": 11684,
+      "sha256": "91023068cdaba5ee900bc0179576512f63eee1ac77966274108ead2042d8bec6"
+    },
+    "SourcesShared/InventoryExplorer.swift": {
+      "bytes": 18179,
+      "sha256": "f3b3799a09eb1c6e5838a4176fd156a3d562e0c01e990f42604b2a8bfc6f2735"
+    },
+    "SourcesShared/InventoryMap.swift": {
+      "bytes": 8095,
+      "sha256": "d1d6ab535628e20447aa1d8c9de729495fa181f5afe1fde387af9a2cfd374fcb"
+    },
+    "SourcesShared/InventoryMetadata.swift": {
+      "bytes": 2437,
+      "sha256": "41d4edcd00f7d8a0a31c7ce457aff967f3c6f263ff96d57c6cdc7ca8f852ea3b"
+    },
+    "SourcesShared/InventoryModels.swift": {
+      "bytes": 78723,
+      "sha256": "f9fa0d755a636a420268ca18108ceb113be52eb9d431e8e5e0dbe3608c189f9b"
+    },
+    "SourcesShared/InventoryPresentation.swift": {
+      "bytes": 31899,
+      "sha256": "85cf72e125be3f470ca994289ef3f0461590fb9dd841237eb428772e8e469858"
+    },
+    "SourcesShared/InventoryReloadPolicy.swift": {
+      "bytes": 1252,
+      "sha256": "29bb10c12a5127dd9f295de4ff257a0a188f85f0c11a5cedc604eead7e4efab0"
+    },
+    "SourcesShared/InventoryRequests.swift": {
+      "bytes": 5129,
+      "sha256": "0c173f55254de860412a3c127971b648c55c3685b310b37861fdd395f716b187"
+    },
+    "SourcesShared/LivingTree.swift": {
+      "bytes": 53718,
+      "sha256": "c0ca558a2b5b6b63d08e800a2223c8000e97ac80e5838bc5e02f07875759edec"
+    },
+    "SourcesShared/LivingTree3D.swift": {
+      "bytes": 17559,
+      "sha256": "bd167aff0c8266d3c70a1db1b4f69aa6e4416480728a57ecdba5f8b860e05b18"
+    },
+    "SourcesShared/LivingTreeCamera.swift": {
+      "bytes": 35801,
+      "sha256": "5ecb2e08fa067c181f70e60a1dbc2c8602e9655f5237690f9033fdb3cb34beb0"
+    },
+    "SourcesShared/LivingTreeColor.swift": {
+      "bytes": 9405,
+      "sha256": "c09ef61c909182d31169160513ff3dc128ef6553eeacb210133925d6c50b16a1"
+    },
+    "SourcesShared/NativeQARuntime.swift": {
+      "bytes": 19126,
+      "sha256": "547d463a4451d18910cd71ce68e1cb219acf71d726c6e6c4de7169b9cdcfbcb9"
+    },
+    "SourcesShared/SparseStorage.swift": {
+      "bytes": 22752,
+      "sha256": "62d67b223198e1769b0db268ff95b11df966d78564141d21ae162f2b0927eb33"
+    },
+    "SourcesShared/SparseStorageDetector.swift": {
+      "bytes": 29235,
+      "sha256": "2f5a04e3ef4d3553c60a9597af8ff2dcea7344506f28f47bbcc9e3963b370d6f"
+    },
+    "SourcesShared/SparseStorageGuidance.swift": {
+      "bytes": 5668,
+      "sha256": "3440740259247a9a31376610e94cebc6912f4b773709ad38b5c022209cc7057e"
+    },
+    "SourcesShared/StorageAtlas.swift": {
+      "bytes": 11602,
+      "sha256": "b87ef90f988a1e0436e381b90272c56cee13219d08c7cc885e07bbc24cdf3e9b"
+    },
+    "SourcesShared/StructuredExplorer.swift": {
+      "bytes": 38761,
+      "sha256": "c7da8a1e27b6c824171f72debd82294047599d72213bb0599043ef6a3e659652"
+    },
+    "SourcesShared/StructuredExplorerFiltering.swift": {
+      "bytes": 9229,
+      "sha256": "9a4cda6861bddae43cb3f2e45c07ff20f2371f61fcd7909caab9337256ea4548"
+    },
+    "scripts/benchmark-change-journal.sh": {
+      "bytes": 1921,
+      "sha256": "21aea298c0c6b4bef66823948999d37af3bc8d1059336434b1a576990a19db4e"
+    },
+    "scripts/benchmark-change-journal.swift": {
+      "bytes": 23999,
+      "sha256": "8d466f4db6052fdab6e3d9abd7080609047fff63e056d189af41235802eb1803"
+    },
+    "scripts/benchmark-cleanup-inspector.sh": {
+      "bytes": 2043,
+      "sha256": "4089bc3b224d2359f7fdd307e12adde4d76596b1d39bd90a6153ce0d5cd7b5e0"
+    },
+    "scripts/benchmark-cleanup-review-queue.sh": {
+      "bytes": 1144,
+      "sha256": "ac2ac86973070f6a6fd9594bb44adc8a5100c00ce15a07d6651ad9a9074e8322"
+    },
+    "scripts/benchmark-inventory-initial.py": {
+      "bytes": 8210,
+      "sha256": "05d6b8888b58a30e72b33f6c11be3385ff220685f050e2f4a467baf2bd5e4b1c"
+    },
+    "scripts/benchmark-inventory.py": {
+      "bytes": 3092,
+      "sha256": "0c8d8de4899ee99435fb512878a8b92f7f9205d0e2c7feea279c199c30779f8b"
+    },
+    "scripts/benchmark-living-tree-camera.sh": {
+      "bytes": 2391,
+      "sha256": "d70e7f73c1f495c84ede5430766e92bd886e1be49f7a7510572a85c4f2891ab4"
+    },
+    "scripts/benchmark-living-tree.sh": {
+      "bytes": 2471,
+      "sha256": "3db20699684c04cfcdf74d360e42726f89eb0b591e89dc3555fa67206bee2d72"
+    },
+    "scripts/benchmark-living-tree.swift": {
+      "bytes": 19198,
+      "sha256": "c5a04d8dd53162c0d353b9d0038c802ef152458d995d92c6ddde392b20643109"
+    },
+    "scripts/benchmark-migration-readiness.sh": {
+      "bytes": 2292,
+      "sha256": "ddcb22bb56dec63726c98c696cea1a0b4c6e6fb1ca1e72a7885bae15c2aa1be4"
+    },
+    "scripts/benchmark-migration-readiness.swift": {
+      "bytes": 18327,
+      "sha256": "586ee5131e0af4bb05493e4e4808a7649669c0190c42ebf93f6129d7d8556488"
+    },
+    "scripts/benchmark-navigation.sh": {
+      "bytes": 2465,
+      "sha256": "531212b9c3d9a3ed96e2efd6be955eb6bd32224013925ef9ace98b854895569f"
+    },
+    "scripts/benchmark-navigation.swift": {
+      "bytes": 12962,
+      "sha256": "d761e7c18d8056579d737a0d181f8a237ced8d3354ee708c6451e045cde2a0d4"
+    },
+    "scripts/benchmark-structured-explorer.sh": {
+      "bytes": 1939,
+      "sha256": "29e30da24507acb6123b26280c70582c3b0e815301056aada5583c1c0e17b0c9"
+    },
+    "scripts/benchmark-structured-explorer.swift": {
+      "bytes": 34627,
+      "sha256": "5024b62b480ff598567308d5d4ab14ca83e362506f71b9a7608ac40e04d17f61"
+    },
+    "scripts/benchmark-structured-filtering.sh": {
+      "bytes": 1621,
+      "sha256": "4367e73fb57b77e63c6d75788a47c74dca2690a8d5b8ed27ebdca70772df995a"
+    },
+    "scripts/benchmark-structured-filtering.swift": {
+      "bytes": 26447,
+      "sha256": "59557dc293b7f3a888189259639408bd076a1e24c05719bbbca0d047e505e555"
+    },
+    "scripts/build-dmg.sh": {
+      "bytes": 7958,
+      "sha256": "eae3b0d6a4cc4ba6c405108c424648ac4f5a2b030c0c3ec8b5d770e1067af537"
+    },
+    "scripts/build-gui-ax-tests.sh": {
+      "bytes": 580,
+      "sha256": "388fd820780a635d5267c898e92bd6aa9f7b4b349f0267b161cc6cfb14ca6862"
+    },
+    "scripts/build-gui.sh": {
+      "bytes": 3103,
+      "sha256": "4966c2e0118a99e868b25920184721d5811c812add3697807e52d096fac2ea8f"
+    },
+    "scripts/build-inventory-verification.sh": {
+      "bytes": 464,
+      "sha256": "327ee54be904be21d1cb0e3545d23f56563888952e42ce7ab76bdd71b2bf6816"
+    },
+    "scripts/build-progressive-verification.sh": {
+      "bytes": 539,
+      "sha256": "42b7cf5c029ad804d129f94da44f8a347b10e178aeb7ded31ab70818eb9533ce"
+    },
+    "scripts/build-prototype-showcase.sh": {
+      "bytes": 2337,
+      "sha256": "56b80596e4d564b7552fad10eb83e29d9e0eee30accc778290980ee68a7a42a0"
+    },
+    "scripts/build.sh": {
+      "bytes": 2685,
+      "sha256": "0a6ae4b8709d18e83b6baa9866f7d29f61336b011f5274dd532aec35d066ccba"
+    },
+    "scripts/camera-living-tree.swift": {
+      "bytes": 36778,
+      "sha256": "fcdb95f8e703169c4b55b974de5b24ec4b0a62614d6f1f543b4e569fbbf598ea"
+    },
+    "scripts/cleanup-inspector-benchmark.swift": {
+      "bytes": 12346,
+      "sha256": "620f8e81e7a85a406ae66cb3a9c2ad3382a90b26afff4a0c41c0d928cfa2425b"
+    },
+    "scripts/cleanup-inspector-scroll-tests.swift": {
+      "bytes": 12814,
+      "sha256": "aa70e87b7ff3b08834b2ee2489c167e15bd747d48fddf06471f541a2aa9d8e5e"
+    },
+    "scripts/cleanup-review-queue-benchmark.swift": {
+      "bytes": 6916,
+      "sha256": "7801a7b97f45f146bc829cf1ac64831fe7cd44fd9391feeb0fdbb06f99509498"
+    },
+    "scripts/cleanup-trash-validation.swift": {
+      "bytes": 9002,
+      "sha256": "29826b4f8e92eacdc5173fbb8678e80fbf8a50f226b3bb2872e7659262449039"
+    },
+    "scripts/completion-migration-verification.swift": {
+      "bytes": 3901,
+      "sha256": "8f9a4794c54df72ffa9a4b2c8b28990ee806c1a386a1fc7793ed2f5e1eb48714"
+    },
+    "scripts/inspector-scroll-probe.swift": {
+      "bytes": 6367,
+      "sha256": "037d6772ab40421db12db3e25d848cd4498f452468d789aaec0e9c895e780832"
+    },
+    "scripts/install-gui.sh": {
+      "bytes": 1696,
+      "sha256": "285fdd7c90fe459c06b207a8381868e5f62b82e287e66ce0d379bb293f726b8d"
+    },
+    "scripts/inventory-verification.swift": {
+      "bytes": 10992,
+      "sha256": "ba6612056a4dec699a41e881d00685e0f716fb546e1f5ca585a49ddf323b50bb"
+    },
+    "scripts/pack-icon.swift": {
+      "bytes": 1479,
+      "sha256": "106dfaa1c8e713019d0ef62d7200660a1d3a4c2d529bbfeb3737fa8d8c2c7d07"
+    },
+    "scripts/prepare-icon.swift": {
+      "bytes": 1024,
+      "sha256": "b39fa9864ed47c6915bd9eb3c3c45a977e2eecf305ee01c8e136901fde51a54a"
+    },
+    "scripts/prepare-native-qa.py": {
+      "bytes": 4042,
+      "sha256": "fbcbe56f80b900b10447b90617a1941369c6804f5af91704a1d4a01900913f29"
+    },
+    "scripts/probe-inspector-scroll.sh": {
+      "bytes": 1367,
+      "sha256": "e34725dc34a024ce6415d2883ddef324be098080801f727f54784d844aad4dbd"
+    },
+    "scripts/progressive-experience-verification.swift": {
+      "bytes": 741,
+      "sha256": "0dd939fd5315e7aeb6e8e73750909a44a525e3b6abde616b2875c7524941db30"
+    },
+    "scripts/prototype-living-tree.sh": {
+      "bytes": 2044,
+      "sha256": "83cbab11657b42d427105ec5f05a9ce48d4ef06e04efbbdd140f1b735ba1e7b0"
+    },
+    "scripts/reconciliation-steady-state-verification.swift": {
+      "bytes": 725,
+      "sha256": "6f1f0c073ddbc9d613342dd8d120b61c43107233d1f833fecd8353a4bd413e65"
+    },
+    "scripts/render-living-tree.swift": {
+      "bytes": 14366,
+      "sha256": "49cbadab961e13c54ddb105b23caa3f4c0ecf97bf564a03c62e5638b250f9434"
+    },
+    "scripts/render-migration-readiness.sh": {
+      "bytes": 2859,
+      "sha256": "7bfc2be2d34dea050cab11ef54f0cce3cafb2c20ca0b11b63e7e1408ae70eb59"
+    },
+    "scripts/render-migration-readiness.swift": {
+      "bytes": 6425,
+      "sha256": "66c793131cb46788daf4fd37c9343719c654b4d9754a95fe9aa537d37bfa9916"
+    },
+    "scripts/test-chart-geometry.sh": {
+      "bytes": 1332,
+      "sha256": "ad5e689093e140f3eb1162937ccdc0df2eb85bb35ee008b823e05f0715416b27"
+    },
+    "scripts/test-cleanup-inspector-scroll.sh": {
+      "bytes": 2096,
+      "sha256": "51ad6abe21aeb0d3115d3cc8cdc23f8adea8b2c11443ad902142b6e4f4972e3d"
+    },
+    "scripts/test-gui.sh": {
+      "bytes": 1710,
+      "sha256": "7df83d21787a94f2345be217cbf96453eab8506df378733e8a6a8ee54a9119c5"
+    },
+    "scripts/test-inventory-model.sh": {
+      "bytes": 1330,
+      "sha256": "6a0d61b13b732ce7b907458611a099affad12575609bb1924b7226c6c29d76ce"
+    },
+    "scripts/test-inventory.sh": {
+      "bytes": 1021,
+      "sha256": "d4df2342685dba27e5c7c112c4790f8707a5618a5d12f85320aaf67d11a9899e"
+    },
+    "scripts/test-monitor-supplement.sh": {
+      "bytes": 499,
+      "sha256": "b21f19be76800a677e07d8441dba772207e3c9ea88fe282c6faeb359273051c0"
+    },
+    "scripts/test-native-qa.sh": {
+      "bytes": 583,
+      "sha256": "29bf62f3cd8a6ea57ca85b6823f08ff22a80329e37c8139e64f6e2ae9be6d1c5"
+    },
+    "scripts/test-structured-filtering.sh": {
+      "bytes": 971,
+      "sha256": "adbb787602b3a3197b0c32f5cb5f8842c081a17d0e7e94dc092a5807cf9b106b"
+    },
+    "scripts/verify-dmg.sh": {
+      "bytes": 5475,
+      "sha256": "dd27e105549f9b29bb978f36ddaa640760188981061f9545a6c3c7a039661721"
+    },
+    "scripts/verify-native-qa.py": {
+      "bytes": 7327,
+      "sha256": "d1b64cfb2b3366b0974662b1af329f480f085b7e55aac445740ca9030ffc8275"
+    },
+    "scripts/version.env": {
+      "bytes": 379,
+      "sha256": "37a20e271efc4b0ceb4fc01bcfe27994eddfcfbedaa078e821c616dc3e302e41"
+    },
+    "tests/CapacityChartGeometryTests.swift": {
+      "bytes": 12729,
+      "sha256": "0d6d6e3e730f726d5642a2960eff89fec51027aead9e46bd5d8d8ce1af843543"
+    },
+    "tests/CleanupInspectorTests.swift": {
+      "bytes": 48400,
+      "sha256": "b892b31b1d94fb20ca0554808666000fce37a55e91556375d63384fd87af3170"
+    },
+    "tests/CleanupReviewQueueTests.swift": {
+      "bytes": 38358,
+      "sha256": "f8f1bd6beb8b2ab806af4dccdcd330c409c76733b49e5a0f47df84a15cb95686"
+    },
+    "tests/CleanupTrashSafetyTests.swift": {
+      "bytes": 68830,
+      "sha256": "b26582fbc10a0d19e73f1844ec3fa357f6753ae441e29aa13ce7e2fd78f82d7f"
+    },
+    "tests/GUIAXTests.swift": {
+      "bytes": 15931,
+      "sha256": "6e2b26baa1f718fa7d2620321fad4598edb982efb16e4241c31e925d3bc0966c"
+    },
+    "tests/GUIModelTests.swift": {
+      "bytes": 157310,
+      "sha256": "aa171697cb8b2e8d48c362bf024295ba6ef7ebfeb0a2aceb6843e86a9b1a59a1"
+    },
+    "tests/InventoryBoundaryTests.swift": {
+      "bytes": 12352,
+      "sha256": "18a64a15a123bda3cff3d4c4147e98d1b67ad25a26e07f98fdf5d10e5295899c"
+    },
+    "tests/InventoryChangeJournalTests.swift": {
+      "bytes": 31894,
+      "sha256": "5ddcb3db4d12ce55f67e7625ef0ade311b1613b3a5e115580bbcc60289cc2e58"
+    },
+    "tests/InventoryCompletionTests.swift": {
+      "bytes": 28674,
+      "sha256": "20808fdfd854ed75f17abe74fb8ea29191261052431d5c8483237dd24570803d"
+    },
+    "tests/InventoryExplorerTests.swift": {
+      "bytes": 13360,
+      "sha256": "b6659fec533618cae01447c62fb882bc64b8eccab03df0ef1ef3f10cc3e894b6"
+    },
+    "tests/InventoryIntegrationTests.swift": {
+      "bytes": 71757,
+      "sha256": "9ec34197bb5497df58898c59839139b699cc5a4b5366ed71b2fb48c4725dc5a0"
+    },
+    "tests/InventoryLifecycleTests.swift": {
+      "bytes": 20145,
+      "sha256": "3851b851326ea03673724e9e4ee083e0ea560ffd5c626c8ccbeefa7224012ab0"
+    },
+    "tests/InventoryModelTests.swift": {
+      "bytes": 69274,
+      "sha256": "96d3247d5663d9fa66ee4f83550dde4af2a9095ff0f345ef7e367aaa5c57e012"
+    },
+    "tests/InventoryProgressiveTests.swift": {
+      "bytes": 19022,
+      "sha256": "0e047b4aa54deaf6435f26ab25d611af0b13d5f35d8542b7da583554c3e46acf"
+    },
+    "tests/InventoryReconciliationScenarios.swift": {
+      "bytes": 10749,
+      "sha256": "cebd9a52c5ade5292276003838cfc36f2aec44d025d1d6cae16c2cb096a3084f"
+    },
+    "tests/InventoryReconciliationTests.swift": {
+      "bytes": 64901,
+      "sha256": "eaca7e38c376fe475ab965454ef61cb17146f53aa8c94b84493497a8835ee652"
+    },
+    "tests/InventoryTests.swift": {
+      "bytes": 11991,
+      "sha256": "a4194fe1a7d14c831f7f377b3f6e3fbf69cb0aa2ee0e35f833da5317e4917b3a"
+    },
+    "tests/LivingTreeCatalogTests.swift": {
+      "bytes": 10818,
+      "sha256": "e87e13e3e673f5ebe0c34f1a005cb478178e9ef87918f4c73b77af98cb9703e8"
+    },
+    "tests/LivingTreeScrollRoutingTests.swift": {
+      "bytes": 14920,
+      "sha256": "f6f1819b29fb11009ff7f616f1a8290989d84f1bf88baa940c3b25b4c6b0ea05"
+    },
+    "tests/LivingTreeTests.swift": {
+      "bytes": 106383,
+      "sha256": "d348ec80c64db66591ee991f677550257cd21cc057d96afa335c9776a53bb444"
+    },
+    "tests/MonitorFixtureLifecycleTests.swift": {
+      "bytes": 1681,
+      "sha256": "e0b4fd96a98eb28791c8c0c3425fe0a43d7873bbf6a1c8e09f4d47e1d7acda71"
+    },
+    "tests/MonitorSupplement.swift": {
+      "bytes": 2807,
+      "sha256": "2e01e81f5806234161a5c44f217e8e86183bf37ee4511f6d647da8ff0faa1fc9"
+    },
+    "tests/NativeQARuntimeTests.swift": {
+      "bytes": 15879,
+      "sha256": "afe8370c557c888190e82461fa68f9ca1653cddb1bb65478b1b5ea0933f4d557"
+    },
+    "tests/SparseStorageCatalogTests.swift": {
+      "bytes": 17853,
+      "sha256": "aa376e3b2a8beb7d02cde5b9ec17f6534d3b915a55928938712e000faabfb6c0"
+    },
+    "tests/SparseStorageTests.swift": {
+      "bytes": 21571,
+      "sha256": "08416b030557df1481461a483d7ab64e5ff1d4025962ad5ac919730ce048cefb"
+    },
+    "tests/StructuredExplorerFilteringTests.swift": {
+      "bytes": 19074,
+      "sha256": "cd8eea30b268400c2dd8ec491a82825b58a52fa8e2e8d7af37c258d91764c001"
+    },
+    "tests/ViewerIdentityTests.swift": {
+      "bytes": 8202,
+      "sha256": "c56a446ed8587851a54a2c3354471e23ca289597d544480c2de305cac0a0bedb"
+    },
+    "tests/fixtures/2026-10-21-0400-event.json": {
+      "bytes": 74313,
+      "sha256": "672d0508bb3371430ae1fc86a4462959032ba2c30d2998050a377202583415ab"
+    },
+    "tests/verify-icon.swift": {
+      "bytes": 2550,
+      "sha256": "96c56dff7a913dc040283426cfe518be6ac32aa341ab13577b33b485daa2a579"
+    },
+    "tests/verify-launchd-notification.sh": {
+      "bytes": 1503,
+      "sha256": "61e4f6c86decc6051318ca174337f62c5f43c67bdd28c2fa82fd114a2a5dd8e4"
+    }
+  },
+  "version": "2.2.0"
+}

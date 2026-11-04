@@ -52,13 +52,34 @@ public struct NativeQARuntime: Sendable {
         guard lstat(path, &value) == 0 else { try reject("missing/unreadable path: \(path)") }
         return value
     }
+    /// Check lexical spelling without Foundation's alias rewriting: standardizingPath changes
+    /// /private/tmp to /tmp on macOS. realpath below independently rejects actual symlink aliases.
+    private static func hasCanonicalSpelling(_ path: String) -> Bool {
+        guard path.hasPrefix("/"), !path.utf8.contains(0) else { return false }
+        if path == "/" { return true }
+        return path.split(separator: "/", omittingEmptySubsequences: false).dropFirst().allSatisfy {
+            !$0.isEmpty && $0 != "." && $0 != ".."
+        }
+    }
     public static func canonical(_ path: String) throws -> String {
-        guard path.hasPrefix("/"), path == (path as NSString).standardizingPath,
+        guard hasCanonicalSpelling(path),
               let buffer = realpath(path, nil) else { try reject("noncanonical path: \(path)") }
         defer { free(buffer) }
         let actual = String(cString: buffer)
         guard actual == path else { try reject("symbolic-link/alias path: \(path)") }
         return actual
+    }
+    /// The kernel supplies this process image, not an argument, URL, environment override or request.
+    /// Foundation may spell /private/tmp as /tmp after Process spawning. Resolve only this trusted
+    /// OS observation; all supplied paths still pass the strict lexical + realpath equality checks.
+    public func validateCurrentWorkerImage() throws {
+        var bytes = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        guard proc_pidpath(getpid(), &bytes, UInt32(bytes.count)) > 0,
+              let resolved = realpath(String(cString: bytes), nil) else { try Self.reject("worker image unavailable") }
+        defer { free(resolved) }
+        guard String(cString: resolved) == helper,
+              try Self.canonical(helper) == helper,
+              try Self.hash(helper) == profile.helperSHA256 else { try Self.reject("worker image does not match pinned helper") }
     }
     public static func hash(_ path: String) throws -> String {
         // Only used for the small pinned helper, never for production catalogs.
@@ -86,7 +107,7 @@ public struct NativeQARuntime: Sendable {
         try result.validateStorage()
         guard try hash(result.helper) == value.helperSHA256 else { try reject("worker executable changed") }
         for entry in value.fixtures {
-            guard entry.path.hasPrefix(result.fixtures + "/"), entry.path == (entry.path as NSString).standardizingPath, ["file", "directory"].contains(entry.kind) else { try reject("out-of-root registration") }
+            guard entry.path.hasPrefix(result.fixtures + "/"), hasCanonicalSpelling(entry.path), ["file", "directory"].contains(entry.kind) else { try reject("out-of-root registration") }
         }
         return result
     }
@@ -126,7 +147,7 @@ public struct NativeQARuntime: Sendable {
         guard sqlite3_open_v2(database, &connection, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_NOFOLLOW, nil) == SQLITE_OK,
               sqlite3_file_control(connection, "main", SQLITE_FCNTL_TEMPFILENAME, &name) == SQLITE_OK, let name else { try Self.reject("SQLite VFS temporary filename unavailable") }
         let actual = String(cString: name)
-        guard actual.hasPrefix(temporary + "/"), actual == (actual as NSString).standardizingPath else { try Self.reject("SQLite VFS temporary filename escapes QA root") }
+        guard actual.hasPrefix(temporary + "/"), Self.hasCanonicalSpelling(actual) else { try Self.reject("SQLite VFS temporary filename escapes QA root") }
         return actual
     }
     public func sameProfile(as other: NativeQARuntime) -> Bool { root == other.root && originalProfile == other.originalProfile }
@@ -229,7 +250,7 @@ public struct NativeQARuntime: Sendable {
         try validateStorage()
         guard ["refresh", "focus", "pause", "resume"].contains(action) else { try Self.reject("unsupported worker request") }
         if let path {
-            guard path == fixtures || path.hasPrefix(fixtures + "/"), path == (path as NSString).standardizingPath else { try Self.reject("request is outside fixtures") }
+            guard path == fixtures || path.hasPrefix(fixtures + "/"), Self.hasCanonicalSpelling(path) else { try Self.reject("request is outside fixtures") }
             // A disappeared selected item is allowed; verify its nearest existing ancestor without following links.
             var ancestor = path
             while lstatExists(ancestor) == false && ancestor != fixtures { ancestor = (ancestor as NSString).deletingLastPathComponent }

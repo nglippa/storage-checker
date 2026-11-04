@@ -24,137 +24,63 @@ struct OverviewView: View {
     var historyLoading = false
     var compact = false
     @ViewState private var showStorageStatus = false
+    var monitoringHealth: ((Date) -> MonitoringHealthPresentation)? = nil
     var body: some View {
-        if let recorded = snapshot?.latest {
-            // Re-evaluates staleness every 15 s without touching the disk.
-            TimelineView(.periodic(from: .now, by: 15)) { context in
-                content(recorded: recorded, now: context.date)
-            }
-        } else {
-            TimelineView(.periodic(from: .now, by: 15)) { context in
-                liveOnly(now: context.date)
-            }
-        }
-    }
-    @ViewBuilder private func liveOnly(now: Date) -> some View {
-        let state = live.state
-        if let reading = state.reading {
-            let severity = EventSeverity.capacity(reading.free)
+        // Both sections use the same freshness policy and visible clock; no disk read on an age tick.
+        TimelineView(.periodic(from: .now, by: 15)) { context in
+            let presentation = CapacityPresentation(state: live.state, recorded: snapshot?.latest, now: context.date)
             VStack(alignment: .leading, spacing: compact ? 7 : 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Label("Internal storage", systemImage: "internaldrive").font(.headline)
+                Label("Internal storage", systemImage: "internaldrive").font(.headline)
+                Text("Physical volume capacity · indexed file totals are separate; inaccessible folders limit coverage.")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(presentation.title).font(.caption).foregroundStyle(.secondary)
+                        if let free = presentation.free {
+                            Text(capacity(free)).font(.system(size: compact ? 28 : 32, weight: .semibold, design: .rounded)).monospacedDigit().accessibilityIdentifier("overview.available")
+                        } else { Text("No reading").font(.title2) }
+                    }
                     Spacer(minLength: 8)
-                    if severity != .normal { SeverityLabel(severity: severity) }
+                    capacityStatus(presentation)
                 }
-                availableSummary(free: reading.free, reading: reading, freshness: state.freshness(at: now), now: now)
-                compactUsage(free: reading.free, total: reading.total, severity: severity)
+                if let free = presentation.free, let total = presentation.total {
+                    compactUsage(free: free, total: total, severity: EventSeverity.capacity(free))
+                }
+                if let health = monitoringHealth?(context.date) {
+                    Text(health.title).font(.callout.weight(.medium)).help(health.detail + " " + health.jobDetails.joined(separator: ". ")).accessibilityIdentifier("overview.monitoringHealth")
+                }
                 InspectorDisclosure("Storage status", isExpanded: $showStorageStatus) {
-                    Text(historyMissing ? "No history is recorded yet. Turn on background monitoring in Settings to record capacity at login and every 30 minutes. This live reading is not recorded."
-                         : historyLoading ? "Recorded history is still loading. Live capacity is read-only and does not create an event or alert."
-                         : "No capacity readings are recorded yet. Live capacity is read-only and does not create an event or alert.")
-                        .font(.subheadline).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(presentation.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        if let health = monitoringHealth?(context.date) { Text(health.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                        if let recorded = snapshot?.latest {
+                            recordedLine(recorded, reading: presentation.isCurrent ? live.state.reading : nil)
+                            changes(recorded)
+                            if let coverage = snapshot?.filesystemCoverage, coverage.state != "not_initialized" { filesystemCoverageLine(coverage) }
+                            if let folders = snapshot?.folderMonitoring, snapshot?.filesystemCoverage?.establishedAt == nil { folderMonitoringLine(folders) }
+                        } else {
+                            Text(historyMissing ? "No history is recorded yet. Enable Background Monitoring in Settings to record capacity at login and every 30 minutes. This live reading is not recorded." : historyLoading ? "Recorded history is still loading." : "No capacity readings are recorded yet.")
+                                .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
             }.padding(.horizontal, 22).padding(.vertical, compact ? 7 : 13)
-        } else {
-            HStack(spacing: 10) {
-                ProgressView().controlSize(.small)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Reading live capacity…").font(.headline)
-                    Text("Recorded history loads independently.").font(.subheadline).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }.padding(.horizontal, 22).padding(.vertical, 16).accessibilityIdentifier("overview.liveLoading")
         }
     }
-    @ViewBuilder private func content(recorded: Measurement, now: Date) -> some View {
-        let state = live.state
-        let freshness = state.freshness(at: now)
-        let reading = state.reading
-        let free = reading?.free ?? recorded.free, total = reading?.total ?? recorded.capacity
-        let severity = EventSeverity.capacity(free)
-        VStack(alignment:.leading,spacing:compact ? 7 : 10) {
-            HStack(alignment:.firstTextBaseline) {
-                Label("Internal storage",systemImage:"internaldrive").font(.headline)
-                Spacer()
-                if severity != .normal { SeverityLabel(severity:severity) }
-            }
-            availableSummary(free:free,reading:reading,freshness:freshness,now:now)
-            compactUsage(free:free,total:total,severity:severity)
-            InspectorDisclosure("Storage status", isExpanded:$showStorageStatus) {
-                VStack(alignment:.leading,spacing:10) {
-                    recordedLine(recorded,reading:reading)
-                    changes(recorded)
-                    if let coverage = snapshot?.filesystemCoverage, coverage.state != "not_initialized" { filesystemCoverageLine(coverage) }
-                    if let folders = snapshot?.folderMonitoring, snapshot?.filesystemCoverage?.establishedAt == nil { folderMonitoringLine(folders) }
-                }
-            }
-        }.padding(.horizontal,22).padding(.vertical,compact ? 7 : 13)
+    private func capacityStatus(_ presentation: CapacityPresentation) -> some View {
+        HStack(spacing: 6) {
+            if presentation.status == .refreshing { ProgressView().controlSize(.small) }
+            Text(presentation.statusText).fixedSize(horizontal: false, vertical: true)
+        }.font(.subheadline).foregroundStyle(presentation.status == .failed || presentation.status == .stale ? Color.primary : Color.secondary)
+            .help(presentation.detail).accessibilityElement(children: .combine).accessibilityIdentifier("overview.liveStatus")
     }
-
-    private func availableSummary(free: Int64, reading: LiveCapacityReading?, freshness: LiveFreshness, now: Date) -> some View {
-        HStack(alignment:.firstTextBaseline,spacing:12) {
-            VStack(alignment:.leading,spacing:1) {
-                Text(reading == nil ? "Available (last recorded)" : "Available now").font(.caption).foregroundStyle(.secondary)
-                Text(capacity(free)).font(.system(size:compact ? 28 : 32,weight:.semibold,design:.rounded)).monospacedDigit()
-                    .accessibilityIdentifier("overview.available")
-            }
-            Spacer(minLength:8)
-            liveStatus(reading:reading,freshness:freshness,now:now)
-        }
-    }
-
     private func compactUsage(free: Int64, total: Int64, severity: EventSeverity) -> some View {
-        VStack(spacing:4) {
-            ProgressView(value:Double(total-free),total:Double(max(total,1))).tint(severity == .normal ? .accentColor : severity.color)
+        VStack(spacing: 4) {
+            ProgressView(value: Double(total-free), total: Double(max(total,1))).tint(severity == .normal ? .accentColor : severity.color)
                 .accessibilityLabel("Physical storage used").accessibilityValue("\(Int(Double(total-free)/Double(max(total,1))*100)) percent")
             HStack { Text("\(capacity(total-free)) used"); Spacer(); Text("\(capacity(total)) total") }
                 .font(.caption).foregroundStyle(.secondary).monospacedDigit()
         }
-    }
-
-    private func available(free: Int64, reading: LiveCapacityReading?, freshness: LiveFreshness, now: Date) -> some View {
-        VStack(alignment:.leading,spacing:3) {
-            Text(reading == nil ? "Available (last recorded)" : "Available now").font(.subheadline).foregroundStyle(.secondary)
-            Text(capacity(free)).font(.system(size:34,weight:.semibold,design:.rounded)).monospacedDigit()
-                .accessibilityLabel("\(reading == nil ? "Last recorded" : "Live") available APFS capacity: \(capacity(free))")
-                .accessibilityIdentifier("overview.available")
-            liveStatus(reading:reading,freshness:freshness,now:now)
-        }
-    }
-    @ViewBuilder private func liveStatus(reading: LiveCapacityReading?, freshness: LiveFreshness, now: Date) -> some View {
-        Group {
-            switch freshness {
-            case .live:
-                Label { Text("Live · updated \(reading!.timestamp.formatted(date:.omitted,time:.standard))") } icon: { Circle().fill(Color.green).frame(width:7,height:7) }
-            case .stale:
-                Label("Stale · last live reading \(reading!.timestamp.formatted(date:.omitted,time:.shortened))" + (live.state.lastError != nil ? " · refresh failed" : ""),systemImage:"exclamationmark.circle")
-                    .foregroundStyle(.orange)
-            case .unavailable:
-                Label(live.state.lastError ?? (live.isRefreshing ? "Reading live capacity…" : "Live reading unavailable"),systemImage:"circle.dashed")
-            }
-        }
-        .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
-        .help("Live readings come from the filesystem when the viewer opens, becomes active, every minute while visible, and on ⌘R. They are not stored and never trigger alerts.")
-        // Explicit label so assistive technologies get the current status, not a cached one.
-        .accessibilityElement(children:.ignore)
-        .accessibilityLabel(liveStatusText(reading:reading,freshness:freshness))
-        .accessibilityIdentifier("overview.liveStatus")
-    }
-    private func liveStatusText(reading: LiveCapacityReading?, freshness: LiveFreshness) -> String {
-        switch freshness {
-        case .live: return "Live, updated \(reading!.timestamp.formatted(date:.omitted,time:.standard))"
-        case .stale: return "Stale, last live reading \(reading!.timestamp.formatted(date:.omitted,time:.shortened))" + (live.state.lastError != nil ? ", refresh failed" : "")
-        case .unavailable: return live.state.lastError ?? "Live reading unavailable"
-        }
-    }
-    private func usage(free: Int64, total: Int64, severity: EventSeverity) -> some View {
-        VStack(alignment:.leading,spacing:7) {
-            HStack { Text("\(capacity(total-free)) used"); Spacer(); Text("\(capacity(total)) total") }.font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
-            ProgressView(value:Double(total-free),total:Double(max(total,1))).tint(severity == .normal ? .accentColor : severity.color)
-                .accessibilityLabel("Physical storage used").accessibilityValue("\(Int(Double(total-free)/Double(max(total,1))*100)) percent")
-            Text(severity == .critical ? "Critical pressure · less than 15 GB available" : (severity == .warning ? "Low capacity · less than 25 GB available" : "Capacity within configured thresholds"))
-                .font(.subheadline).foregroundStyle(severity == .normal ? Color.secondary : Color.primary)
-        }.frame(maxWidth:.infinity)
     }
     private func changes(_ current: Measurement) -> some View {
         VStack(alignment:.leading,spacing:9) {

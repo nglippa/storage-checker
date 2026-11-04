@@ -1182,6 +1182,8 @@ import SQLite3
         try cleanupTrashSafetyTests(trashSafetyRoot) { ok, message in try test(ok, message) }
         let repository = URL(fileURLWithPath: CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "tests/fixtures").standardizedFileURL
             .deletingLastPathComponent().deletingLastPathComponent()
+        try correctnessPresentationTests { ok, message in try test(ok, message) }
+        try await correctnessCapacityMonitorTests { ok, message in try test(ok, message) }
         try viewerIdentityTests(root: repository) { ok, message in try test(ok, message) }
         try await cleanupReviewQueueTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-queue-fixtures")) { ok, message in try test(ok, message) }
         print("\(tests) GUI model/read-only tests passed; isolated fixtures: \(folder.path)")

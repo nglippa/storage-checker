@@ -30,7 +30,7 @@ struct MonitorRootView: View {
             ToolbarItem(placement: .principal) {
                 Picker("Section", selection: $section) {
                     Text("Storage").tag("inventory")
-                    Text("Monitoring").tag("history")
+                    Text("History & Monitoring").tag("history")
                 }.pickerStyle(.segmented).fixedSize().help("Storage shows what is using your disk. Monitoring shows how free space changed over time and why.")
                 .accessibilityIdentifier("app.section")
             }
@@ -117,6 +117,9 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     private var loadedPageNode: Int64?
     private var loadedPageHasQualifiedSize = false
     init(database: String, readiness: ViewerReadiness) { self.database = database; self.readiness = readiness; reader = InventoryReader(path: database) }
+    func lifecycle(monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil) -> InventoryLifecyclePresentation {
+        InventoryLifecyclePresentation(hasRoot: root != nil, status: status, requested: initializationRequested, loading: loading, error: error, monitoringConfigured: monitoringConfigured, indexingFailure: indexingFailure, monitoringEnabled: monitoringEnabled)
+    }
     var selectedNode: InventoryNode? { items.first { $0.id == selected } }
     var queryID: String { "\(mode.rawValue)|\(sort.rawValue)|\(search)|\(scopeToFolder)|\(offset)|\(revision)" }
     /// The mode that shows a folder after navigating: the explorer stays the explorer; the rankings and
@@ -180,7 +183,8 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         ownDataBytes = files.exists ? files.folder : nil
         guard files.exists else {
             status = InventoryStatus(generation: nil, state: "uninitialized", rootPath: nil, totalNodes: 0, completedDirectories: 0, pendingDirectories: 0, staleDirectories: 0, unknownDirectories: 0, queuedDirectoryJobs: 0, hasReconciliationWork: false, hasInitialDiscoveryWork: false, progress: nil, completeness: .unknown, reason: nil, updatedAt: nil, createdAt: nil, initialCompletion: .notStarted)
-            root = nil; directory = nil; items = []; error = nil; progress = []
+            root = nil; directory = nil; parentID = nil; items = []; breadcrumbs = []; selected = nil; hasMore = false
+            accounting = nil; error = nil; progress = []; indexingPaused = false
             return
         }
         do {
@@ -343,24 +347,41 @@ struct DiskInventoryView: View {
     @AppStorage("inventory.header.details", store: ViewerStore.viewPreferences) private var showingIndexDetails = false
     @ObservedObject private var qaWorker = NativeQAWorker.shared
     private var workerAvailable: Bool {
+        if let scope = LifecycleQAScope.active {
+            return (try? scope.admit(command: "inventory-request")) != nil && FileManager.default.fileExists(atPath: scope.agentURL(scope.labels[2]).path)
+        }
         let data = URL(fileURLWithPath: configuration.database).deletingLastPathComponent()
         let path = configuration.isQA ? data.appendingPathComponent("inventory-worker.plist").path : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/local.macbook.storage-monitor.inventory.plist").path
         if NativeQARuntime.active != nil { return qaWorker.failure == nil }
         return FileManager.default.fileExists(atPath: path)
     }
+    private var inventoryUpdatesEnabled: Bool? { history.monitoring?.inventoryUpdatesEnabled }
+    private var showsInitialization: Bool { initialization.isVisible && inventoryUpdatesEnabled != false }
     private var indexingActive: Bool {
+        if inventoryUpdatesEnabled == false { return false }
         guard let status = model.status else { return true }
         // Deferred folders retry on the worker's next scheduled update; they are not active indexing.
         return status.generation == nil || InventoryStatusPresentation(status: status).activeListings > 0 || status.hasReconciliationWork
     }
+    private var lifecycle: InventoryLifecyclePresentation {
+        let configured = history.monitoring.map { $0.state == .on || $0.state == .needsUpdate }
+        let tasks = history.monitoring?.launchd
+        let job = tasks?.jobs[(history.monitoring?.jobLabels ?? MonitoringSetupStatus.labels)[2]]
+        let failure: String?
+        if tasks?.reliable == true, let job, job.pid == nil, let exit = job.lastExitStatus, exit != 0 && exit != 75 {
+            failure = "The background indexer reported an error before folder results became available."
+        } else { failure = nil }
+        return model.lifecycle(monitoringConfigured: configured ?? (configuration.isQA ? workerAvailable : nil), indexingFailure: failure, monitoringEnabled: inventoryUpdatesEnabled)
+    }
+    @Environment(\.openSettings) private var openSettings
     @State private var showingDeferred = false
     @State private var showingAccounting = false
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-            controls
-            if let error = model.error {
+            if lifecycle.showsBrowser { controls }
+            if let error = model.error, lifecycle.showsBrowser {
                 HStack(alignment: .top) {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
                     Text(error).font(.callout).textSelection(.enabled)
@@ -368,7 +389,9 @@ struct DiskInventoryView: View {
                 }.padding(14).accessibilityIdentifier("inventory.error")
                 Divider()
             }
-            if model.mode == .review {
+            if !lifecycle.showsBrowser {
+                lifecyclePlaceholder
+            } else if model.mode == .review {
                 CleanupReviewQueueView(browser: model, queue: model.reviewQueue)
             } else if model.mode == .explorer && model.search.isEmpty {
                 InventoryExplorerView(browser: model)
@@ -384,7 +407,7 @@ struct DiskInventoryView: View {
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 22).padding(.vertical, 9)
             }
             Divider()
-            Text("Indexed sizes can include shared storage and are not guaranteed recoverable space.")
+            Text("Indexed sizes describe accessible files, not all physical disk usage or guaranteed recoverable space. Protected folders may be missing.")
                 .help("File allocation may include shared APFS blocks. Totals count hard links once and do not represent reclaimable physical storage." + (model.databaseBytes.map { " Inventory database: " + ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) + "." } ?? ""))
                 .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 22).padding(.vertical, 9)
         }
@@ -404,11 +427,35 @@ struct DiskInventoryView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { model.revision += 1 } label: {
-                    if model.loading { ProgressView().controlSize(.small) } else { Image(systemName: "arrow.clockwise") }
+                    if model.loading { ProgressView().controlSize(.small) } else { Label("Reload Inventory", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon) }
                 }
                     .help("Reload indexed results. No filesystem scan is performed.").accessibilityLabel("Reload inventory").accessibilityIdentifier("inventory.reload")
             }
         }
+    }
+    private var lifecyclePlaceholder: some View {
+        VStack(spacing: 12) {
+            if lifecycle.showsProgress { ProgressView().controlSize(.small) }
+            else { Image(systemName: lifecycle.state == .failed ? "exclamationmark.triangle" : "internaldrive").font(.title).foregroundStyle(.secondary) }
+            Text(lifecycle.title).font(.headline)
+            Text(lifecycle.detail).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            switch lifecycle.action {
+            case .openSettings:
+                HStack {
+                    if lifecycle.state == .monitoringOff {
+                        Button("Enable Monitoring…") { openSettings() }
+                            .help("Open Settings to review and confirm background monitoring setup.")
+                            .accessibilityIdentifier("inventory.setup")
+                    }
+                    Button("Open Settings…") { openSettings() }
+                }
+            case .startIndexing: Button("Start indexing") { model.request("refresh") }.disabled(!workerAvailable).accessibilityIdentifier("inventory.start")
+            case .retry:
+                HStack { Button("Reload Inventory") { model.revision &+= 1 }; Button("Open Settings…") { openSettings() } }
+            case nil: EmptyView()
+            }
+        }.frame(maxWidth: 500).padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityElement(children: .contain).accessibilityIdentifier("inventory.lifecycle")
     }
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -420,8 +467,8 @@ struct DiskInventoryView: View {
                     if let directory = model.directory, indexingActive {
                         Button("Update “\(model.displayName(directory))” first") { model.prioritizeCurrentFolder() }
                     }
-                    Button("Refresh this folder") { model.request("refresh", path: model.directory?.path) }
-                    Button("Refresh entire inventory") { model.request("refresh") }
+                    Button("Recheck This Folder") { model.request("refresh", path: model.directory?.path) }
+                    Button("Recheck Entire Inventory") { model.request("refresh") }
                     Divider()
                     Button("Pause indexing") { model.request("pause") }
                     Button("Resume indexing") { model.request("resume") }
@@ -429,23 +476,24 @@ struct DiskInventoryView: View {
             }
             initializationProgress
             summaryLine
+            if lifecycle.state == .stale { Text(lifecycle.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             MigrationReadinessSummary(controller: model.migration, browser: model)
-            if let status = model.status, !(initialization.isVisible && status.generation == nil) {
-                let presentation = InventoryStatusPresentation(status: status)
-                if !initialization.isVisible {
+            if let status = model.status, !(showsInitialization && status.generation == nil) {
+                let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled)
+                if !showsInitialization {
                     if showingIndexDetails {
                         Text("\(status.totalNodes.formatted()) items found · \(presentation.foundFolders.formatted()) folders found · \(presentation.activeListings.formatted()) listings queued")
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     }
                 } else if presentation.phase == .reconciling && !model.indexingPaused {
                     // The first-index panel owns title and counts; add only overlapping reconciliation.
-                    Text(status.hasEventGapRecheck ? "Updating older measurements" : presentation.headline).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.status")
+                    Text(status.hasEventGapRecheck && !presentation.updatesAreWaiting ? "Updating older measurements" : presentation.headline).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.status")
                 }
-                if showingIndexDetails || initialization.isVisible {
+                if showingIndexDetails || showsInitialization {
                     Text(presentation.detail + (status.unknownDirectories > 0 ? " \(status.unknownDirectories.formatted()) folders have partial or unavailable measurements." : ""))
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("inventory.statusDetail")
                 }
-                if status.deferredDirectories > 0 && (showingIndexDetails || initialization.isVisible) {
+                if status.deferredDirectories > 0 && (showingIndexDetails || showsInitialization) {
                     Button(status.deferredDirectories == 1 ? "Show folder" : "Show \(status.deferredDirectories.formatted()) folders") {
                         showingDeferred = true
                         Task { await model.loadDeferredFolders() }
@@ -489,20 +537,24 @@ struct DiskInventoryView: View {
     /// One line: indexing status (details a click away), a full refresh's progress, and the storage accounting.
     @ViewBuilder private var summaryLine: some View {
         HStack(spacing: 6) {
-            if let status = model.status, !initialization.isVisible {
-                let presentation = InventoryStatusPresentation(status: status)
-                Text(status.hasEventGapRecheck ? "Updating older measurements" : presentation.headline).font(.caption).foregroundStyle(.secondary).lineLimit(1).accessibilityIdentifier("inventory.status")
-                if status.refreshIsManual, status.hasReconciliationWork, let fraction = status.refreshFraction {
+            if let status = model.status, !showsInitialization {
+                let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled)
+                Text(status.hasEventGapRecheck && !presentation.updatesAreWaiting ? "Updating older measurements" : presentation.headline).font(.caption).foregroundStyle(.secondary).lineLimit(1).accessibilityIdentifier("inventory.status")
+                if !presentation.updatesAreWaiting, status.refreshIsManual, status.hasReconciliationWork, let fraction = status.refreshFraction {
                     ProgressView(value: fraction).progressViewStyle(.linear).controlSize(.small).frame(width: 90)
                         .accessibilityLabel("Full refresh").accessibilityValue("about \(Int(fraction * 100)) percent rechecked")
                         .accessibilityIdentifier("inventory.refreshProgress")
+                }
+                if presentation.updatesAreWaiting {
+                    Button("Open Settings…") { openSettings() }
+                        .buttonStyle(.link).font(.caption).accessibilityIdentifier("inventory.waitingSettings")
                 }
                 Button(showingIndexDetails ? "Hide details" : "Indexing details") { showingIndexDetails.toggle() }
                     .buttonStyle(.link).font(.caption).accessibilityIdentifier("inventory.indexDetails")
             }
             if let latest = history.snapshot?.latest {
                 let accounting = storageAccounting(latest)
-                if model.status != nil && !initialization.isVisible { Text("·").font(.caption).foregroundStyle(.tertiary) }
+                if model.status != nil && !showsInitialization { Text("·").font(.caption).foregroundStyle(.tertiary) }
                 if showingIndexDetails {
                     Text(accounting.summary).font(.caption).foregroundStyle(.secondary).monospacedDigit().lineLimit(2)
                         .accessibilityIdentifier("inventory.accountingSummary")
@@ -578,7 +630,7 @@ struct DiskInventoryView: View {
     }
     @ViewBuilder private var initializationProgress: some View {
         let presentation = initialization
-        if presentation.isVisible, model.status != nil || model.error == nil {
+        if lifecycle.showsBrowser, showsInitialization, model.status != nil || model.error == nil {
             VStack(alignment: .leading, spacing: 7) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(presentation.title).font(.callout).fontWeight(.medium)
@@ -626,7 +678,7 @@ struct DiskInventoryView: View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Picker("Browse", selection: $model.mode) { ForEach(InventoryBrowserMode.allCases) { Text($0.rawValue).tag($0) } }
-                    .labelsHidden().fixedSize().accessibilityIdentifier("inventory.mode")
+                    .fixedSize().accessibilityIdentifier("inventory.mode")
                 if model.mode != .review { Button("Go to folder…") { model.chooseFolder() }.accessibilityIdentifier("inventory.goToFolder") }
                 if model.mode == .review {
                     Button { model.mode = .explorer } label: { Label("Back to Explorer", systemImage: "chevron.backward") }
@@ -647,6 +699,10 @@ struct DiskInventoryView: View {
                 if model.mode != .review {
                     TextField("Search name or path prefix", text: $model.search).textFieldStyle(.roundedBorder).frame(minWidth: 180, maxWidth: 290).accessibilityIdentifier("inventory.search")
                 }
+            }
+            if model.mode == .explorer {
+                Text("Find large files and folders with the Largest files or Largest folders list in Browse.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if model.mode != .review && ((model.mode != .contents && model.mode != .explorer) || !model.search.isEmpty) {
                 Toggle("Only inside the selected folder", isOn: $model.scopeToFolder).font(.caption).accessibilityIdentifier("inventory.scope")
@@ -735,28 +791,30 @@ struct InventoryCapacitySummary: View {
     @ObservedObject var live: LiveCapacityMonitor
     let recorded: Measurement?
     var body: some View {
-        let reading = live.state.reading
-        let free = reading?.free ?? recorded?.free, used = reading?.used ?? recorded?.used
-        if let free, let used {
-            let total = free + used, severity = EventSeverity.capacity(free)
-            HStack(alignment: .center, spacing: 24) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(reading == nil ? "Available · last recorded" : "Available now").font(.caption).foregroundStyle(.secondary)
-                    Text(capacity(free)).font(StorageDesign.valueFont)
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    ProgressView(value: Double(used), total: Double(max(total, 1))).progressViewStyle(.linear)
-                        .tint(severity == .normal ? .accentColor : (severity == .warning ? .orange : .red))
-                        .accessibilityLabel("Disk usage").accessibilityValue("\(capacity(used)) used of \(capacity(total))")
-                    Text("\(capacity(used)) used of \(capacity(total))").font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                }.frame(maxWidth: 280)
-                if severity != .normal {
-                    Label(severity == .critical ? "Very low space" : "Low space", systemImage: "exclamationmark.circle")
-                        .font(.callout.weight(.medium)).foregroundStyle(severity == .critical ? .red : .orange)
-                }
-                Spacer(minLength: 0)
-            }
-            .accessibilityElement(children: .combine).accessibilityIdentifier("inventory.capacity")
+        TimelineView(.periodic(from: .now, by: 15)) { context in
+            let presentation = CapacityPresentation(state: live.state, recorded: recorded, now: context.date)
+            VStack(alignment: .leading, spacing: 6) {
+                if let free = presentation.free, let used = presentation.used, let total = presentation.total {
+                    let severity = EventSeverity.capacity(free)
+                    HStack(alignment: .center, spacing: 24) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(presentation.title).font(.caption).foregroundStyle(.secondary)
+                            Text(capacity(free)).font(StorageDesign.valueFont)
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            ProgressView(value: Double(used), total: Double(max(total, 1))).progressViewStyle(.linear)
+                                .tint(severity == .normal ? .accentColor : (severity == .warning ? .orange : .red))
+                                .accessibilityLabel("Physical storage used").accessibilityValue("\(capacity(used)) used of \(capacity(total))")
+                            Text("\(capacity(used)) used of \(capacity(total))").font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        }.frame(maxWidth: 280)
+                        Spacer(minLength: 0)
+                    }
+                } else { Text("Available capacity · no reading").font(.callout) }
+                HStack(spacing: 6) {
+                    if presentation.status == .refreshing { ProgressView().controlSize(.small) }
+                    Text(presentation.statusText).font(.caption).foregroundStyle(presentation.status == .failed || presentation.status == .stale ? Color.primary : Color.secondary).fixedSize(horizontal: false, vertical: true)
+                }.help(presentation.detail)
+            }.accessibilityElement(children: .combine).accessibilityIdentifier("inventory.capacity")
         }
     }
 }

@@ -141,6 +141,7 @@ struct MigrationReadinessSummary: View {
 
     private var status: String {
         if let report = controller.report {
+            guard report.coverage.inventoryAvailable else { return report.summary }
             var text = report.reviewCount > 0 || report.unknownCount > 0 ? report.summary : "No large sparse-storage discrepancies detected"
             if let headline = report.headline, report.reviewCount > 0 { text += " · " + headline.title }
             if !report.coverage.isComplete { text += " · coverage limited" }
@@ -150,7 +151,7 @@ struct MigrationReadinessSummary: View {
         return "checking indexed files…"
     }
     private var symbol: String {
-        guard let report = controller.report else { return "shippingbox" }
+        guard let report = controller.report, report.coverage.inventoryAvailable else { return "shippingbox" }
         return report.reviewCount > 0 ? "exclamationmark.triangle" : (report.unknownCount > 0 ? "questionmark.circle" : "checkmark.circle")
     }
     private var tint: Color {
@@ -174,7 +175,11 @@ struct MigrationReadinessPanel: View {
                 if let item = report.headline {
                     MigrationReadinessMeasurements(item: item)
                     if item.severity == .review {
-                        Label(SparseStorageGuidance.reviewHeadline, systemImage: "exclamationmark.triangle").font(.callout.weight(.semibold)).foregroundStyle(.orange)
+                        Label {
+                            Text(SparseStorageGuidance.reviewHeadline).foregroundStyle(.primary)
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange).accessibilityHidden(true)
+                        }.font(.callout.weight(.semibold))
                     }
                     Text(SparseStorageGuidance.explanation(item, bytes: AtlasText.bytes)).font(.callout).fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 10) {
@@ -190,7 +195,7 @@ struct MigrationReadinessPanel: View {
                     ForEach(Array(others), id: \.id) { item in
                         Button { reveal(item) } label: {
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                Text(item.severity.title).font(.caption2.weight(.semibold)).foregroundStyle(item.severity == .review ? .orange : .secondary).frame(width: 78, alignment: .leading)
+                                Text(item.severity.title).font(.caption2.weight(.semibold)).foregroundStyle(item.severity == .review ? Color.primary : Color.secondary).frame(width: 78, alignment: .leading)
                                 Text(item.node.name).lineLimit(1).truncationMode(.middle)
                                 Spacer(minLength: 4)
                                 Text("gap " + AtlasText.bytes(item.allocation.gap)).monospacedDigit().foregroundStyle(.secondary)
@@ -285,7 +290,7 @@ struct MigrationReadinessInspectorSection: View {
             HStack {
                 Text("Migration readiness").font(.subheadline.weight(.semibold))
                 Spacer()
-                Text(item.severity.title).font(.caption.weight(.semibold)).foregroundStyle(item.severity == .review ? .orange : .secondary)
+                Text(item.severity.title).font(.caption.weight(.semibold)).foregroundStyle(item.severity == .review ? Color.primary : Color.secondary)
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background((item.severity == .review ? Color.orange : Color.secondary).opacity(0.12), in: Capsule())
             }
@@ -303,7 +308,13 @@ struct MigrationReadinessInspectorSection: View {
                 if item.indexed != item.allocation { row("When indexed", "\(AtlasText.bytes(item.indexed.logical)) logical · \(AtlasText.bytes(item.indexed.allocated)) allocated") }
             }
             Text(item.verification.summary).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            if item.severity == .review { Label(SparseStorageGuidance.reviewHeadline, systemImage: "exclamationmark.triangle").font(.callout.weight(.medium)).foregroundStyle(.orange) }
+            if item.severity == .review {
+                Label {
+                    Text(SparseStorageGuidance.reviewHeadline).foregroundStyle(.primary)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange).accessibilityHidden(true)
+                }.font(.callout.weight(.medium))
+            }
             Text(SparseStorageGuidance.explanation(item, bytes: AtlasText.bytes)).font(.callout).fixedSize(horizontal: false, vertical: true)
             Label { Text(SparseStorageGuidance.dataSafety(item.kind)).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "exclamationmark.shield") }
                 .font(.caption).foregroundStyle(.primary)

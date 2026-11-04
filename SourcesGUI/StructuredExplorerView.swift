@@ -333,7 +333,6 @@ struct StructuredExplorerView: View {
         .contentShape(Rectangle())
         .focusable()
         .focused($focused)
-        .focusEffectDisabled()
         .onKeyPress(keys: [.upArrow, .downArrow, .leftArrow, .rightArrow]) { press in
             if press.modifiers.contains(.option) || press.modifiers.contains(.shift) {
                 let step = min(size.width, size.height) * 0.14
@@ -615,7 +614,7 @@ struct StructuredExplorerView: View {
                 clear: clearFocus, reset: resetFilters)
             if let key = state.isolatedRoot, let node = tree.model?[key]?.node {
                 HStack(spacing: 8) {
-                    Label("Isolated: \(node.name)", systemImage: "scope").lineLimit(1).truncationMode(.middle).help(node.path)
+                    Label("Isolated path: \(node.name)", systemImage: "scope").lineLimit(1).truncationMode(.middle).help("Only this folder and its descendants are shown. Exit Isolation restores the previous scope. " + node.path)
                     Spacer(minLength: 4)
                     Button("Exit Isolation", action: exitIsolation).accessibilityLabel("Exit isolation and restore previous selection")
                 }.font(.caption).foregroundStyle(.secondary)
@@ -815,7 +814,7 @@ struct StructuredExplorerView: View {
         menu.addItem(.separator())
         menu.addItem(StructuredExplorerMenuAction.item("Clear Focus / Isolation") { clearFocus() })
         menu.addItem(StructuredExplorerMenuAction.item("Fit") { frameSelection(layout, model: model) })
-        menu.addItem(StructuredExplorerMenuAction.item("Reset") { resetFilters() })
+        menu.addItem(StructuredExplorerMenuAction.item("Reset Filters & View") { resetFilters() })
         return menu
     }
 
@@ -830,7 +829,7 @@ struct StructuredExplorerView: View {
                 helpRow("Zoom", "Scroll (mouse wheel or trackpad), pinch, or the − and + buttons.")
                 helpRow("Move around", "Drag, or hold ⇧ or ⌥ while scrolling.")
                 helpRow("See more or less", "Levels sets how many rings are shown. +N marks contents not shown.")
-                helpRow("Frame", "Fit frames the selected branch (F); Reset shows everything (0).")
+                helpRow("Frame", "Fit frames the selected branch (F); Reset View restores zoom and pan (0). Geometry zoom keeps labels at a readable text size.")
             }
             Text("Prefer a list? The Navigator and Atlas show the same folders.").font(.caption).foregroundStyle(.secondary)
         }
@@ -853,7 +852,7 @@ struct StructuredExplorerPainter {
     let coloring: LivingTreeColoring
     let palette: StructuredExplorerPalette
 
-    static let titleFont = NSFont.systemFont(ofSize: 11.5, weight: .semibold), detailFont = NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
+    static let titleFont = NSFont.systemFont(ofSize: 11.5, weight: .semibold), detailFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
     @MainActor private static var widths = [String: CGFloat]()
     @MainActor static func width(_ text: String, detail: Bool) -> CGFloat {
         let key = (detail ? "d" : "t") + text
@@ -863,7 +862,7 @@ struct StructuredExplorerPainter {
         widths[key] = w
         return w
     }
-    static let captionFont = NSFont.systemFont(ofSize: 9.5, weight: .medium)
+    static let captionFont = NSFont.systemFont(ofSize: 11, weight: .medium)
     /// A ring caption's text box, as drawn.
     @MainActor static func captionSize(_ text: String) -> CGSize {
         let size = (text as NSString).size(withAttributes: [.font: captionFont])
@@ -885,7 +884,7 @@ struct StructuredExplorerPainter {
                            with: .color(palette.secondary.opacity(spur ? 0.08 : 0.16)), style: StrokeStyle(lineWidth: 0.75, dash: spur ? [3, 4] : []))
             }
             for caption in layout.ringCaptions(transform: t, size: size, labels: labels, measure: Self.captionSize) {
-                ctx.draw(Text(caption.text).font(.system(size: 9.5, weight: .medium)).foregroundColor(palette.secondary.opacity(0.85)),
+                ctx.draw(Text(caption.text).font(.system(size: 11, weight: .medium)).foregroundColor(palette.secondary.opacity(0.85)),
                          at: CGPoint(x: caption.rect.midX, y: caption.rect.midY))
             }
         }
@@ -979,6 +978,6 @@ struct StructuredExplorerPainter {
         c.stroke(shape, with: .color(label.emphasized ? StructuredExplorerPalette.accent : palette.plateEdge), lineWidth: label.emphasized ? 1.5 : 0.5)
         let titleWidth = Self.width(label.title, detail: false)
         c.draw(Text(label.title).font(.system(size: 11.5, weight: .semibold)).foregroundColor(palette.ink), at: CGPoint(x: label.rect.minX + 7, y: label.rect.midY), anchor: .leading)
-        c.draw(Text(label.detail).font(.system(size: 10.5).monospacedDigit()).foregroundColor(palette.secondary), at: CGPoint(x: label.rect.minX + 11 + titleWidth, y: label.rect.midY), anchor: .leading)
+        c.draw(Text(label.detail).font(.system(size: 11).monospacedDigit()).foregroundColor(palette.secondary), at: CGPoint(x: label.rect.minX + 11 + titleWidth, y: label.rect.midY), anchor: .leading)
     }
 }

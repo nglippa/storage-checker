@@ -343,7 +343,7 @@ func tilde(_ path: String) -> String {
 
 func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double, previous: (id: Int64, time: Double)?, marker: EventMarker,
                              roots candidates: [MonitoredRoot], within base: String = home.path, budget: TimeInterval = 25, replayTimeout: TimeInterval = 10, processBudget: TimeInterval = 3,
-                             now: () -> Date = Date.init, simulateActivityGap: Bool = false, lockPath: String? = nil, lockWait: TimeInterval = 45) -> [String: Any] {
+                             now: () -> Date = Date.init, simulateActivityGap: Bool = false, includeProcesses: Bool = true, lockPath: String? = nil, lockWait: TimeInterval = 45) -> [String: Any] {
     let started = now()
     let (roots, rejected) = validatedRoots(candidates, within: base)
     let previousId = previous?.id ?? -1
@@ -510,13 +510,13 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
 
     // 3. Process correlation: only through writable files inside grown folders.
     let processStarted = now()
-    let samples = sampleUserProcesses()
+    let samples = includeProcesses ? sampleUserProcesses() : []
     let priorProcesses = decodeState(db, "attribution_processes", as: ProcessBaseline.self)
     let priorWritten = priorProcesses?.readingId == previousId ? priorProcesses!.written : [:]
     let grown = changes.filter { ["grew", "new"].contains($0["kind"] as! String) && max(int64($0["after_allocated"]) - int64($0["before_allocated"]), int64($0["after_logical"]) - int64($0["before_logical"])) >= correlationThreshold }
     let base = canonicalPath(home.path) ?? home.path
     let grownPaths = grown.map { ($0["path"] as! String).hasPrefix("~") ? base + ($0["path"] as! String).dropFirst() : $0["path"] as! String }
-    var correlations = [[String: Any]](), queries = 0, processStatus = grownPaths.isEmpty ? "not_needed" : "complete"
+    var correlations = [[String: Any]](), queries = 0, processStatus = !includeProcesses ? "skipped" : (grownPaths.isEmpty ? "not_needed" : "complete")
     if !grownPaths.isEmpty {
         for sample in samples where sample.pid != getpid() {
             if now().timeIntervalSince(processStarted) > processBudget || queries > 50_000 { processStatus = "partial"; break }
@@ -533,7 +533,7 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
         }
         correlations.sort { ($0["writable_files"] as! Int) > ($1["writable_files"] as! Int) }
     }
-    try? encodeState(db, "attribution_processes", ProcessBaseline(readingId: readingId, written: Dictionary(samples.map { ($0.key, $0.written) }, uniquingKeysWith: { a, _ in a })))
+    if includeProcesses { try? encodeState(db, "attribution_processes", ProcessBaseline(readingId: readingId, written: Dictionary(samples.map { ($0.key, $0.written) }, uniquingKeysWith: { a, _ in a }))) }
 
     // 4. Samples of changed paths, grown folders first.
     var pathSamples = [String]()
@@ -563,7 +563,7 @@ func collectIntervalEvidence(db: Database, readingId: Int64, readingTime: Double
                     "changes": Array(changes.prefix(40)), "changes_total": changes.count,
                     "incomparable": Array(incomparable.prefix(20)), "incomparable_total": incomparable.count, "rejected_roots": rejected],
         "file_activity": activityJSON,
-        "processes": ["status": processStatus, "sampled": samples.count, "method": "open files (proc_pidfdinfo) and disk-write counters (proc_pid_rusage) of same-user processes",
+        "processes": ["status": processStatus, "sampled": samples.count, "method": includeProcesses ? "open files (proc_pidfdinfo) and disk-write counters (proc_pid_rusage) of same-user processes" : "Suppressed for disposable lifecycle QA",
                       "correlations": Array(correlations.prefix(10))],
         "duration_ms": Int(now().timeIntervalSince(started) * 1000),
     ]

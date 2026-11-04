@@ -270,13 +270,26 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
         if let root = value("--root") {
             try required(directory.standardizedFileURL != defaultData.standardizedFileURL, "A scoped inventory requires an isolated data directory")
             guard let candidate = coverageRegion(root: root) else { throw Failure("Inventory root must be a directory on the startup Data volume") }
-            region = candidate
+            if let runtime = NativeQARuntime.active {
+                // The normal Data-volume region uses /System/Volumes/Data spellings. QA keeps
+                // the already validated exact fixture spelling as its region boundary instead.
+                guard root == runtime.fixtures, directory.path == runtime.support, database == runtime.database else {
+                    try NativeQARuntime.reject("worker database/root does not match profile")
+                }
+                try runtime.validateStorage()
+                region = CoverageRegion(mount: runtime.fixtures, prefix: "", device: candidate.device, deviceIdentifier: candidate.deviceIdentifier)
+            } else if let scope = LifecycleQAScope.active {
+                guard root == scope.fixtures, directory.path == scope.data.path, database == scope.database else { try LifecycleQAScope.refuse("inventory data/root mismatch") }
+                try scope.admit(command: command); try scope.validateFixtures()
+                region = CoverageRegion(mount: scope.fixtures, prefix: "", device: candidate.device, deviceIdentifier: candidate.deviceIdentifier)
+            } else { region = candidate }
         } else {
+            if LifecycleQAScope.active != nil { try LifecycleQAScope.refuse("inventory requires the explicit fixture root") }
             guard let candidate = startupDataRegion(try? measure()).region else { throw Failure("Startup Data volume unavailable") }
             region = candidate
         }
         let started = Date()
-        let fda = NativeQARuntime.active != nil ? "qa-fixtures-only" : fullDiskAccessState()
+        let fda = NativeQARuntime.active != nil || LifecycleQAScope.active != nil ? "qa-fixtures-only" : fullDiskAccessState()
         if directory.standardizedFileURL == defaultData.standardizedFileURL,
            fm.fileExists(atPath: database) {
             var source: OpaquePointer?, statement: OpaquePointer?
@@ -304,14 +317,14 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
         // Full Disk Access belongs to this process (the helper launchd runs), not to the viewer, so the
         // viewer reads what the worker itself observed.
         try? legacy.state("inventory_full_disk_access", fda)
-        let gate: ConsentGate = NativeQARuntime.active != nil ? [] : coverageGate(legacy, region: region, fda: fda)
+        let gate: ConsentGate = NativeQARuntime.active != nil || LifecycleQAScope.active != nil ? [] : coverageGate(legacy, region: region, fda: fda)
         try initializeInventorySchema(databasePath: database)
         try consumeInventoryRequests(database: database, directory: directory, region: region)
         if args.contains("--resume") {
             let cancel = directory.appendingPathComponent("inventory.cancel")
             if fm.fileExists(atPath: cancel.path) { try fm.removeItem(at: cancel) }
         }
-        if try await reader.root() != nil { try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil) }
+        if try await reader.root() != nil { try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil || LifecycleQAScope.active != nil ? 0.1 : nil) }
         let budget = min(3_600, max(0.01, Double(value("--budget") ?? "20") ?? 20))
         var result = runInventory(databasePath: database, directory: directory, region: region,
                                   options: InventoryRunOptions(maxDuration: budget, batchSize: Int(value("--batch") ?? "256") ?? 256,
@@ -323,7 +336,7 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
             // was walking. Replay once more and persist invalidation before going idle.
             // Do not extend this process into an unbounded catch-up loop on a busy disk.
             try consumeInventoryRequests(database: database, directory: directory, region: region)
-            try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil)
+            try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil || LifecycleQAScope.active != nil ? 0.1 : nil)
             let final = runInventory(databasePath: database, directory: directory, region: region,
                                      options: InventoryRunOptions(maxDuration: 0, cancelFile: directory.appendingPathComponent("inventory.cancel").path),
                                      fdaOverride: fda, gatedOverride: gate)
@@ -339,7 +352,7 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
         if result.outcome == "failed" {
             // Logged above. A failing background worker waits for the next scheduled wake instead of
             // being relaunched by launchd every minute.
-            if command == "inventory-work" { exit(0) }
+            if command == "inventory-work", NativeQARuntime.active == nil { exit(0) }
             throw Failure(result.reason ?? "Inventory failed")
         }
         if command == "inventory-work", let code = inventoryWorkExitCode(main) { exit(code) }

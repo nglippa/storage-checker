@@ -58,7 +58,7 @@ struct StructuredExplorerFilterControls: View {
     }
 
     private var focus: some View {
-        Toggle("Focus", isOn: Binding(get: { state.filter.focus != .off }, set: { state.filter.focus = $0 ? .subtree : .off }))
+        Toggle("Focus on Selection", isOn: Binding(get: { state.filter.focus != .off }, set: { state.filter.focus = $0 ? .subtree : .off }))
             .toggleStyle(.button).disabled(!canFocus && state.filter.focus == .off)
             .accessibilityLabel("Focus on selected folder")
             .accessibilityValue(state.filter.focus == .off ? "Off" : state.filter.focus == .path ? "Path to root" : "Ancestors and descendants")
@@ -87,9 +87,9 @@ struct StructuredExplorerFilterControls: View {
     }
 
     private var resetButton: some View {
-        Button("Reset", action: reset)
+        Button("Reset Filters & View", action: reset)
             .disabled(!state.filter.isActive && state.isolatedRoot == nil && state.camera.isFit)
-            .accessibilityLabel("Reset explorer filters and isolation")
+            .accessibilityLabel("Reset explorer filters, isolation and view")
             .help("All sizes, Dim, focus off, exit isolation and reset the view. Keeps Levels and restores the entry selection.")
     }
 

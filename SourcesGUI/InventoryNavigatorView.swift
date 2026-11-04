@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 struct InventoryNavigatorView: View {
     @ObservedObject var browser: InventoryBrowserModel
     @ObservedObject var explorer: InventoryExplorerController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -35,7 +36,7 @@ struct InventoryNavigatorView: View {
             }
             .onChange(of: explorer.scrollRequest) { _, id in
                 guard let id, explorer.rows.contains(where: { $0.id == id }) else { return }
-                withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
                 explorer.scrollHandled()
             }
             .onChange(of: explorer.rows.count) { _, _ in
@@ -70,6 +71,7 @@ struct InventoryNavigatorView: View {
 private struct NavigatorRow: View {
     let row: InventoryExplorerRow
     @ObservedObject var explorer: InventoryExplorerController
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let hueIndex: Int
     let sharedNote: String?
     @Environment(\.colorScheme) private var colorScheme
@@ -104,7 +106,7 @@ private struct NavigatorRow: View {
 
     @ViewBuilder private func entry(_ node: InventoryNode) -> some View {
         if node.kind == .directory && node.childCount > 0 {
-            Button { withAnimation(.easeOut(duration: 0.15)) { explorer.toggle(node.id) } } label: {
+            Button { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { explorer.toggle(node.id) } } label: {
                 Image(systemName: "chevron.right").font(.system(size: 9.5, weight: .semibold)).foregroundStyle(.secondary)
                     .rotationEffect(.degrees(explorer.state.isExpanded(node.id) ? 90 : 0))
                     .frame(width: 14, height: 18).contentShape(Rectangle())

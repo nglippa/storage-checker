@@ -107,6 +107,7 @@ public struct SparseStorageReport: Sendable {
 
     /// The Overview's status sentence; never claims more than the scanned coverage supports.
     public var summary: String {
+        guard coverage.inventoryAvailable else { return "Waiting for disk inventory; nothing checked yet" }
         if reviewCount > 0 { return reviewCount == 1 ? "1 item to review" : "\(reviewCount) items to review" }
         if unknownCount > 0 { return unknownCount == 1 ? "1 item could not be checked" : "\(unknownCount) items could not be checked" }
         return "No large sparse-storage discrepancies detected in scanned locations."

@@ -1,0 +1,555 @@
+{
+  "passed": true,
+  "records": [
+    {
+      "assertion": "disposable source matches build manifest",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "lifecycle-qa-inspect",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime"
+      ],
+      "exit": 0,
+      "seconds": 0.094,
+      "stdout": "{\n  \"agents\" : [\n    false,\n    false,\n    false\n  ],\n  \"compiled_fixture_role\" : \"V2\",\n  \"data\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Library\\/Application Support\\/MacBook Storage Monitor\",\n  \"expired\" : false,\n  \"fixtures\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/fixtures\",\n  \"generated_plists\" : [\n    {\n      \"EnvironmentVariables\" : {\n        \"PATH\" : \"\\/usr\\/bin:\\/bin:\\/usr\\/sbin:\\/sbin\",\n        \"SQLITE_TMPDIR\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Temporary\",\n        \"TMPDIR\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Temporary\\/\"\n      },\n      \"Label\" : \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\",\n      \"LowPriorityIO\" : true,\n      \"Nice\" : 10,\n      \"ProcessType\" : \"Background\",\n      \"ProgramArguments\" : [\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Applications\\/MacBook Storage Monitor.app\\/Contents\\/MacOS\\/StorageMonitor\",\n        \"check\",\n        \"--lifecycle-qa-root\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\",\n        \"--root\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/fixtures\",\n        \"--data-dir\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Library\\/Application Support\\/MacBook Storage Monitor\"\n      ],\n      \"RunAtLoad\" : true,\n      \"StandardErrorPath\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Logs\\/agent-0-errors.log\",\n      \"StandardOutPath\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Logs\\/agent-0.log\",\n      \"StartCalendarInterval\" : [\n        {\n          \"Minute\" : 0\n        },\n        {\n          \"Minute\" : 30\n        }\n      ],\n      \"Umask\" : 63\n    },\n    {\n      \"EnvironmentVariables\" : {\n        \"PATH\" : \"\\/usr\\/bin:\\/bin:\\/usr\\/sbin:\\/sbin\",\n        \"SQLITE_TMPDIR\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Temporary\",\n        \"TMPDIR\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Temporary\\/\"\n      },\n      \"KeepAlive\" : {\n        \"SuccessfulExit\" : false\n      },\n      \"Label\" : \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\",\n      \"LowPriorityIO\" : true,\n      \"Nice\" : 15,\n      \"ProcessType\" : \"Background\",\n      \"ProgramArguments\" : [\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Applications\\/MacBook Storage Monitor.app\\/Contents\\/MacOS\\/StorageMonitor\",\n        \"initialize-baseline\",\n        \"--lifecycle-qa-root\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\",\n        \"--root\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/fixtures\",\n        \"--data-dir\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Library\\/Application Support\\/MacBook Storage Monitor\"\n      ],\n      \"RunAtLoad\" : true,\n      \"StandardErrorPath\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Logs\\/agent-1-errors.log\",\n      \"StandardOutPath\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Logs\\/agent-1.log\",\n      \"ThrottleInterval\" : 300,\n      \"Umask\" : 63\n    },\n    {\n      \"EnvironmentVariables\" : {\n        \"PATH\" : \"\\/usr\\/bin:\\/bin:\\/usr\\/sbin:\\/sbin\",\n        \"SQLITE_TMPDIR\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Temporary\",\n        \"TMPDIR\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Temporary\\/\"\n      },\n      \"KeepAlive\" : {\n        \"SuccessfulExit\" : false\n      },\n      \"Label\" : \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\",\n      \"LowPriorityIO\" : true,\n      \"Nice\" : 15,\n      \"ProcessType\" : \"Background\",\n      \"ProgramArguments\" : [\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Applications\\/MacBook Storage Monitor.app\\/Contents\\/MacOS\\/StorageMonitor\",\n        \"inventory-work\",\n        \"--budget\",\n        \"2\",\n        \"--lifecycle-qa-root\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\",\n        \"--root\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/fixtures\",\n        \"--data-dir\",\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Library\\/Application Support\\/MacBook Storage Monitor\"\n      ],\n      \"RunAtLoad\" : true,\n      \"StandardErrorPath\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Logs\\/agent-2-errors.log\",\n      \"StandardOutPath\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Logs\\/agent-2.log\",\n      \"ThrottleInterval\" : 60,\n      \"Umask\" : 63,\n      \"WatchPaths\" : [\n        \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/home\\/Library\\/Application Support\\/MacBook Storage Monitor\\/inventory-requests\"\n      ]\n    }\n  ],\n  \"installer\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\\/Bundles\\/Installer.app\\/Contents\\/MacOS\\/StorageMonitor\",\n  \"labels\" : [\n    \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\",\n    \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\",\n    \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\"\n  ],\n  \"login_persistence\" : \"NOT VERIFIED: private plists are explicitly bootstrapped only\",\n  \"notifications\" : \"suppressed; not an authorization or delivery test\",\n  \"root\" : \"\\/private\\/tmp\\/storage-monitor-lifecycle-1prjqtwv\\/source\\/build\\/lifecycle-qa\\/runtime\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "actual stable helper admits exact scope without production fallback",
+      "pass": true
+    },
+    {
+      "assertion": "exact three unique QA labels",
+      "pass": true
+    },
+    {
+      "assertion": "generated check explicitly fixture rooted",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "check",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/fixtures",
+        "--data-dir",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor"
+      ],
+      "exit": 1,
+      "seconds": 0.021,
+      "stdout": "",
+      "stderr": "Storage Monitor: QA runtime refused: lifecycle installation: command must run from its pinned image role\n"
+    },
+    {
+      "assertion": "stable installer cannot execute scheduled check",
+      "pass": true
+    },
+    {
+      "assertion": "generated initialize-baseline explicitly fixture rooted",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "initialize-baseline",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/fixtures",
+        "--data-dir",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor"
+      ],
+      "exit": 1,
+      "seconds": 0.02,
+      "stdout": "",
+      "stderr": "Storage Monitor: QA runtime refused: lifecycle installation: command must run from its pinned image role\n"
+    },
+    {
+      "assertion": "stable installer cannot execute scheduled initialize-baseline",
+      "pass": true
+    },
+    {
+      "assertion": "generated inventory-work explicitly fixture rooted",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "inventory-work",
+        "--budget",
+        "2",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/fixtures",
+        "--data-dir",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor"
+      ],
+      "exit": 1,
+      "seconds": 0.02,
+      "stdout": "",
+      "stderr": "Storage Monitor: QA runtime refused: lifecycle installation: command must run from its pinned image role\n"
+    },
+    {
+      "assertion": "stable installer cannot execute scheduled inventory-work",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/lifecycle-qa-guard.py",
+        "--validate"
+      ],
+      "exit": 0,
+      "seconds": 0.043,
+      "stdout": "{\"labels\": [\"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\", \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\", \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\"], \"helper\": \"/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor\", \"mutations\": false, \"negative_pin_test\": \"mismatched helper hash refuses before execution; zero recording executor calls\", \"expiry_cleanup\": \"status/uninstall permitted; no restart during uninstall recovery\"}\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "independent teardown guard validates fixed namespace and image",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b"
+      ],
+      "exit": 113,
+      "seconds": 0.006,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\" in domain for user gui: 501\n"
+    },
+    {
+      "assertion": "fresh namespace absent: local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline"
+      ],
+      "exit": 113,
+      "seconds": 0.004,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\" in domain for user gui: 501\n"
+    },
+    {
+      "assertion": "fresh namespace absent: local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory"
+      ],
+      "exit": 113,
+      "seconds": 0.003,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\" in domain for user gui: 501\n"
+    },
+    {
+      "assertion": "fresh namespace absent: local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print-disabled",
+        "gui/501"
+      ],
+      "exit": 0,
+      "seconds": 0.004,
+      "stdout": "\n\tdisabled services = {\n\t\t\"com.microsoft.teams2.agent\" => enabled\n\t\t\"com.norton.userinit\" => enabled\n\t\t\"com.norton.mes.vpn\" => enabled\n\t\t\"com.apple.ManagedClientAgent.enrollagent\" => disabled\n\t\t\"com.malwarebytes.mbam.frontend.agent\" => enabled\n\t\t\"dev.forge-terminal-mcp\" => enabled\n\t\t\"local.macbook.storage-monitor\" => enabled\n\t\t\"com.lippalabs.developer-bridge\" => disabled\n\t\t\"com.microsoft.update.agent\" => enabled\n\t\t\"io.nexu.open-design\" => enabled\n\t\t\"com.apple.Siri.agent\" => disabled\n\t\t\"local.macbook.storage-monitor.baseline\" => enabled\n\t\t\"com.apple.FolderActionsDispatcher\" => disabled\n\t\t\"com.norton.installer-submit\" => enabled\n\t\t\"com.openai.chat-helper\" => enabled\n\t\t\"com.apple.appleseed.seedusaged.postinstall\" => disabled\n\t\t\"com.apple.ScriptMenuApp\" => disabled\n\t\t\"com.norton.Antivirus\" => enabled\n\t\t\"homebrew.mxcl.redis\" => enabled\n\t\t\"local.macbook.storage-monitor.inventory\" => enabled\n\t}\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "independent guard armed before services",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "install",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--lifecycle-qa-version",
+        "V1"
+      ],
+      "exit": 0,
+      "seconds": 1.592,
+      "stdout": "Installed /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/LaunchAgents/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.plist\nDisposable fixture services registered. Private plists do not establish login persistence.\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "real installer V1 succeeds",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b"
+      ],
+      "exit": 0,
+      "seconds": 0.005,
+      "stdout": "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b = {\n\tactive count = 1\n\tpath = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/LaunchAgents/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.plist\n\ttype = LaunchAgent\n\tstate = running\n\n\tprogram = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\targuments = {\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\t\tcheck\n\t\t--lifecycle-qa-root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime\n\t\t--root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/fixtures\n\t\t--data-dir\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor\n\t}\n\n\tstdout path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-0.log\n\tstderr path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-0-errors.log\n\tinherited environment = {\n\t\tSSH_AUTH_SOCK => /var/run/com.apple.launchd.px8YbW3zVq/Listeners\n\t}\n\n\tdefault environment = {\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t}\n\n\tenvironment = {\n\t\tOSLogRateLimit => 64\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t\tSQLITE_TMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary\n\t\tTMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary/\n\t\tXPC_SERVICE_NAME => local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\n\t}\n\n\tdomain = gui/501 [100021]\n\tumask = 77\n\tasid = 100021\n\tminimum runtime = 10\n\texit timeout = 5\n\tnice = 10\n\truns = 1\n\tpid = 6693\n\timmediate reason = speculative\n\tforks = 1\n\texecs = 1\n\tinitialized = 1\n\ttrampolined = 1\n\tstarted suspended = 0\n\tproxy started suspended = 0\n\tchecked allocations = 0 (queried = 1)\n\tchecked allocations reason = no host\n\tchecked allocations flags = 0x0\n\tlast exit code = (never exited)\n\n\tevent triggers = {\n\t\tlocal.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.268435495 => {\n\t\t\tkeepalive = 0\n\t\t\tservice = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\n\t\t\tstream = com.apple.launchd.calendarinterval\n\t\t\tmonitor = com.apple.UserEventAgent-Aqua\n\t\t\tdescriptor = {\n\t\t\t\t\"Minute\" => 30\n\t\t\t}\n\t\t}\n\t\tlocal.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.268435494 => {\n\t\t\tkeepalive = 0\n\t\t\tservice = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\n\t\t\tstream = com.apple.launchd.calendarinterval\n\t\t\tmonitor = com.apple.UserEventAgent-Aqua\n\t\t\tdescriptor = {\n\t\t\t\t\"Minute\" => 0\n\t\t\t}\n\t\t}\n\t}\n\n\tevent channels = {\n\t\t\"com.apple.launchd.calendarinterval\" = {\n\t\t\tport = 0x1090c7\n\t\t\tactive = 0\n\t\t\tmanaged = 1\n\t\t\treset = 0\n\t\t\thide = 0\n\t\t\twatching = 0\n\t\t}\n\t}\n\n\tresource coalition = {\n\t\tID = 106291\n\t\ttype = resource\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\n\t}\n\n\tjetsam coalition = {\n\t\tID = 106292\n\t\ttype = jetsam\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\n\t}\n\n\tspawn type = background (5)\n\tjetsam priority = 40\n\tjetsam memory limit (active) = (unlimited)\n\tjetsam memory limit (inactive) = (unlimited)\n\tjetsamproperties category = daemon\n\tjetsam thread limit = 32\n\tcpumon = default\n\tsanitizer flags = 0x0\n\n\tproperties = runatload | low priority i/o | inferred program\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline"
+      ],
+      "exit": 0,
+      "seconds": 0.004,
+      "stdout": "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline = {\n\tactive count = 1\n\tpath = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/LaunchAgents/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline.plist\n\ttype = LaunchAgent\n\tstate = running\n\n\tprogram = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\targuments = {\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\t\tinitialize-baseline\n\t\t--lifecycle-qa-root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime\n\t\t--root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/fixtures\n\t\t--data-dir\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor\n\t}\n\n\tstdout path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-1.log\n\tstderr path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-1-errors.log\n\tinherited environment = {\n\t\tSSH_AUTH_SOCK => /var/run/com.apple.launchd.px8YbW3zVq/Listeners\n\t}\n\n\tdefault environment = {\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t}\n\n\tenvironment = {\n\t\tOSLogRateLimit => 64\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t\tSQLITE_TMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary\n\t\tTMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary/\n\t\tXPC_SERVICE_NAME => local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\n\t}\n\n\tdomain = gui/501 [100021]\n\tumask = 77\n\tasid = 100021\n\tminimum runtime = 300\n\texit timeout = 5\n\tnice = 15\n\truns = 1\n\tpid = 6698\n\timmediate reason = speculative\n\tforks = 0\n\texecs = 1\n\tinitialized = 1\n\ttrampolined = 1\n\tstarted suspended = 0\n\tproxy started suspended = 0\n\tchecked allocations = 0 (queried = 1)\n\tchecked allocations reason = no host\n\tchecked allocations flags = 0x0\n\tlast exit code = (never exited)\n\n\tsemaphores = {\n\t\tsuccessful exit => 0\n\t}\n\n\tresource coalition = {\n\t\tID = 106293\n\t\ttype = resource\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\n\t}\n\n\tjetsam coalition = {\n\t\tID = 106294\n\t\ttype = jetsam\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\n\t}\n\n\tspawn type = background (5)\n\tjetsam priority = 40\n\tjetsam memory limit (active) = (unlimited)\n\tjetsam memory limit (inactive) = (unlimited)\n\tjetsamproperties category = daemon\n\tjetsam thread limit = 32\n\tcpumon = default\n\tsanitizer flags = 0x0\n\n\tproperties = runatload | low priority i/o | inferred program\n}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory"
+      ],
+      "exit": 0,
+      "seconds": 0.004,
+      "stdout": "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory = {\n\tactive count = 1\n\tpath = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/LaunchAgents/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory.plist\n\ttype = LaunchAgent\n\tstate = running\n\n\tprogram = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\targuments = {\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\t\tinventory-work\n\t\t--budget\n\t\t2\n\t\t--lifecycle-qa-root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime\n\t\t--root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/fixtures\n\t\t--data-dir\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor\n\t}\n\n\tstdout path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-2.log\n\tstderr path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-2-errors.log\n\tinherited environment = {\n\t\tSSH_AUTH_SOCK => /var/run/com.apple.launchd.px8YbW3zVq/Listeners\n\t}\n\n\tdefault environment = {\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t}\n\n\tenvironment = {\n\t\tOSLogRateLimit => 64\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t\tSQLITE_TMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary\n\t\tTMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary/\n\t\tXPC_SERVICE_NAME => local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t}\n\n\tdomain = gui/501 [100021]\n\tumask = 77\n\tasid = 100021\n\tminimum runtime = 60\n\texit timeout = 5\n\tnice = 15\n\truns = 1\n\tpid = 6713\n\timmediate reason = speculative\n\tforks = 0\n\texecs = 1\n\tinitialized = 1\n\ttrampolined = 1\n\tstarted suspended = 0\n\tproxy started suspended = 0\n\tchecked allocations = 0 (queried = 1)\n\tchecked allocations reason = no host\n\tchecked allocations flags = 0x0\n\tlast exit code = (never exited)\n\n\tsemaphores = {\n\t\tsuccessful exit => 0\n\t}\n\n\tevent triggers = {\n\t\tcom.apple.launchd.WatchPaths => {\n\t\t\tkeepalive = 0\n\t\t\tservice = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t\t\tstream = com.apple.fsevents.matching\n\t\t\tmonitor = com.apple.UserEventAgent-Aqua\n\t\t\tdescriptor = {\n\t\t\t\t\"WatchPaths\" => [\n\t\t\t\t\t0 = \"/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor/inventory-requests\"\n\t\t\t\t]\n\t\t\t}\n\t\t}\n\t}\n\n\tevent channels = {\n\t\t\"com.apple.fsevents.matching\" = {\n\t\t\tport = 0x152253\n\t\t\tactive = 0\n\t\t\tmanaged = 1\n\t\t\treset = 0\n\t\t\thide = 0\n\t\t\twatching = 0\n\t\t}\n\t}\n\n\tresource coalition = {\n\t\tID = 106295\n\t\ttype = resource\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t}\n\n\tjetsam coalition = {\n\t\tID = 106296\n\t\ttype = jetsam\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t}\n\n\tspawn type = background (5)\n\tjetsam priority = 40\n\tjetsam memory limit (active) = (unlimited)\n\tjetsam memory limit (inactive) = (unlimited)\n\tjetsamproperties category = daemon\n\tjetsam thread limit = 32\n\tcpumon = default\n\tsanitizer flags = 0x0\n\n\tproperties = runatload | low priority i/o | inferred program\n}\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "real launchd loads all three private plists",
+      "pass": true
+    },
+    {
+      "assertion": "RunAtLoad V1 check commits actual capacity reading",
+      "pass": true
+    },
+    {
+      "assertion": "real inventory worker indexes only explicit fixtures",
+      "pass": true
+    },
+    {
+      "assertion": "real baseline initializer finishes fixture-only work",
+      "pass": true
+    },
+    {
+      "assertion": "actual installed V1 image matches immutable role",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "install",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime"
+      ],
+      "exit": 1,
+      "seconds": 0.04,
+      "stdout": "",
+      "stderr": "Storage Monitor: QA runtime refused: lifecycle installation: command must run from its pinned image role\n"
+    },
+    {
+      "assertion": "installed worker cannot act as stable installer",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "install",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--lifecycle-qa-version",
+        "V2",
+        "--lifecycle-qa-fail-at",
+        "swapped"
+      ],
+      "exit": 1,
+      "seconds": 1.572,
+      "stdout": "",
+      "stderr": "Storage Monitor: Lifecycle QA injected failure at swapped. The previous installation and history were restored.\n"
+    },
+    {
+      "assertion": "real installer V2 reports injected failure",
+      "pass": true
+    },
+    {
+      "assertion": "real failed V2 swap rolls executable back to V1",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "install",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--lifecycle-qa-version",
+        "V2",
+        "--lifecycle-qa-fail-at",
+        "registered"
+      ],
+      "exit": 1,
+      "seconds": 5.497,
+      "stdout": "",
+      "stderr": "Storage Monitor: Lifecycle QA injected failure at registered. The previous installation and history were restored.\n"
+    },
+    {
+      "assertion": "real installer V2 reports injected failure",
+      "pass": true
+    },
+    {
+      "assertion": "post-registration rollback follows an observed committed V2 worker reading",
+      "pass": true
+    },
+    {
+      "assertion": "history survives both real rollback phases",
+      "pass": true
+    },
+    {
+      "assertion": "actual installer reaches journaled interruption phase",
+      "pass": true
+    },
+    {
+      "assertion": "pause marker identifies the exact launched installer child",
+      "pass": true
+    },
+    {
+      "assertion": "actual installer process terminated and reaped before recovery lock",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "install",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--lifecycle-qa-version",
+        "V2"
+      ],
+      "exit": 0,
+      "seconds": 2.834,
+      "stdout": "Reverted an interrupted update.\nRestored the previous background monitor.\nHistory schema unchanged by this update; no backup was needed.\nInstalled /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/LaunchAgents/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.plist\nDisposable fixture services registered. Private plists do not establish login persistence.\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "real installer V2 succeeds",
+      "pass": true
+    },
+    {
+      "assertion": "same installer recovers real interrupted transaction",
+      "pass": true
+    },
+    {
+      "assertion": "in-place update installs distinct real V2 image",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "bootout",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory"
+      ],
+      "exit": 0,
+      "seconds": 0.004,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "assertion": "test removes only its own inventory registration",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "install",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime",
+        "--lifecycle-qa-version",
+        "V2"
+      ],
+      "exit": 0,
+      "seconds": 1.666,
+      "stdout": "History schema unchanged by this update; no backup was needed.\nInstalled /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/LaunchAgents/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.plist\nDisposable fixture services registered. Private plists do not establish login persistence.\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "real installer V2 succeeds",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory"
+      ],
+      "exit": 0,
+      "seconds": 0.005,
+      "stdout": "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory = {\n\tactive count = 1\n\tpath = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/LaunchAgents/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory.plist\n\ttype = LaunchAgent\n\tstate = running\n\n\tprogram = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\targuments = {\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor\n\t\tinventory-work\n\t\t--budget\n\t\t2\n\t\t--lifecycle-qa-root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime\n\t\t--root\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/fixtures\n\t\t--data-dir\n\t\t/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor\n\t}\n\n\tstdout path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-2.log\n\tstderr path = /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Logs/agent-2-errors.log\n\tinherited environment = {\n\t\tSSH_AUTH_SOCK => /var/run/com.apple.launchd.px8YbW3zVq/Listeners\n\t}\n\n\tdefault environment = {\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t}\n\n\tenvironment = {\n\t\tOSLogRateLimit => 64\n\t\tPATH => /usr/bin:/bin:/usr/sbin:/sbin\n\t\tSQLITE_TMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary\n\t\tTMPDIR => /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Temporary/\n\t\tXPC_SERVICE_NAME => local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t}\n\n\tdomain = gui/501 [100021]\n\tumask = 77\n\tasid = 100021\n\tminimum runtime = 60\n\texit timeout = 5\n\tnice = 15\n\truns = 1\n\tpid = 7057\n\timmediate reason = speculative\n\tforks = 0\n\texecs = 1\n\tinitialized = 1\n\ttrampolined = 1\n\tstarted suspended = 0\n\tproxy started suspended = 0\n\tchecked allocations = 0 (queried = 1)\n\tchecked allocations reason = no host\n\tchecked allocations flags = 0x0\n\tlast exit code = (never exited)\n\n\tsemaphores = {\n\t\tsuccessful exit => 0\n\t}\n\n\tevent triggers = {\n\t\tcom.apple.launchd.WatchPaths => {\n\t\t\tkeepalive = 0\n\t\t\tservice = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t\t\tstream = com.apple.fsevents.matching\n\t\t\tmonitor = com.apple.UserEventAgent-Aqua\n\t\t\tdescriptor = {\n\t\t\t\t\"WatchPaths\" => [\n\t\t\t\t\t0 = \"/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor/inventory-requests\"\n\t\t\t\t]\n\t\t\t}\n\t\t}\n\t}\n\n\tevent channels = {\n\t\t\"com.apple.fsevents.matching\" = {\n\t\t\tport = 0x10b7ab\n\t\t\tactive = 0\n\t\t\tmanaged = 1\n\t\t\treset = 0\n\t\t\thide = 0\n\t\t\twatching = 0\n\t\t}\n\t}\n\n\tresource coalition = {\n\t\tID = 106341\n\t\ttype = resource\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t}\n\n\tjetsam coalition = {\n\t\tID = 106342\n\t\ttype = jetsam\n\t\tstate = active\n\t\tactive count = 1\n\t\tname = local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\n\t}\n\n\tspawn type = background (5)\n\tjetsam priority = 40\n\tjetsam memory limit (active) = (unlimited)\n\tjetsam memory limit (inactive) = (unlimited)\n\tjetsamproperties category = daemon\n\tjetsam thread limit = 32\n\tcpumon = default\n\tsanitizer flags = 0x0\n\n\tproperties = runatload | low priority i/o | inferred program\n}\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "repair restores own missing plist and actual registration",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "uninstall",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime"
+      ],
+      "exit": 0,
+      "seconds": 0.365,
+      "stdout": "Background monitoring disabled; LaunchAgents removed. App and history retained: /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor\n",
+      "stderr": ""
+    },
+    {
+      "assertion": "real disable completes",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b"
+      ],
+      "exit": 113,
+      "seconds": 0.005,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\" in domain for user gui: 501\n"
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline"
+      ],
+      "exit": 113,
+      "seconds": 0.004,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\" in domain for user gui: 501\n"
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory"
+      ],
+      "exit": 113,
+      "seconds": 0.005,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\" in domain for user gui: 501\n"
+    },
+    {
+      "assertion": "disable removes all own real services",
+      "pass": true
+    },
+    {
+      "assertion": "disable retains private history",
+      "pass": true
+    },
+    {
+      "assertion": "actual fixture checks perform no broad diagnostic or process sampling writes",
+      "pass": true
+    },
+    {
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/Bundles/Installer.app/Contents/MacOS/StorageMonitor",
+        "uninstall",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime"
+      ],
+      "exit": 0,
+      "seconds": 0.363,
+      "stdout": "Background monitoring disabled; LaunchAgents removed. App and history retained: /private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/lifecycle-qa/runtime/home/Library/Application Support/MacBook Storage Monitor\n",
+      "stderr": ""
+    },
+    {
+      "finally_uninstall_exit": 0
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b"
+      ],
+      "exit": 113,
+      "seconds": 0.004,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\" in domain for user gui: 501\n"
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline"
+      ],
+      "exit": 113,
+      "seconds": 0.003,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\" in domain for user gui: 501\n"
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print",
+        "gui/501/local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory"
+      ],
+      "exit": 113,
+      "seconds": 0.003,
+      "stdout": "",
+      "stderr": "Bad request.\nCould not find service \"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\" in domain for user gui: 501\n"
+    },
+    {
+      "argv": [
+        "/bin/launchctl",
+        "print-disabled",
+        "gui/501"
+      ],
+      "exit": 0,
+      "seconds": 0.003,
+      "stdout": "\n\tdisabled services = {\n\t\t\"com.microsoft.teams2.agent\" => enabled\n\t\t\"com.norton.userinit\" => enabled\n\t\t\"com.norton.mes.vpn\" => enabled\n\t\t\"com.apple.ManagedClientAgent.enrollagent\" => disabled\n\t\t\"com.malwarebytes.mbam.frontend.agent\" => enabled\n\t\t\"dev.forge-terminal-mcp\" => enabled\n\t\t\"local.macbook.storage-monitor\" => enabled\n\t\t\"com.lippalabs.developer-bridge\" => disabled\n\t\t\"com.microsoft.update.agent\" => enabled\n\t\t\"io.nexu.open-design\" => enabled\n\t\t\"com.apple.Siri.agent\" => disabled\n\t\t\"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\" => enabled\n\t\t\"local.macbook.storage-monitor.baseline\" => enabled\n\t\t\"com.apple.FolderActionsDispatcher\" => enabled\n\t\t\"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\" => enabled\n\t\t\"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\" => enabled\n\t\t\"com.norton.installer-submit\" => enabled\n\t\t\"com.openai.chat-helper\" => enabled\n\t\t\"com.apple.appleseed.seedusaged.postinstall\" => disabled\n\t\t\"com.apple.ScriptMenuApp\" => disabled\n\t\t\"com.norton.Antivirus\" => enabled\n\t\t\"homebrew.mxcl.redis\" => enabled\n\t\t\"local.macbook.storage-monitor.inventory\" => enabled\n\t}\n",
+      "stderr": ""
+    }
+  ],
+  "protected_unchanged": true,
+  "labels_absent": {
+    "local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b": true,
+    "local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline": true,
+    "local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory": true
+  },
+  "guard_exit": 0,
+  "guard_cleanup_verified": true,
+  "guard_cleanup": [
+    {
+      "event": "cleanup-complete",
+      "unix": 1793775958.116266,
+      "labels_absent": {
+        "local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b": true,
+        "local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline": true,
+        "local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory": true
+      },
+      "manual_installers": [],
+      "installed_workers": [],
+      "success": true
+    }
+  ],
+  "own_disabled_override_rows": [
+    "\t\t\"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.baseline\" => enabled",
+    "\t\t\"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b\" => enabled",
+    "\t\t\"local.macbook.storage-monitor.lifecycle-qa.1836c3c9-3045-45c9-9c58-38c0f2c9e84b.inventory\" => enabled"
+  ],
+  "before_override_sha256": "e94c82a43acc9528c78ea17ac899bdc576606739093f853dc9534555c5dd4cd7",
+  "after_override_sha256": "e570e5721bef974553fa32b26b805f9c206c1e61b6393db3b7fc2e3137713b1c",
+  "gui_launched": false,
+  "login_persistence": "NOT VERIFIED",
+  "notifications_FDA": "NOT VERIFIED; fixture checks suppress notification/process/diagnostic side effects"
+}

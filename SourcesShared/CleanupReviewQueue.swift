@@ -98,6 +98,8 @@ public struct CleanupReviewQueueEntry: Identifiable, Sendable {
     public let filesystemIdentity: InventoryIdentity
     public let inspection: ArtifactInspection?
     public var freshness: CleanupReviewFreshness
+    /// Display context only; never grants assessment, plan or Trash eligibility.
+    private let retainedReviewContext: Bool
     public var id: Int64 { node.id }
     public var stage: Stage {
         guard let inspection, inspection.identity == .verified, let classification = inspection.classification,
@@ -111,7 +113,11 @@ public struct CleanupReviewQueueEntry: Identifiable, Sendable {
     /// A quiet filesystem does not keep an old process observation current.
     public func status(at now: Date) -> CleanupStatus? {
         guard freshness.isFresh(now: now) else { return .insufficientEvidence }
-        return inspection?.assessment?.status
+        return inspection?.assessment?.status ?? (retainedReviewContext ? .insufficientEvidence : nil)
+    }
+    /// Retained review context only. Eligibility, recovery estimates, plans and Trash still require fresh evidence.
+    public func needsRecheck(at now: Date) -> Bool {
+        retainedReviewContext && status(at: now) == .insufficientEvidence
     }
     public var confidence: ArtifactConfidence { inspection?.classification?.confidence ?? .unknown }
     /// This is exclusively indexed allocated storage. Logical size is never substituted.
@@ -128,8 +134,11 @@ public struct CleanupReviewQueueEntry: Identifiable, Sendable {
         return bytes
     }
     public var uncertainty: [String] { (inspection?.classification?.unknowns ?? []) + (inspection?.incomplete ?? []) + freshness.invalidationReasons }
-    public init(node: InventoryNode, inspection: ArtifactInspection?, journal: InventoryChangeCursor?, processes: ProcessObservation?, invalidationReasons: [String] = []) {
+    public init(node: InventoryNode, inspection: ArtifactInspection?, journal: InventoryChangeCursor?, processes: ProcessObservation?, invalidationReasons: [String] = [], retainingReviewContext: Bool = false) {
         self.node = node; filesystemIdentity = node.identity
+        retainedReviewContext = inspection?.assessment?.status != .preserve && inspection?.assessment?.status != .protected
+            && (retainingReviewContext || (inspection?.identity == .verified
+                && (inspection?.classification?.confidence ?? .unknown) >= .strong && inspection?.assessment?.status == .reviewCandidate))
         // The shared Inspector consumes ArtifactInspection directly. Carry freshness uncertainty into
         // that same model so opening a stale row cannot display a fresher assessment than the queue.
         if let inspection, !invalidationReasons.isEmpty {
@@ -214,8 +223,9 @@ public struct CleanupReviewQueueSnapshot: Sendable {
     }
     public func filtered(filter: CleanupReviewQueueFilter = .init(), sort: CleanupReviewQueueSort = .indexedAllocated, now: Date = Date()) -> [CleanupReviewQueueEntry] {
         entries.filter { entry in
-            (filter.includesPotentialMatches || entry.stage == .verifiedArtifact)
-                && (filter.status == nil || entry.status(at: now) == filter.status)
+            (filter.includesPotentialMatches || entry.stage == .verifiedArtifact || entry.needsRecheck(at: now))
+                && (filter.status == nil || entry.status(at: now) == filter.status
+                    || (filter.status == .reviewCandidate && entry.needsRecheck(at: now)))
                 && (filter.kind == nil || entry.inspection?.classification?.kind == filter.kind)
                 && (filter.tool == nil || entry.inspection?.classification?.tool == filter.tool)
         }.sorted { a, b in
@@ -383,8 +393,14 @@ public actor CleanupReviewQueue {
         if node.status == .stale { reasons.append("Indexed measurement is stale.") }
         reasons += inspection.incomplete
         if let old = entries[nodeID], old.filesystemIdentity != node.identity { reasons.append("Filesystem identity changed; earlier evidence no longer applies.") }
-        let result = CleanupReviewQueueEntry(node: node, inspection: inspection, journal: latest.next, processes: processes, invalidationReasons: reasons)
-        if inspection.classification != nil, entries[nodeID] != nil || entries.count < budget.maximumEntries {
+        let old = entries[nodeID]
+        let uncertainIdentity: Bool = { if case .unavailable = inspection.identity { return true }; return false }()
+        let retainContext = old?.filesystemIdentity == node.identity
+            && (old?.needsRecheck(at: Date()) == true || old?.inspection?.assessment?.status == .reviewCandidate)
+            && inspection.assessment?.status != .preserve && inspection.assessment?.status != .protected
+            && ((inspection.identity == .verified && inspection.classification != nil) || uncertainIdentity)
+        let result = CleanupReviewQueueEntry(node: node, inspection: inspection, journal: latest.next, processes: processes, invalidationReasons: reasons, retainingReviewContext: retainContext)
+        if inspection.classification != nil || retainContext, entries[nodeID] != nil || entries.count < budget.maximumEntries {
             if let old = entries[nodeID] { identities.remove(old.filesystemIdentity.stableKey) }
             entries[nodeID] = result; identities.insert(node.identity.stableKey)
         } else if inspection.classification == nil {

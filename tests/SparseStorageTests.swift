@@ -162,6 +162,13 @@ func sparseStorageModelTests(_ scratch: URL, _ test: (Bool, String) throws -> Vo
     let clear = SparseStorageReport(items: [], reviewCount: 0, unknownCount: 0, informationalCount: 0, coverage: coverage, thresholds: t, generation: 1, filesystem: "apfs", completedAt: now, pass: .full)
     try test(clear.summary == "No large sparse-storage discrepancies detected in scanned locations." && clear.headline == nil && clear.coverage.isComplete && clear.coverage.notes.isEmpty,
              "sparse storage: with nothing detected the summary is limited to scanned locations")
+    let absent = SparseStorageReport(items: [], reviewCount: 0, unknownCount: 0, informationalCount: 0, coverage: SparseStorageCoverage(), thresholds: t, generation: nil, filesystem: nil, completedAt: now, pass: .full)
+    try test(absent.summary == "Waiting for disk inventory; nothing checked yet" && !absent.coverage.isComplete,
+             "sparse storage: absent inventory never reports a successful clean result")
+    var measuringCoverage = coverage; measuringCoverage.inventoryIncomplete = true
+    let measuring = SparseStorageReport(items: [], reviewCount: 0, unknownCount: 0, informationalCount: 0, coverage: measuringCoverage, thresholds: t, generation: 1, filesystem: "apfs", completedAt: now, pass: .full)
+    try test(measuring.summary.contains("in scanned locations") && !measuring.coverage.isComplete,
+             "sparse storage: a started incomplete inventory limits the clean result to scanned locations")
     coverage.inventoryIncomplete = true; coverage.protectedFolders = 3
     coverage.limitedLocations = [.init(application: "Docker Desktop", path: "~/Library/Containers/com.docker.docker", state: .protected, installed: true)]
     let limited = SparseStorageReport(items: [item], reviewCount: 1, unknownCount: 0, informationalCount: 0, coverage: coverage, thresholds: t, generation: 1, filesystem: "apfs", completedAt: now, pass: .full)

@@ -85,6 +85,7 @@ func cleanupTrashSafetyTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
              "trash safety: adapter error after a retained move reports uncertainty and requires reconciliation, never a false no-move claim")
 
     try cleanupTrashExecutionBoundaryTests(root.appendingPathComponent("execution-boundaries"), test)
+    try cleanupVenvSymlinkSafetyTests(root.appendingPathComponent("venv-symlinks"), test)
 
     let directAlias = URL(fileURLWithPath: "/tmp/storage-monitor-direct-alias-" + UUID().uuidString + ".txt")
     try Data("retained direct /tmp alias fixture".utf8).write(to: directAlias)
@@ -703,4 +704,109 @@ private func cleanupTrashExecutionBoundaryTests(_ root: URL, _ test: (Bool, Stri
     })
     let failedAtBarrier: Bool = { if case .failed = boundaryResult { return true }; return false }()
     try test(failedAtBarrier && armed.count == 1 && fm.fileExists(atPath: direct.path), "trash execution boundary: validated adapter is reached once; nil result fails without native fallback")
+}
+
+/// Real no-follow traversal and retained renames of disposable fixtures only; never invokes native Trash.
+func cleanupVenvSymlinkSafetyTests(_ root: URL, _ test: (Bool, String) throws -> Void) throws {
+    let fm = FileManager.default
+    try fm.createDirectory(at: root, withIntermediateDirectories: true)
+    @Sendable func observation(_ executable: String? = nil) -> ProcessObservation {
+        ProcessObservation(executables: executable.map { [$0] } ?? [], workingDirectories: [], inspected: 100, unreadable: 0)
+    }
+    let environment = ArtifactEnvironment(home: root.path, pathDirectories: [], processes: { observation() }, git: GitInspector.available())
+    func make(_ name: String, target: String = "/usr/bin/python3", marker: Bool = true) throws -> URL {
+        let folder = root.appendingPathComponent(name).appendingPathComponent(".venv")
+        try fm.createDirectory(at: folder.appendingPathComponent("bin"), withIntermediateDirectories: true)
+        if marker { try Data("home = /usr/bin\nversion = 3.9\n".utf8).write(to: folder.appendingPathComponent("pyvenv.cfg")) }
+        try Data("fixture-package==1.0\n".utf8).write(to: folder.deletingLastPathComponent().appendingPathComponent("requirements.txt"))
+        try fm.createSymbolicLink(atPath: folder.appendingPathComponent("bin/python3").path, withDestinationPath: target)
+        return folder
+    }
+    func ready(_ folder: URL, env: ArtifactEnvironment? = nil) throws -> CleanupTrashConfirmationToken {
+        switch CleanupTrashPolicy.prepare(node: try trashSafetyNode(folder.path), environment: env ?? environment) {
+        case .ready(let token): return token
+        case .blocked(let reason): throw NSError(domain: "VenvSafetyFixture", code: 1, userInfo: [NSLocalizedDescriptionKey: reason])
+        }
+    }
+    func blocked(_ folder: URL, env: ArtifactEnvironment? = nil) throws -> Bool {
+        if case .blocked = CleanupTrashPolicy.prepare(node: try trashSafetyNode(folder.path), environment: env ?? environment) { return true }
+        return false
+    }
+    func refusedWithoutAdapter(_ token: CleanupTrashConfirmationToken, env: ArtifactEnvironment? = nil, accepted: Bool = true) -> Bool {
+        var calls = 0
+        let outcome = CleanupTrashPolicy.perform(confirmation: token, overrideAccepted: accepted, environment: env ?? environment, trash: { _ in calls += 1; return nil })
+        if case .refused = outcome { return calls == 0 }
+        return false
+    }
+    func metadata(_ path: String) throws -> String {
+        var st = stat(); guard lstat(path, &st) == 0 else { throw CocoaError(.fileReadNoSuchFile) }
+        return "\(st.st_dev):\(st.st_ino):\(st.st_size):\(st.st_mode):\(st.st_flags):\(st.st_mtimespec.tv_sec):\(st.st_mtimespec.tv_nsec):\(st.st_ctimespec.tv_sec):\(st.st_ctimespec.tv_nsec)"
+    }
+    let systemBefore = try metadata("/usr/bin/python3"), bytesBefore = try Data(contentsOf: URL(fileURLWithPath: "/usr/bin/python3"))
+    let conventional = try make("conventional"), candidate = try ready(conventional)
+    try test(candidate.inspection.classification?.kind == .pythonVirtualEnvironment && candidate.inspection.assessment?.status == .reviewCandidate,
+             "venv symlinks: conventional environment remains a classified review candidate and reaches confirmation")
+    let warned: Bool = { if case .allowed(true, let warnings) = candidate.decision { return warnings.contains(CleanupTrashPolicy.programUseWarning) }; return false }()
+    try test(warned && refusedWithoutAdapter(candidate, accepted: false), "venv symlinks: shared interpreter exception still requires explicit program-use acknowledgment")
+    let moveToken = try ready(conventional), destination = root.appendingPathComponent("retained-environment")
+    let identity = moveToken.node.identity
+    var movedURL: URL?
+    let moved = CleanupTrashPolicy.perform(confirmation: moveToken, overrideAccepted: true, environment: environment, trash: { url in
+        movedURL = url; try fm.moveItem(at: url, to: destination); return destination
+    })
+    try test(moved == .moved(trashPath: destination.path) && movedURL?.path == conventional.path && !fm.fileExists(atPath: conventional.path)
+             && (try trashSafetyNode(destination.path).identity) == identity
+             && (try fm.destinationOfSymbolicLink(atPath: destination.appendingPathComponent("bin/python3").path)) == "/usr/bin/python3",
+             "venv symlinks: retained adapter moves only the selected directory and the link object, preserving its target text")
+    try test(try metadata("/usr/bin/python3") == systemBefore && Data(contentsOf: URL(fileURLWithPath: "/usr/bin/python3")) == bytesBefore,
+             "venv symlinks: shared system interpreter bytes and identity/metadata remain unchanged after the retained move")
+    let relative = try make("relative")
+    try fm.createSymbolicLink(atPath: relative.appendingPathComponent("bin/python").path, withDestinationPath: "python3")
+    try test((try ready(relative)).inspection.classification?.kind == .pythonVirtualEnvironment, "venv symlinks: relative interpreter alias within the same bin resolves without traversing an external subtree")
+    var unrelated = environment; unrelated.processes = { observation("/usr/bin/python3") }
+    try test((try ready(relative, env: unrelated)).node.path == relative.path, "venv symlinks: unrelated use of the shared base interpreter does not establish use of this environment")
+    var local = environment; local.processes = { observation(relative.appendingPathComponent("bin/python").path) }
+    try test(try blocked(relative, env: local), "venv symlinks: a process's candidate-local interpreter path remains blocked")
+    let alias = root.appendingPathComponent("external-python-alias")
+    try fm.createSymbolicLink(at: alias, withDestinationURL: relative.appendingPathComponent("bin/python"))
+    var aliased = environment; aliased.processes = { observation(alias.path) }
+    try test(try blocked(relative, env: aliased), "venv symlinks: an external process alias traversing this environment remains blocked")
+    var onPath = environment; onPath.pathDirectories = [relative.appendingPathComponent("bin").path]
+    try test(try blocked(relative, env: onPath), "venv symlinks: a candidate bin directory on PATH remains blocked")
+    let commands = root.appendingPathComponent("commands"); try fm.createDirectory(at: commands, withIntermediateDirectories: true)
+    try fm.createSymbolicLink(at: commands.appendingPathComponent("python"), withDestinationURL: alias)
+    var linkedPath = environment; linkedPath.pathDirectories = [commands.path]
+    try test(try blocked(relative, env: linkedPath), "venv symlinks: nested PATH command aliases depending on the candidate remain blocked")
+    try test(try blocked(make("broken", target: root.appendingPathComponent("missing-python").path)), "venv symlinks: broken interpreter target remains blocked")
+    try test(try blocked(make("protected-directory", target: "/System")), "venv symlinks: protected directory target receives no interpreter exemption")
+    let loop = try make("loop", target: "python")
+    try fm.createSymbolicLink(atPath: loop.appendingPathComponent("bin/python").path, withDestinationPath: "python3")
+    try test(try blocked(loop), "venv symlinks: cyclic interpreter aliases remain blocked")
+    try test(try blocked(make("forged-name", marker: false)), "venv symlinks: a .venv name without a real configuration cannot exempt protected symlinks")
+    let ordinaryLink = try make("ordinary-link")
+    try fm.createSymbolicLink(atPath: ordinaryLink.appendingPathComponent("bin/not-python").path, withDestinationPath: "/usr/bin/python3")
+    try test(try blocked(ordinaryLink), "venv symlinks: non-interpreter descendants keep the original protected-target boundary")
+    try test(try blocked(relative.appendingPathComponent("bin/python3")), "venv symlinks: directly selecting a system-target link remains blocked")
+    let retargeted = try make("retargeted"), retargetToken = try ready(retargeted)
+    try fm.removeItem(at: retargeted.appendingPathComponent("bin/python3"))
+    try fm.createSymbolicLink(atPath: retargeted.appendingPathComponent("bin/python3").path, withDestinationPath: "/System")
+    try test(refusedWithoutAdapter(retargetToken), "venv symlinks: a protected retarget after confirmation is refused before the adapter")
+    let replaced = try make("replaced"), replacedToken = try ready(replaced)
+    try fm.moveItem(at: replaced, to: replaced.deletingLastPathComponent().appendingPathComponent("original-held"))
+    try fm.createDirectory(at: replaced, withIntermediateDirectories: false)
+    try test(refusedWithoutAdapter(replacedToken), "venv symlinks: candidate identity replacement after confirmation is refused before the adapter")
+    let newChild = try make("new-child"), childToken = try ready(newChild)
+    try Data("new credential".utf8).write(to: newChild.appendingPathComponent(".env"))
+    try test(refusedWithoutAdapter(childToken), "venv symlinks: protected descendant inserted after confirmation is refused before the adapter")
+    let external = root.appendingPathComponent("outside");try fm.createDirectory(at: external, withIntermediateDirectories: true)
+    let sentinel = external.appendingPathComponent("sentinel.txt");try Data("keep external contents".utf8).write(to: sentinel)
+    let traversal = try make("traversal")
+    try fm.createSymbolicLink(at: traversal.appendingPathComponent("outside"), withDestinationURL: external)
+    var externalUse = environment;externalUse.processes = { ProcessObservation(executables: [], workingDirectories: [external.path], inspected: 100, unreadable: 0) }
+    try test(try blocked(traversal, env: externalUse), "venv symlinks: ordinary external directory links retain active-target refusal")
+    let traversalToken = try ready(traversal), kept = root.appendingPathComponent("retained-with-external-link")
+    let outcome = CleanupTrashPolicy.perform(confirmation: traversalToken, overrideAccepted: true, environment: environment, trash: { url in try fm.moveItem(at: url, to: kept);return kept })
+    try test(outcome == .moved(trashPath: kept.path) && (try String(contentsOf: sentinel, encoding: .utf8)) == "keep external contents"
+             && (try fm.destinationOfSymbolicLink(atPath: kept.appendingPathComponent("outside").path)) == external.path,
+             "venv symlinks: moving a containing directory never enumerates or modifies an external linked directory")
 }

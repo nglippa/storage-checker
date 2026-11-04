@@ -172,11 +172,16 @@ func cleanupReviewQueueTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
     let expiredAt = observedAt.addingTimeInterval(20.001)
     try test(cache.status(at: observedAt.addingTimeInterval(20)) == .reviewCandidate && cache.status(at: expiredAt) == .insufficientEvidence,
              "queue candidate eligibility expires with process evidence at the explicit TTL boundary")
-    try test(!snapshot.filtered(now: expiredAt).contains { $0.id == cache.id }, "default queue filter excludes process-expired candidates without journal events")
+    try test(snapshot.filtered(now: expiredAt).contains { $0.id == cache.id } && cache.needsRecheck(at: expiredAt), "default queue filter retains expired review context marked Needs recheck without extending eligibility")
+    try test(cache.status(at: expiredAt) == .insufficientEvidence && CleanupReviewPlan(entries: [cache], now: expiredAt).count == 0,
+             "retained Needs recheck row cannot enter a cleanup plan or regain candidate eligibility")
+    try test(!snapshot.filtered(filter: .init(status: .preserve), now: expiredAt).contains { $0.id == cache.id },
+             "retaining expired review context does not override an explicit assessment filter")
+    try test(!cache.needsRecheck(at: observedAt), "fresh review evidence never displays the stale review label")
     let expiredSnapshot = snapshot.reevaluatingFreshness(at: Date().addingTimeInterval(60))
     let expiredActorSnapshot = await queue.snapshot(now: Date().addingTimeInterval(60))
-    try test(expiredSnapshot.progress.reviewCandidates == 0 && expiredSnapshot.filtered(now: Date().addingTimeInterval(60)).isEmpty,
-             "idle freshness publication expires candidate count and filtering without evidence collection")
+    try test(expiredSnapshot.progress.reviewCandidates == 0 && expiredSnapshot.filtered(now: Date().addingTimeInterval(60)).contains { $0.id == cache.id },
+             "idle freshness publication expires eligible count while retaining review context without evidence collection")
     try test(expiredActorSnapshot.progress.reviewCandidates == 0, "actor snapshots derive current eligibility without discovery or process polling")
     let noProcess = CleanupReviewQueueEntry(node: cache.node, inspection: cache.inspection, journal: cache.freshness.journal, processes: nil)
     try test(noProcess.status(at: observedAt) == .insufficientEvidence && CleanupReviewPlan(entries: [noProcess], now: observedAt).count == 0,
@@ -195,6 +200,13 @@ func cleanupReviewQueueTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
     let expiredReview = estimatedEntry.inspectionForReview(at: expiredAt)!
     try test(expiredReview.assessment?.status == .insufficientEvidence && expiredReview.storage.recovery == .unknown("Evidence freshness needs revalidation."),
              "opening expired retained evidence cannot show a fresher assessment or estimate in the shared Inspector")
+    let protectedInspection = ArtifactInspection(nodeID: cache.id, path: cache.node.path, collectedAt: observedAt, elapsed: 0,
+        identity: .verified, classification: cache.inspection!.classification,
+        assessment: CleanupAssessment(status: .protected, summary: "Protected fixture", reasons: [], risks: []), storage: cache.inspection!.storage, incomplete: [])
+    let protectedEntry = CleanupReviewQueueEntry(node: cache.node, inspection: protectedInspection, journal: cache.freshness.journal,
+        processes: cache.freshness.processObservation, retainingReviewContext: true)
+    try test(protectedEntry.status(at: observedAt) == .protected && !protectedEntry.needsRecheck(at: observedAt)
+             && !protectedEntry.needsRecheck(at: expiredAt), "a fresh Protected result clears prior candidate context even after later evidence expiry")
     let invalidatedEstimate = CleanupReviewQueueEntry(node: cache.node, inspection: estimatedInspection,
         journal: cache.freshness.journal, processes: cache.freshness.processObservation, invalidationReasons: ["Journal changed."])
     try test(invalidatedEstimate.inspection?.assessment?.status == .insufficientEvidence && invalidatedEstimate.inspection?.storage.recovery == .unknown("Evidence freshness needs revalidation."),
@@ -204,11 +216,16 @@ func cleanupReviewQueueTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
     try test(invalidated.entries.allSatisfy { !$0.freshness.invalidationReasons.isEmpty && $0.status == .insufficientEvidence }, "journal resynchronization invalidates every retained recommendation")
     let whileResynchronizing = try await queue.refresh(nodeID: cacheID, reader: reader, environment: fixture.environment)
     try test(whileResynchronizing?.status == .insufficientEvidence, "selected row remains invalid when journal cannot verify freshness")
+    let uncertainSnapshot = await queue.snapshot()
+    try test(whileResynchronizing?.needsRecheck(at: Date()) == true && uncertainSnapshot.filtered().contains { $0.id == cacheID }
+             && CleanupReviewPlan(entries: [whileResynchronizing!]).count == 0,
+             "a failed journal recheck preserves prior review context in the default filter but cannot authorize a plan")
     try test(whileResynchronizing?.inspection?.assessment?.status == .insufficientEvidence && whileResynchronizing?.inspection?.incomplete.isEmpty == false,
              "shared Inspector receives the queue freshness uncertainty and conservative assessment")
     _ = await queue.applyChanges(try await reader.changes(since: nil))
     let refreshed = try await queue.refresh(nodeID: cacheID, reader: reader, environment: fixture.environment)
     try test(refreshed?.status == .reviewCandidate && refreshed!.freshness.isFresh(now: Date()), "opening candidate revalidates classification and current process evidence")
+    try test(refreshed?.needsRecheck(at: Date()) == false, "successful recheck replaces retained uncertainty with fresh candidate evidence")
     let processReads = QueueProcessReadCounter()
     var countedEnvironment = fixture.environment
     countedEnvironment.processes = { processReads.observe() }
@@ -228,6 +245,9 @@ func cleanupReviewQueueTests(_ folder: URL, _ test: (Bool, String) throws -> Voi
     let dependency = snapshot.entries.first { $0.inspection?.classification?.kind == .nodeDependencies }!
     let active = try await queue.refresh(nodeID: dependency.id, reader: reader, environment: running)
     try test(active?.status == .preserve, "opening candidate observes process changes that the journal cannot track")
+    let afterPreserve = await queue.snapshot()
+    try test(active?.needsRecheck(at: Date()) == false && !afterPreserve.filtered().contains { $0.id == dependency.id },
+             "fresh Preserve assessment clears retained candidate visibility without losing the safety result")
     let small = CleanupReviewQueue(budget: .init(rowsPerPage: 8, maximumScannedRows: 8, maximumEntries: 2, inspectionsPerStep: 2))
     var partial = try await small.discoverNext(reader: reader, environment: fixture.environment)
     for _ in 0..<6 where partial.progress.stopReason == nil { partial = try await small.discoverNext(reader: reader, environment: fixture.environment) }

@@ -180,7 +180,7 @@ import AppKit
         cancelTrashConfirmation()
         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
-        let report: @Sendable (Int) -> Void = { checked in
+        let report: @Sendable (Int) -> Void = { [weak self] checked in
             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
         }
         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
@@ -331,10 +331,10 @@ struct CleanupInspectorSection: View {
             if shown.offersPreview { previewArea }
             if showsTrash { trashArea }
             HStack(spacing: 6) {
-                Text(shown.collected).font(.caption2).foregroundStyle(.tertiary)
+                Text(shown.collected).font(.caption).foregroundStyle(.tertiary)
                 Spacer()
-                Button { cleanup.refresh(node) } label: { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(.borderless).font(.caption).help("Collect the evidence again").accessibilityLabel("Refresh evidence")
+                Button("Recheck Candidate", systemImage: "arrow.clockwise") { cleanup.refresh(node) }
+                    .buttonStyle(.borderless).font(.caption).help("Collect the evidence again").accessibilityLabel("Recheck Candidate")
             }
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("inventory.cleanup")
@@ -380,8 +380,8 @@ struct CleanupInspectorSection: View {
                 }
                 GridRow { Text("Recoverable").font(.caption).foregroundStyle(.secondary); Text(shown.recovery).font(.caption.monospacedDigit()) }
             }
-            if let basis = shown.recoveryBasis { Text(basis).font(.caption2).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true) }
-            Button(showLimitations ? "Hide accounting notes" : "About these sizes") { showLimitations.toggle() }.buttonStyle(.link).font(.caption2)
+            if let basis = shown.recoveryBasis { Text(basis).font(.caption).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true) }
+            Button(showLimitations ? "Hide accounting notes" : "About these sizes") { showLimitations.toggle() }.buttonStyle(.link).font(.caption)
             if showLimitations { ForEach(ArtifactStorage.limitations, id: \.self) { bullet($0) } }
         }
     }

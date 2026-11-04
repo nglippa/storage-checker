@@ -45,7 +45,7 @@ struct HistoryView: View {
         .toolbar {
             ToolbarItem(placement:.navigation) { Label("Storage Monitor",systemImage:"internaldrive").font(.headline) }
             ToolbarItemGroup(placement:.primaryAction) {
-                Button { store.refreshAll() } label: { Image(systemName:"arrow.clockwise") }.help("Refresh live capacity and recorded history (⌘R). Does not record a reading, run diagnostics, or send alerts.").accessibilityLabel("Refresh").accessibilityIdentifier("history.refresh")
+                Button { store.refreshAll() } label: { Label("Reload History & Capacity", systemImage:"arrow.clockwise").labelStyle(.titleAndIcon) }.help("Refresh live capacity and recorded history (⌘R). Does not record a reading, run diagnostics, or send alerts.").accessibilityLabel("Reload history and check disk capacity").accessibilityIdentifier("history.refresh")
                 Button { store.showInspector.toggle() } label: { Image(systemName:"sidebar.right") }.help("Show Event Details (⌥⌘I)").accessibilityLabel("Show Event Details").accessibilityIdentifier("history.inspector")
             }
         }
@@ -64,7 +64,7 @@ struct HistoryView: View {
     /// Current storage, the latest notable change and the chart.
     @ViewBuilder private func summary(compact: Bool) -> some View {
         VStack(spacing:0) {
-            OverviewView(snapshot:store.snapshot,live:store.live,historyMissing:store.historyMissing,historyLoading:store.isLoading && store.snapshot == nil,compact:compact)
+            OverviewView(snapshot:store.snapshot,live:store.live,historyMissing:store.historyMissing,historyLoading:store.isLoading && store.snapshot == nil,compact:compact,monitoringHealth:store.monitoringHealth)
             Divider()
             if let error = store.error {
                 HStack(alignment:.top) {

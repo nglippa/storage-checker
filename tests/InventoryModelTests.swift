@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 /// Supplies one already indexed fixture node to the queue without opening or changing a catalog.
 private struct ReviewQueuePresentationReader: CleanupReviewInventoryReading {
@@ -110,6 +111,38 @@ private final class TrashControllerGate: @unchecked Sendable {
         let model = InventoryBrowserModel(database: database, readiness: readiness)
         await model.load()
         test((model.status?.totalNodes ?? 0) >= 13 && model.root != nil, "the browser loads the indexed fixture (\(model.status?.totalNodes ?? 0) nodes)")
+
+        // First launch is decided by the actual default browser model, before renderer selection.
+        let missingDatabase = scratch.appendingPathComponent("first-launch/history.sqlite3").path
+        let firstLaunch = InventoryBrowserModel(database: missingDatabase, readiness: readiness)
+        await firstLaunch.load()
+        test(firstLaunch.mode == .explorer && firstLaunch.lifecycle(monitoringConfigured: false).state == .monitoringOff
+             && !firstLaunch.lifecycle(monitoringConfigured: false).showsBrowser && !firstLaunch.loading,
+             "default Explorer on a missing database reaches usable monitoring setup instead of indefinite loading")
+        test(!fm.fileExists(atPath: missingDatabase) && firstLaunch.lifecycle(monitoringConfigured: false).action == .openSettings,
+             "first-launch presentation offers Settings and creates no database or scan")
+        firstLaunch.initializationRequested = true
+        test(firstLaunch.lifecycle(monitoringConfigured: true).state == .indexing, "a deliberate first-index request is shown as waiting for results")
+        // Recover this same model by copying only the isolated catalog to its previously missing path.
+        try fm.createDirectory(at: URL(fileURLWithPath: missingDatabase).deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.copyItem(atPath: database, toPath: missingDatabase)
+        await firstLaunch.load()
+        test(firstLaunch.root != nil && firstLaunch.lifecycle(monitoringConfigured: true).showsBrowser && !firstLaunch.initializationRequested,
+             "first-launch browser recovers when its fixture catalog is created")
+        try fm.removeItem(atPath: missingDatabase)
+        await firstLaunch.load()
+        test(firstLaunch.root == nil && firstLaunch.parentID == nil && firstLaunch.accounting == nil && firstLaunch.selected == nil
+             && !firstLaunch.lifecycle(monitoringConfigured: false).showsBrowser,
+             "a disappeared fixture catalog clears stale browser selection and accounting and returns to setup")
+
+        // Unshown host only. No activation, ordering, event loop, keyboard input or desktop actions.
+        // Repeated configuration models immediate, 1 s, 3 s and later delivery without a timing heuristic.
+        let settingsHost = NSWindow(contentRect: .init(x: 0, y: 0, width: 540, height: 600), styleMask: [.titled], backing: .buffered, defer: true)
+        for delivery in ["immediate", "one second", "three seconds", "later", "repeated", "restored", "activation"] {
+            SettingsWindowSetup.configure(settingsHost)
+            test(!settingsHost.isRestorable && !settingsHost.isVisible && !settingsHost.isKeyWindow,
+                 "unshown Settings host remains reusable without restoration or focus changes (\(delivery) configuration)")
+        }
 
         // Refresh requested while a load is running: it must run once that load ends, however many are asked for.
         model.search = "d"  // a search adds a short delay to each load, so the load is reliably in flight
@@ -459,9 +492,12 @@ private final class TrashControllerGate: @unchecked Sendable {
             test(published && presentation.rows.count == 1 && presentation.plan.count == 1 && presentation.snapshot?.progress.reviewCandidates == 1,
                  "review queue: controller publishes fresh candidates consistently in table count and selected plan")
             presentation.advanceFreshness(to: processTime.addingTimeInterval(21))
-            test(presentation.rows.isEmpty && presentation.snapshot?.progress.reviewCandidates == 0 && presentation.plan.count == 0
+            test(presentation.rows.count == 1 && presentation.rows.first?.id == deps.id
+                 && presentation.rows.first?.needsRecheck(at: presentation.freshnessNow) == true
+                 && presentation.rows.first?.status(at: presentation.freshnessNow) == .insufficientEvidence
+                 && presentation.snapshot?.progress.reviewCandidates == 0 && presentation.plan.count == 0
                  && presentation.plan.excludedNonCandidates == [deps.path] && presentation.selection == [deps.id],
-                 "review queue: idle controller expiry removes eligibility and plan accounting while preserving explicit selection")
+                 "review queue: idle expiry retains Needs recheck row and selection while removing eligibility and plan accounting")
             cleanup.beginQueueReview(plain)
             cleanup.acceptQueueReview(queueInspection, node: deps)
             test(cleanup.inspection == nil && cleanup.inspecting == plain.id,

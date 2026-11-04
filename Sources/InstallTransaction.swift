@@ -25,6 +25,30 @@ struct InstallJournal: Codable {
 }
 
 extension MonitorInstallLayout {
+    func validateQABoundary(journal: InstallJournal? = nil) throws {
+        guard let qa else { return }
+        guard home.path == qa.home.path, data.path == qa.data.path, app.path == qa.app.path else { try LifecycleQAScope.refuse("layout differs from admitted scope") }
+        try qa.validateStorage()
+        for role in ["Installer", "V1", "V2"] { try qa.validateBundle(qa.bundle(role), roles: [role]) }
+        for bundle in [app, previousApp] where fm.fileExists(atPath: bundle.path) { try qa.validateBundle(bundle) }
+        let expected = agents.map(\.plist)
+        for agent in agents where fm.fileExists(atPath: agent.url.path) { try qa.validateAgent(agent.url.path, expected: expected) }
+        for duplicate in duplicateAgents { try qa.validateAgent(duplicate.path, expected: expected) }
+        if let journal { for (name, original) in journal.savedAgents { try qa.validateSavedAgent(name: name, original: original, expected: expected) } }
+    }
+    func guardedControl(_ control: @escaping LaunchControl) -> LaunchControl {
+        guard let qa else { return control }
+        return { arguments, acceptable in
+            try self.validateQABoundary()
+            let domain = "gui/\(getuid())", targets = qa.labels.map { domain + "/" + $0 }
+            let service = arguments.count == 2 && ["enable", "bootout", "print", "kickstart"].contains(arguments[0]) && targets.contains(arguments[1])
+            let bootstrap = arguments.count == 3 && arguments[0] == "bootstrap" && arguments[1] == domain && qa.labels.map({ qa.agentURL($0).path }).contains(arguments[2])
+            guard service || bootstrap else { try LifecycleQAScope.refuse("launchctl escaped owned labels/plists") }
+            if qa.expired && !["bootout", "print"].contains(arguments[0]) { try LifecycleQAScope.refuse("expired lease cannot register or start services") }
+            if bootstrap { try qa.validateAgent(arguments[2], expected: self.agents.map(\.plist)) }
+            try control(arguments, acceptable)
+        }
+    }
     var transaction: URL { data.appendingPathComponent("install-transaction") }
     var journal: URL { transaction.appendingPathComponent("journal.json") }
     var snapshot: URL { transaction.appendingPathComponent("history.snapshot.sqlite3") }
@@ -105,6 +129,7 @@ struct InstallTransaction {
 
     /// Records the prior state durably before anything changes.
     static func begin(_ layout: MonitorInstallLayout, control: @escaping LaunchControl) throws -> InstallTransaction {
+        try layout.validateQABoundary()
         try privateDirectory(layout.transaction)
         var saved = [String: String]()
         for (index, url) in (layout.agents.map(\.url) + layout.duplicateAgents).enumerated() where fm.fileExists(atPath: url.path) {
@@ -118,6 +143,7 @@ struct InstallTransaction {
     }
 
     mutating func advance(_ phase: InstallJournal.Phase) throws {
+        try layout.validateQABoundary(journal: journal)
         journal.phase = phase
         try JSONEncoder().encode(journal).write(to: layout.journal, options: .atomic)
         _ = chmod(layout.journal.path, 0o600)
@@ -127,6 +153,7 @@ struct InstallTransaction {
 
     /// Idempotent: finishing an already partly committed transaction is safe.
     func commit() throws -> [String] {
+        try layout.validateQABoundary(journal: journal)
         var notes = [String]()
         if journal.snapshot, fm.fileExists(atPath: layout.snapshot.path) {
             if let before = journal.schemaBefore, (try? schemaFingerprint(layout.history.path)) == before {
@@ -151,7 +178,8 @@ struct InstallTransaction {
     /// from the first bootstrap on, a started agent may have written to it, and migrations are
     /// additive, so the previous helper runs against the migrated database instead. (`registered`
     /// is committed, never rolled back.)
-    func rollback() throws -> [String] {
+    func rollback(restart: Bool = true) throws -> [String] {
+        try layout.validateQABoundary(journal: journal)
         try stopAgents()
         var notes = [String]()
         if fm.fileExists(atPath: layout.previousApp.path) {
@@ -188,7 +216,7 @@ struct InstallTransaction {
         try fm.removeItem(at: layout.transaction)
         // Only agents the person had enabled before are registered again. Files are already restored,
         // so a launchd refusal here is reported for Repair rather than undoing the restoration.
-        for agent in layout.agents where saved.contains(agent.url.path) {
+        for agent in layout.agents where restart && !((layout.qa?.expired) ?? false) && saved.contains(agent.url.path) {
             do {
                 try control(["enable", "\(domain)/\(agent.label)"], false)
                 try control(["bootstrap", domain, agent.url.path], false)
@@ -199,10 +227,11 @@ struct InstallTransaction {
 }
 
 /// Finishes or reverts an install interrupted by a crash, kill or power loss.
-func recoverInterruptedInstall(layout: MonitorInstallLayout, control: @escaping LaunchControl) throws -> [String] {
+func recoverInterruptedInstall(layout: MonitorInstallLayout, control: @escaping LaunchControl, restart: Bool = true) throws -> [String] {
     guard let transaction = InstallTransaction.load(layout, control: control) else { return [] }
+    try layout.validateQABoundary(journal: transaction.journal)
     if transaction.journal.phase == .registered {
         return ["Completed an interrupted update."] + (try transaction.commit())
     }
-    return ["Reverted an interrupted update."] + (try transaction.rollback())
+    return ["Reverted an interrupted update."] + (try transaction.rollback(restart: restart))
 }
