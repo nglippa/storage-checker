@@ -1,0 +1,539 @@
+{
+  "source_commit": "199ece914c991a20b7ededfc845c8e436aaca227",
+  "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+  "dmg": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg",
+  "bytes": 16923096,
+  "sha256": "624f239edba086c5b759d313b8ecee0796c23d0a2427c0ce7bacfa642e62c4f1",
+  "records": [
+    {
+      "stage": "portable-sidecar",
+      "argv": [
+        "/usr/bin/shasum",
+        "-a",
+        "256",
+        "-c",
+        "Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg.sha256"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist",
+      "started_utc": "2026-11-05T05:48:31Z",
+      "pid": 35270,
+      "exit": 0,
+      "seconds": 0.142,
+      "passed_checks": 0,
+      "last_lines": [
+        "Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg: OK"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "image-integrity",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "verify",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:32Z",
+      "pid": 35271,
+      "exit": 0,
+      "seconds": 4.026,
+      "passed_checks": 0,
+      "last_lines": [
+        "GPT Partition Data (Backup GPT Table: verified   CRC32 $588BE28A",
+        "Checksumming GPT Header (Backup GPT Header : 7)\u2026",
+        "  GPT Header (Backup GPT Header : 7): verified   CRC32 $930B7791",
+        "verified   CRC32 $C361D05D"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "readonly-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "attach",
+        "-plist",
+        "-readonly",
+        "-nobrowse",
+        "-noautoopen",
+        "-mountpoint",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35334,
+      "exit": 0,
+      "seconds": 0.201,
+      "passed_checks": 0,
+      "last_lines": [
+        "\t\t</dict>",
+        "\t</array>",
+        "</dict>",
+        "</plist>"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "viewer-architectures",
+      "argv": [
+        "/usr/bin/lipo",
+        "-archs",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35346,
+      "exit": 0,
+      "seconds": 0.134,
+      "passed_checks": 0,
+      "last_lines": [
+        "x86_64 arm64"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "viewer-minimum-os",
+      "argv": [
+        "/usr/bin/xcrun",
+        "vtool",
+        "-show-build",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35349,
+      "exit": 0,
+      "seconds": 0.046,
+      "passed_checks": 0,
+      "last_lines": [
+        "      sdk 27.0",
+        "   ntools 1",
+        "     tool LD",
+        "  version 27037.1"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "monitor-architectures",
+      "argv": [
+        "/usr/bin/lipo",
+        "-archs",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35350,
+      "exit": 0,
+      "seconds": 0.021,
+      "passed_checks": 0,
+      "last_lines": [
+        "x86_64 arm64"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "monitor-minimum-os",
+      "argv": [
+        "/usr/bin/xcrun",
+        "vtool",
+        "-show-build",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35351,
+      "exit": 0,
+      "seconds": 0.024,
+      "passed_checks": 0,
+      "last_lines": [
+        "      sdk 27.0",
+        "   ntools 1",
+        "     tool LD",
+        "  version 27037.1"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "strict-signature",
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35352,
+      "exit": 0,
+      "seconds": 0.083,
+      "passed_checks": 0,
+      "last_lines": [],
+      "warning_lines": []
+    },
+    {
+      "stage": "signature-details",
+      "argv": [
+        "/usr/bin/codesign",
+        "-dv",
+        "--verbose=4",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35353,
+      "exit": 0,
+      "seconds": 0.012,
+      "passed_checks": 0,
+      "last_lines": [
+        "Sealed Resources version=2 rules=13 files=3",
+        "Internal requirements count=0 size=12",
+        "Total signatures=1",
+        "Chosen signature=1"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "distribution-qa-refusal",
+      "argv": [
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "status",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/must-not-be-created"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35354,
+      "exit": 1,
+      "seconds": 0.094,
+      "passed_checks": 0,
+      "last_lines": [
+        "Storage Monitor: QA runtime refused: lifecycle installation: unavailable in distribution builds"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "packaged-self-test-arm64",
+      "argv": [
+        "/usr/bin/arch",
+        "-arm64",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "self-test"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:48:36Z",
+      "pid": 35355,
+      "exit": 0,
+      "seconds": 84.208,
+      "passed_checks": 238,
+      "last_lines": [
+        "PASS a worker started while another process holds the history write lock waits and completes (exit 0), as after an in-place update",
+        "PASS a failed background worker writes one ERROR line to monitor.log (stderr goes to /dev/null), with the home folder shown as ~",
+        "PASS a quarantined (downloaded) helper is detected so setup can explain Gatekeeper",
+        "238 tests passed"
+      ],
+      "warning_lines": [],
+      "expected_checks": 238,
+      "emulated": false
+    },
+    {
+      "stage": "packaged-self-test-x86_64",
+      "argv": [
+        "/usr/bin/arch",
+        "-x86_64",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "self-test"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:50:00Z",
+      "pid": 36805,
+      "exit": 0,
+      "seconds": 87.387,
+      "passed_checks": 238,
+      "last_lines": [
+        "PASS a worker started while another process holds the history write lock waits and completes (exit 0), as after an in-place update",
+        "PASS a failed background worker writes one ERROR line to monitor.log (stderr goes to /dev/null), with the home folder shown as ~",
+        "PASS a quarantined (downloaded) helper is detected so setup can explain Gatekeeper",
+        "238 tests passed"
+      ],
+      "warning_lines": [],
+      "expected_checks": 238,
+      "emulated": true
+    },
+    {
+      "stage": "gatekeeper",
+      "argv": [
+        "/usr/sbin/spctl",
+        "--assess",
+        "--type",
+        "execute",
+        "--verbose=2",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:51:28Z",
+      "pid": 38235,
+      "exit": 3,
+      "seconds": 0.452,
+      "passed_checks": 0,
+      "last_lines": [
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app: rejected"
+      ],
+      "warning_lines": []
+    },
+    {
+      "stage": "detach-owned-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "detach",
+        "-quiet",
+        "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image"
+      ],
+      "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361",
+      "started_utc": "2026-11-05T05:51:28Z",
+      "pid": 38246,
+      "exit": 0,
+      "seconds": 0.074,
+      "passed_checks": 0,
+      "last_lines": [],
+      "warning_lines": []
+    }
+  ],
+  "GUI_launched": false,
+  "production_installed": false,
+  "runtime_environment_overrides": {
+    "TMPDIR": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/Temporary/",
+    "SQLITE_TMPDIR": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/Temporary"
+  },
+  "runtime_environment_excludes_build_only_overrides": true,
+  "earlier_harness_environment_refusal_preserved": "verification-build-env-attempt.json",
+  "metadata": {
+    "app": {
+      "CFBundleIdentifier": "local.macbook.storage-monitor.viewer",
+      "CFBundleName": "Storage Monitor",
+      "CFBundleDisplayName": "Storage Monitor",
+      "CFBundleExecutable": "StorageMonitorViewer",
+      "CFBundleIconFile": "AppIcon",
+      "CFBundlePackageType": "APPL",
+      "CFBundleInfoDictionaryVersion": "6.0",
+      "CFBundleShortVersionString": "2.2.0",
+      "CFBundleVersion": "10",
+      "LSMinimumSystemVersion": "14.0",
+      "NSHighResolutionCapable": true,
+      "NSPrincipalClass": "NSApplication",
+      "LSApplicationCategoryType": "public.app-category.utilities"
+    },
+    "helper": {
+      "CFBundleIdentifier": "local.macbook.storage-monitor",
+      "CFBundleName": "MacBook Storage Monitor",
+      "CFBundleDisplayName": "MacBook Storage Monitor",
+      "CFBundleExecutable": "StorageMonitor",
+      "CFBundleIconFile": "AppIcon",
+      "CFBundlePackageType": "APPL",
+      "CFBundleInfoDictionaryVersion": "6.0",
+      "CFBundleShortVersionString": "2.2.0",
+      "CFBundleVersion": "10",
+      "LSMinimumSystemVersion": "14.0",
+      "NSHighResolutionCapable": true,
+      "LSUIElement": true
+    }
+  },
+  "gatekeeper": {
+    "exit": 3,
+    "assessment": "rejected",
+    "stderr": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/mounted-image/Storage Monitor.app: rejected\n",
+    "informational_only_existing_policy": true
+  },
+  "checks_completed": true,
+  "owned_mount_detached": true,
+  "copied_artifact": "/Users/nicholaslippa/storage-checker-structured-explorer/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg",
+  "copied_sidecar": "/Users/nicholaslippa/storage-checker-structured-explorer/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg.sha256",
+  "copied_sidecar_check": "exit0",
+  "protected_artifacts_unchanged": 10,
+  "build": {
+    "argv": [
+      "/bin/sh",
+      "scripts/build-dmg.sh"
+    ],
+    "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source",
+    "source_commit": "199ece914c991a20b7ededfc845c8e436aaca227",
+    "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+    "environment_overrides": {
+      "STORAGE_MONITOR_VERSION": "2.2.0",
+      "STORAGE_MONITOR_BUILD": "10",
+      "STORAGE_MONITOR_SIGN_IDENTITY": "-",
+      "STORAGE_MONITOR_ARCHS": "arm64 x86_64",
+      "STORAGE_MONITOR_SDK_PATH": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+      "STORAGE_MONITOR_DMG_NAME": "Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg",
+      "STORAGE_MONITOR_APP_ONLY": "0",
+      "STORAGE_MONITOR_SKIP_VERIFY": "0",
+      "SOURCE_DATE_EPOCH": "1793856905",
+      "TMPDIR": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/Temporary/",
+      "SQLITE_TMPDIR": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/Temporary"
+    },
+    "started_utc": "2026-11-05T05:35:57Z",
+    "events": [
+      {
+        "seconds": 0.017,
+        "text": "==> Icon (Assets/AppIcon.png)"
+      },
+      {
+        "seconds": 35.979,
+        "text": "==> Compile background monitor (arm64, macOS 14.0+)"
+      },
+      {
+        "seconds": 128.593,
+        "text": "==> Compile desktop app (arm64, macOS 14.0+)"
+      },
+      {
+        "seconds": 265.719,
+        "text": "==> Compile background monitor (x86_64, macOS 14.0+)"
+      },
+      {
+        "seconds": 383.472,
+        "text": "==> Compile desktop app (x86_64, macOS 14.0+)"
+      },
+      {
+        "seconds": 517.3,
+        "text": "==> Normalize permissions, attributes and timestamps"
+      },
+      {
+        "seconds": 517.322,
+        "text": "==> Sign (identity: -)"
+      },
+      {
+        "seconds": 517.61,
+        "text": "==> Disk image"
+      },
+      {
+        "seconds": 524.805,
+        "text": "Built /private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg ( 16M)"
+      },
+      {
+        "seconds": 528.774,
+        "text": "PASS image checksum verifies"
+      },
+      {
+        "seconds": 528.941,
+        "text": "PASS image mounts read-only without Finder (-nobrowse, -noautoopen)"
+      },
+      {
+        "seconds": 528.949,
+        "text": "PASS volume contains exactly Storage Monitor.app and Applications (Applications|Storage Monitor.app|)"
+      },
+      {
+        "seconds": 528.953,
+        "text": "PASS Applications shortcut is a symlink to /Applications"
+      },
+      {
+        "seconds": 528.959,
+        "text": "PASS app bundle identifier is local.macbook.storage-monitor.viewer"
+      },
+      {
+        "seconds": 528.97,
+        "text": "PASS app display name is Storage Monitor"
+      },
+      {
+        "seconds": 528.979,
+        "text": "PASS bundled helper is local.macbook.storage-monitor and background-only"
+      },
+      {
+        "seconds": 528.997,
+        "text": "PASS app and helper version 2.2.0 (10)"
+      },
+      {
+        "seconds": 529.005,
+        "text": "PASS both bundles declare minimum macOS 14.0"
+      },
+      {
+        "seconds": 529.007,
+        "text": "PASS StorageMonitorViewer is executable"
+      },
+      {
+        "seconds": 529.023,
+        "text": "PASS StorageMonitorViewer is universal (arm64 x86_64 )"
+      },
+      {
+        "seconds": 529.069,
+        "text": "PASS StorageMonitorViewer deployment target is macOS 14.0 for every architecture"
+      },
+      {
+        "seconds": 529.099,
+        "text": "PASS StorageMonitorViewer links only system libraries"
+      },
+      {
+        "seconds": 529.124,
+        "text": "PASS StorageMonitorViewer searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain"
+      },
+      {
+        "seconds": 529.172,
+        "text": "PASS StorageMonitorViewer embeds no build-machine home or repository path"
+      },
+      {
+        "seconds": 529.174,
+        "text": "PASS StorageMonitor is executable"
+      },
+      {
+        "seconds": 529.189,
+        "text": "PASS StorageMonitor is universal (arm64 x86_64 )"
+      },
+      {
+        "seconds": 529.21,
+        "text": "PASS StorageMonitor deployment target is macOS 14.0 for every architecture"
+      },
+      {
+        "seconds": 529.222,
+        "text": "PASS StorageMonitor links only system libraries"
+      },
+      {
+        "seconds": 529.246,
+        "text": "PASS StorageMonitor searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain"
+      },
+      {
+        "seconds": 529.271,
+        "text": "PASS StorageMonitor embeds no build-machine home or repository path"
+      },
+      {
+        "seconds": 529.275,
+        "text": "PASS both bundles carry the approved icon"
+      },
+      {
+        "seconds": 529.279,
+        "text": "PASS Info.plists are valid"
+      },
+      {
+        "seconds": 529.317,
+        "text": "PASS code signature verifies (deep, strict)"
+      },
+      {
+        "seconds": 529.328,
+        "text": "INFO app signature: Signature=adhoc"
+      },
+      {
+        "seconds": 529.338,
+        "text": "INFO helper signature: Signature=adhoc"
+      },
+      {
+        "seconds": 529.77,
+        "text": "INFO Gatekeeper assessment (informational): /private/tmp/storage-monitor-dmg-verify.OO5F8B/Storage Monitor.app: rejected"
+      },
+      {
+        "seconds": 614.53,
+        "text": "PASS bundled background monitor runs from the image (238 tests passed)"
+      },
+      {
+        "seconds": 614.531,
+        "text": "DMG verification passed: /private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg"
+      }
+    ],
+    "pid": 23540,
+    "exit": 0,
+    "seconds": 614.577,
+    "warning_lines": [],
+    "pass_count": 25,
+    "failure_lines": [],
+    "source_unchanged": true
+  },
+  "qualification": "Corrected packaged238 ARM and238 Rosetta pass once each; historical367 failures preserved; no public-release acceptance",
+  "raw_power_logs_committed": false
+}

@@ -1,5 +1,7 @@
 # Development DMG verification — 2026-11-04
 
+> Historical candidate: its failures below are preserved. The corrected source/candidate is verified separately in [PACKAGE-VERIFICATION-199ece9.md](PACKAGE-VERIFICATION-199ece9.md).
+
 Source: committed `migration-readiness` at `367049910dce2fec3700c9a86f916f09488fe623`; content fingerprint `a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77` (160 named inputs). This is a later documentation-only record; the DMG contains the source commit, not this later report commit.
 
 **Development candidate only: Gatekeeper REJECTED; the additional Rosetta full self-tests FAILED twice. No public-release acceptance is claimed.**

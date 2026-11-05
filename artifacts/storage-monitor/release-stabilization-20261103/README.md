@@ -13,3 +13,5 @@ The source selected for this milestone is the existing `migration-readiness` bra
 ## Committed development package
 
 [Package verification](PACKAGE-VERIFICATION-3670499.md) records the image built from committed source `3670499`. Its structural/native ARM checks passed; the extra Rosetta full suite failed twice and remains unresolved. Gatekeeper rejected the ad-hoc package. This later report commit does not change compiler inputs or designate an accepted release.
+
+Latest corrected CLI self-test/package result: [diagnosis](SELF-TEST-DIAGNOSIS-20261105.md) and [package verification](PACKAGE-VERIFICATION-199ece9.md). Corrected packaged ARM238 and Rosetta238 pass; old367 failures remain historical records.

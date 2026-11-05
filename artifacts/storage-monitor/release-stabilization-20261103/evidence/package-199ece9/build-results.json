@@ -1,0 +1,184 @@
+{
+  "argv": [
+    "/bin/sh",
+    "scripts/build-dmg.sh"
+  ],
+  "cwd": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source",
+  "source_commit": "199ece914c991a20b7ededfc845c8e436aaca227",
+  "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+  "environment_overrides": {
+    "STORAGE_MONITOR_VERSION": "2.2.0",
+    "STORAGE_MONITOR_BUILD": "10",
+    "STORAGE_MONITOR_SIGN_IDENTITY": "-",
+    "STORAGE_MONITOR_ARCHS": "arm64 x86_64",
+    "STORAGE_MONITOR_SDK_PATH": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "STORAGE_MONITOR_DMG_NAME": "Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg",
+    "STORAGE_MONITOR_APP_ONLY": "0",
+    "STORAGE_MONITOR_SKIP_VERIFY": "0",
+    "SOURCE_DATE_EPOCH": "1793856905",
+    "TMPDIR": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/Temporary/",
+    "SQLITE_TMPDIR": "/private/tmp/storage-monitor-selftest-package-20261105-1l61t361/Temporary"
+  },
+  "started_utc": "2026-11-05T05:35:57Z",
+  "events": [
+    {
+      "seconds": 0.017,
+      "text": "==> Icon (Assets/AppIcon.png)"
+    },
+    {
+      "seconds": 35.979,
+      "text": "==> Compile background monitor (arm64, macOS 14.0+)"
+    },
+    {
+      "seconds": 128.593,
+      "text": "==> Compile desktop app (arm64, macOS 14.0+)"
+    },
+    {
+      "seconds": 265.719,
+      "text": "==> Compile background monitor (x86_64, macOS 14.0+)"
+    },
+    {
+      "seconds": 383.472,
+      "text": "==> Compile desktop app (x86_64, macOS 14.0+)"
+    },
+    {
+      "seconds": 517.3,
+      "text": "==> Normalize permissions, attributes and timestamps"
+    },
+    {
+      "seconds": 517.322,
+      "text": "==> Sign (identity: -)"
+    },
+    {
+      "seconds": 517.61,
+      "text": "==> Disk image"
+    },
+    {
+      "seconds": 524.805,
+      "text": "Built /private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg ( 16M)"
+    },
+    {
+      "seconds": 528.774,
+      "text": "PASS image checksum verifies"
+    },
+    {
+      "seconds": 528.941,
+      "text": "PASS image mounts read-only without Finder (-nobrowse, -noautoopen)"
+    },
+    {
+      "seconds": 528.949,
+      "text": "PASS volume contains exactly Storage Monitor.app and Applications (Applications|Storage Monitor.app|)"
+    },
+    {
+      "seconds": 528.953,
+      "text": "PASS Applications shortcut is a symlink to /Applications"
+    },
+    {
+      "seconds": 528.959,
+      "text": "PASS app bundle identifier is local.macbook.storage-monitor.viewer"
+    },
+    {
+      "seconds": 528.97,
+      "text": "PASS app display name is Storage Monitor"
+    },
+    {
+      "seconds": 528.979,
+      "text": "PASS bundled helper is local.macbook.storage-monitor and background-only"
+    },
+    {
+      "seconds": 528.997,
+      "text": "PASS app and helper version 2.2.0 (10)"
+    },
+    {
+      "seconds": 529.005,
+      "text": "PASS both bundles declare minimum macOS 14.0"
+    },
+    {
+      "seconds": 529.007,
+      "text": "PASS StorageMonitorViewer is executable"
+    },
+    {
+      "seconds": 529.023,
+      "text": "PASS StorageMonitorViewer is universal (arm64 x86_64 )"
+    },
+    {
+      "seconds": 529.069,
+      "text": "PASS StorageMonitorViewer deployment target is macOS 14.0 for every architecture"
+    },
+    {
+      "seconds": 529.099,
+      "text": "PASS StorageMonitorViewer links only system libraries"
+    },
+    {
+      "seconds": 529.124,
+      "text": "PASS StorageMonitorViewer searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain"
+    },
+    {
+      "seconds": 529.172,
+      "text": "PASS StorageMonitorViewer embeds no build-machine home or repository path"
+    },
+    {
+      "seconds": 529.174,
+      "text": "PASS StorageMonitor is executable"
+    },
+    {
+      "seconds": 529.189,
+      "text": "PASS StorageMonitor is universal (arm64 x86_64 )"
+    },
+    {
+      "seconds": 529.21,
+      "text": "PASS StorageMonitor deployment target is macOS 14.0 for every architecture"
+    },
+    {
+      "seconds": 529.222,
+      "text": "PASS StorageMonitor links only system libraries"
+    },
+    {
+      "seconds": 529.246,
+      "text": "PASS StorageMonitor searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain"
+    },
+    {
+      "seconds": 529.271,
+      "text": "PASS StorageMonitor embeds no build-machine home or repository path"
+    },
+    {
+      "seconds": 529.275,
+      "text": "PASS both bundles carry the approved icon"
+    },
+    {
+      "seconds": 529.279,
+      "text": "PASS Info.plists are valid"
+    },
+    {
+      "seconds": 529.317,
+      "text": "PASS code signature verifies (deep, strict)"
+    },
+    {
+      "seconds": 529.328,
+      "text": "INFO app signature: Signature=adhoc"
+    },
+    {
+      "seconds": 529.338,
+      "text": "INFO helper signature: Signature=adhoc"
+    },
+    {
+      "seconds": 529.77,
+      "text": "INFO Gatekeeper assessment (informational): /private/tmp/storage-monitor-dmg-verify.OO5F8B/Storage Monitor.app: rejected"
+    },
+    {
+      "seconds": 614.53,
+      "text": "PASS bundled background monitor runs from the image (238 tests passed)"
+    },
+    {
+      "seconds": 614.531,
+      "text": "DMG verification passed: /private/tmp/storage-monitor-selftest-package-20261105-1l61t361/source/build/dist/Storage-Monitor-2.2.0-selftest-fix-199ece9-20261105.dmg"
+    }
+  ],
+  "pid": 23540,
+  "exit": 0,
+  "seconds": 614.577,
+  "warning_lines": [],
+  "pass_count": 25,
+  "failure_lines": [],
+  "source_unchanged": true
+}

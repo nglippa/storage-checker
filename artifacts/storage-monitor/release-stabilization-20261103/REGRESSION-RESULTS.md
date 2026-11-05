@@ -1,5 +1,26 @@
 # Regression results
 
+Current tested source: `199ece914c991a20b7ededfc845c8e436aaca227`, content fingerprint `19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2`, version2.2.0(10). All following corrected-source stages exited0 without compiler warnings.
+
+| Corrected-source stage | Checks passed | Duration |
+|---|---:|---:|
+| Monitor arm64 | 238 | 84.989s |
+| Monitor x86_64/Rosetta | 238 | 86.454s |
+| Inventory integration | 379 | 393.901s |
+| Monitor supplement | 149 | 157.104s |
+| Headless browser/controller | 97 | 166.188s |
+
+Readiness-refusal cleanup and deterministic counterexamples passed on both architectures. The new [development DMG](PACKAGE-VERIFICATION-199ece9.md) passed25stock packaging checks, independent image/signature checks and actual packaged238 self-tests on BOTH architectures. Gatekeeper remainsREJECTED; physical Intel/macOS14 and native package installation are not implied.
+
+[Diagnosis](SELF-TEST-DIAGNOSIS-20261105.md) · [source and results](evidence/selftest-diagnosis-20261105/results.json) · [controller/controls](evidence/selftest-diagnosis-20261105/followup-results.json) · [unchanged GUI compiler inputs](evidence/selftest-diagnosis-20261105/gui-input-proof.json).
+
+The previous viewer1149, chart/input52, Inspector10 and structured-filtering36 receipts retain their original identities and are not relabelled new runs. Their relevant compiler inputs are unchanged; the controller was rerun because its monitor runtime changed. The earlier39actual lifecycle assertions and native waiting/recovery observations retain their source identities.
+
+## Historical detailed stabilization receipts — a8eced snapshot
+
+The remainder records the earlier source state and commands. Its old branch/dirty/source labels and235/148 counts describe that historical snapshot, not the corrected source above.
+
+
 Branch `migration-readiness`, HEAD `6981c2da5ef1c4a1c528332eb0b1be1948721c39`, with uncommitted stabilization changes. Content fingerprint `a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77` binds 160 source, script, fixture and instruction files. Version remains **2.2.0 (10)**. This 160-file manifest covers the named compiler/test/tooling inputs, fixtures and root instructions/notices; historical151-file manifests had a narrower selection and are preserved separately. It is not a universal artifact checksum.
 
 The fresh GUI stages below ran sequentially against the final frozen source and disposable copy. Core stages retained from the preceding fully passing snapshot are separated in their own table. Before/after hashes guarded both the repository and scratch source. Exact argv/cwd/exit/duration/warnings are in [results.json](evidence/local-lifecycle/final-neutral-freshness/results.json), full logs beside it; [completion receipt](evidence/local-lifecycle/final-neutral-freshness/complete.json).
