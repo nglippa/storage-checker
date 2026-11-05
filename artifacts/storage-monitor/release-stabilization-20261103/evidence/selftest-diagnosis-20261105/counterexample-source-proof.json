@@ -1,0 +1,9 @@
+{
+  "public_run_and_capture_sha256": "8306e55a4f0ff657886d7ad78f5b19f11cb3eb4d12dfd26ab3f8664b0bab7807",
+  "FileLock_sha256": "abca87f2f7d32670fb52b7fd01e34af0c0763c41db379151a1b948144c26ac9a",
+  "source": "Exact final committed-proposal implementation bytes; standalone entry point only",
+  "controls": [
+    "producer blocks on nonexistent release flag; strict100ms/cap16 run",
+    "synthetic3.1s unrelated preparation before exact0.5s FileLock wait; do not infer historical values"
+  ]
+}

@@ -31,6 +31,12 @@ func run(_ path: String, _ args: [String], timeout: Double = 10, cap: Int = 2621
     let fd = pipe.fileHandleForReading.fileDescriptor, errorFD = errorPipe.fileHandleForReading.fileDescriptor
     _ = fcntl(fd, F_SETFL, O_NONBLOCK); _ = fcntl(errorFD, F_SETFL, O_NONBLOCK)
     let deadline = Date().addingTimeInterval(timeout)
+    return captureCommandOutput(task, pipe, errorPipe, deadline: deadline, cap: cap)
+}
+
+// Shared capture engine: the caller owns launch/readiness; the absolute deadline never resets.
+private func captureCommandOutput(_ task: Process, _ pipe: Pipe, _ errorPipe: Pipe, deadline: Date, cap: Int) -> CommandResult {
+    let fd = pipe.fileHandleForReading.fileDescriptor, errorFD = errorPipe.fileHandleForReading.fileDescriptor
     var bytes = Data(), errors = Data(), expired = false, truncated = false
     func drainStream(_ descriptor: Int32, _ destination: inout Data) {
         var buffer = [UInt8](repeating: 0, count: 8192)
@@ -494,6 +500,33 @@ func show(_ directory: URL, _ command: String, _ limit: Int) throws {
     }
 }
 
+// A continuous-output fixture must actually be producing before its 100 ms capture test starts.
+// Process startup (including first Rosetta translation) has its own bounded fixture allowance.
+private func selfTestContinuousOutput() throws -> CommandResult {
+    let task = Process(), pipe = Pipe(), errorPipe = Pipe()
+    task.executableURL = URL(fileURLWithPath: "/usr/bin/yes")
+    task.standardInput = FileHandle.nullDevice; task.standardOutput = pipe; task.standardError = errorPipe
+    try task.run()
+    let fd = pipe.fileHandleForReading.fileDescriptor, errorFD = errorPipe.fileHandleForReading.fileDescriptor
+    _ = fcntl(fd, F_SETFL, O_NONBLOCK); _ = fcntl(errorFD, F_SETFL, O_NONBLOCK)
+    var captured = false
+    defer {
+        if !captured { _ = captureCommandOutput(task, pipe, errorPipe, deadline: .distantPast, cap: 16) }
+    }
+    let clock = SuspendingClock(), readyUntil = SuspendingClock.now.advanced(by: .seconds(10))
+    // FIONREAD = _IOR('f', 127, int) in Darwin sys/filio.h; the macro is unavailable to Swift.
+    let readableBytesRequest: UInt = 0x4004667f
+    var ready = false, available: Int32 = 0
+    while task.isRunning && clock.now < readyUntil {
+        if ioctl(fd, readableBytesRequest, &available) == 0 && available > 16 { ready = true; break }
+        Thread.sleep(forTimeInterval: 0.005)
+    }
+    try required(ready, "Continuous-output self-test fixture did not become ready within 10 active seconds (buffered=\(available))")
+    let result = captureCommandOutput(task, pipe, errorPipe, deadline: Date().addingTimeInterval(0.1), cap: 16)
+    captured = true
+    return result
+}
+
 func selfTest() throws {
     var count = 0
     func test(_ value: Bool, _ description: String) throws { try required(value, "FAIL: \(description)"); count += 1; print("PASS \(description)") }
@@ -554,12 +587,14 @@ func selfTest() throws {
     let a = open(lockPath,O_RDWR|O_CREAT,0o600), b = open(lockPath,O_RDWR,0o600)
     defer { close(a); close(b) }; _ = flock(a,LOCK_EX|LOCK_NB)
     try test(flock(b,LOCK_EX|LOCK_NB) != 0, "overlapping check lock")
-    let timed = try run("/bin/sleep", ["2"], timeout: 0.1)
+    let timed = try run("/bin/sleep", ["2"], timeout: 0.1, cap: 16)
     try test(timed.timedOut, "subprocess deadlines enforced")
+    try test(timed.data.isEmpty && timed.errors.isEmpty && !timed.truncated, "a deadline before producer output remains a valid bounded capture")
     let streams = try run("/usr/bin/du", ["-k", "-s", folder.appendingPathComponent("missing").path, folder.path], cap: 16)
     try test(!streams.data.isEmpty && !streams.errors.isEmpty && streams.truncated, "noisy stderr cannot displace directory-size stdout")
-    let continuous = try run("/usr/bin/yes", [], timeout: 0.1, cap: 16)
-    try test(continuous.timedOut && continuous.truncated && continuous.data.count == 16, "continuous output cannot starve deadline or exceed capture cap")
+    let continuous = try selfTestContinuousOutput()
+    try test(continuous.timedOut && continuous.truncated && continuous.data.count == 16, "continuous output cannot starve deadline or exceed capture cap (timedOut=\(continuous.timedOut), truncated=\(continuous.truncated), bytes=\(continuous.data.count))")
+    try test(kill(continuous.pid, 0) == -1 && errno == ESRCH, "continuous-output subprocess is terminated and reaped")
     try test(kill(timed.pid, 0) == -1 && errno == ESRCH, "timed-out subprocess is terminated and reaped, not orphaned")
 
     // Truncated property lists are refused, never parsed as partial documents.

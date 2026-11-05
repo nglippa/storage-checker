@@ -977,11 +977,18 @@ func baselineInitializationSelfTest(_ test: (Bool, String) throws -> Void) throw
     try test(held != nil && initializeBaseline(dbPath: db("clean"), directory: dir("clean"), roots: roots("clean"), within: "/private/tmp", options: fast).outcome == "already_running", "a second initializer exits immediately")
     _ = held
     // 17. A busy baseline never blocks the scheduled check indefinitely.
-    let busyLock = FileLock(dir("clean").appendingPathComponent("attribution.lock").path, wait: 0)
-    let clock = Date()
-    let skipped = collectIntervalEvidence(db: try Database(db("clean")), readingId: 9, readingTime: Date().timeIntervalSince1970, previous: nil, marker: currentEventMarker(sandbox), roots: roots("clean"), within: "/private/tmp", lockPath: dir("clean").appendingPathComponent("attribution.lock").path, lockWait: 0.5)
-    try test(folders(skipped)["status"] as? String == "busy" && Date().timeIntervalSince(clock) < 3, "scheduled check skips folder evidence after a bounded wait while the baseline is busy")
-    _ = busyLock
+    // Prepare unrelated SQLite/FSEvents work before timing the bounded collector call.
+    let busyDatabase = try Database(db("clean")), busyMarker = currentEventMarker(sandbox), busyRoots = roots("clean")
+    let busyPath = dir("clean").appendingPathComponent("attribution.lock").path
+    let busyLock = FileLock(busyPath, wait: 0)
+    try test(busyLock != nil, "baseline-contention fixture holds its lock")
+    let busyClock = SuspendingClock(), busyStart = SuspendingClock.now
+    let skipped = withExtendedLifetime(busyLock) {
+        collectIntervalEvidence(db: busyDatabase, readingId: 9, readingTime: Date().timeIntervalSince1970, previous: nil, marker: busyMarker, roots: busyRoots, within: "/private/tmp", lockPath: busyPath, lockWait: 0.5)
+    }
+    let busyElapsed = busyStart.duration(to: busyClock.now)
+    let busyStatus = folders(skipped)["status"] as? String ?? "unknown"
+    try test(busyStatus == "busy" && busyElapsed < .seconds(3), "scheduled check skips folder evidence after a bounded wait while the baseline is busy (status=\(busyStatus), active elapsed=\(busyElapsed))")
     // 18. Initialization never notifies.
     try test(notificationRequests == notificationsBefore, "no notifications during initialization")
 
