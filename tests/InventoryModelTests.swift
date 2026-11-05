@@ -135,6 +135,42 @@ private final class TrashControllerGate: @unchecked Sendable {
              && !firstLaunch.lifecycle(monitoringConfigured: false).showsBrowser,
              "a disappeared fixture catalog clears stale browser selection and accounting and returns to setup")
 
+        // Pause intent survives app updates, including before a catalog exists; Reload must not resume it.
+        let missingPause = URL(fileURLWithPath: missingDatabase).deletingLastPathComponent().appendingPathComponent("inventory.cancel")
+        _ = try InventoryRequests.enqueue(database: missingDatabase, action: "pause")
+        await firstLaunch.load()
+        let pausedFirstUse = firstLaunch.lifecycle(monitoringConfigured: true, monitoringEnabled: true)
+        test(firstLaunch.indexingPaused && firstLaunch.root == nil && pausedFirstUse.state == .paused && pausedFirstUse.action == .resumeIndexing && !pausedFirstUse.showsProgress,
+             "a missing catalog still detects its persistent pause and offers Resume before the first root")
+        firstLaunch.reload(); await firstLaunch.load()
+        test(firstLaunch.indexingPaused && fm.fileExists(atPath: missingPause.path) && !fm.fileExists(atPath: missingDatabase),
+             "manual catalog reload preserves pause intent and does not start indexing or create a database")
+        test(firstLaunch.lastManualReloadAt == nil && firstLaunch.reloadNotice == nil,
+             "Reload before a database exists never announces saved inventory success")
+        firstLaunch.request("resume")
+        let missingResumed = await waitUntil { !firstLaunch.indexingPaused && !fm.fileExists(atPath: missingPause.path) }
+        await firstLaunch.load()
+        test(missingResumed && firstLaunch.lifecycle(monitoringConfigured: true).state == .notCreated && !fm.fileExists(atPath: missingDatabase),
+             "explicit Resume clears only the fixture pause and queues work without pretending results already exist")
+
+        model.request("pause")
+        let fixturePaused = await waitUntil { model.indexingPaused }
+        await model.load()
+        test(fixturePaused && model.lifecycle(monitoringConfigured: true, monitoringEnabled: true).state == .paused && model.root != nil,
+             "a paused existing catalog keeps its browsable root and advertises the saved pause")
+        test(model.message == nil && model.pausedSince != nil && model.lifecycle(monitoringConfigured: true, monitoringEnabled: true).detail.contains("paused since"),
+             "pausing adds no duplicate note; the paused state carries its date and explanation")
+        model.request("resume")
+        let fixtureResumed = await waitUntil { !model.indexingPaused }
+        await model.load()
+        test(fixtureResumed && model.lifecycle(monitoringConfigured: true).state == .available,
+             "explicit Resume removes the fixture marker and returns the existing catalog to ordinary browsing")
+        // Resume from Settings leaves this model untouched: an earlier pause note must clear on the next read.
+        model.message = "Indexing paused. It stays paused until you choose Resume Indexing; current results stay available."
+        await model.load()
+        test(model.message == nil && model.pausedSince == nil,
+             "a pause note never outlives the pause (Resume from Settings or Storage)")
+
         // Unshown host only. No activation, ordering, event loop, keyboard input or desktop actions.
         // Repeated configuration models immediate, 1 s, 3 s and later delivery without a timing heuristic.
         let settingsHost = NSWindow(contentRect: .init(x: 0, y: 0, width: 540, height: 600), styleMask: [.titled], backing: .buffered, defer: true)
@@ -143,6 +179,92 @@ private final class TrashControllerGate: @unchecked Sendable {
             test(!settingsHost.isRestorable && !settingsHost.isVisible && !settingsHost.isKeyWindow,
                  "unshown Settings host remains reusable without restoration or focus changes (\(delivery) configuration)")
         }
+
+        // Periodic catalog reads remain silent; explicit Reload/Retry has its own visible progress.
+        model.search = "d"
+        let automaticRead = Task { await model.load() }
+        let automaticInFlight = await waitUntil { model.loading }
+        test(automaticInFlight && !model.manualReloading, "an automatic catalog read does not animate the manual Reload Inventory control")
+        await automaticRead.value
+        test(model.root != nil && model.error == nil && !model.manualReloading, "a silent automatic read still publishes catalog data and completion")
+        test(model.lastManualReloadAt == nil && model.reloadNotice == nil, "automatic reads never claim a manual reload completed")
+
+        model.reload()
+        test(model.manualReloading, "an explicit reload acknowledges the request before its asynchronous read starts")
+        test(model.reloadNotice == "Refreshing…", "a manual reload explains its saved-catalog read while running")
+        let manualRead = Task { await model.load() }
+        _ = await waitUntil { model.loading }
+        test(model.manualReloading, "the explicit reload indicator remains visible while its read is in flight")
+        await manualRead.value
+        test(!model.loading && !model.manualReloading, "an explicit reload clears both loading states on completion")
+        let firstManualSuccess = model.lastManualReloadAt
+        test(firstManualSuccess != nil && model.reloadNotice?.hasPrefix("Refreshed at ") == true,
+             "a successful manual read publishes a dated saved-inventory completion without claiming filesystem changes")
+
+        let automaticBeforeManual = Task { await model.load() }
+        _ = await waitUntil { model.loading }
+        let manualReplayRevision = model.revision
+        model.reload(); model.reload(); model.reload()
+        await automaticBeforeManual.value
+        test(model.manualReloading && model.revision == manualReplayRevision + 1, "manual reloads arriving during an automatic read coalesce and remain visible until their replay")
+        test(model.lastManualReloadAt == firstManualSuccess, "a coalesced manual request cannot complete on the older automatic read")
+        await model.load()
+        test(!model.manualReloading && model.root != nil, "the coalesced manual replay publishes data and clears its indicator")
+        let replaySuccess = model.lastManualReloadAt
+        test(replaySuccess != nil && replaySuccess != firstManualSuccess, "the coalesced manual replay records its own completion")
+
+        model.reload()
+        let manualPredecessor = Task { await model.load() }
+        _ = await waitUntil { model.loading }
+        model.reload()
+        await manualPredecessor.value
+        test(model.manualReloading && model.lastManualReloadAt == replaySuccess,
+             "an older manual read cannot announce completion while a newer manual request awaits replay")
+        await model.load()
+        let latestReplaySuccess = model.lastManualReloadAt
+        test(!model.manualReloading && latestReplaySuccess != replaySuccess, "the newest manual replay owns completion feedback")
+
+        model.reload()
+        let cancelledManual = Task { await model.load() }
+        _ = await waitUntil { model.loading }
+        cancelledManual.cancel(); await cancelledManual.value
+        test(!model.loading && !model.manualReloading, "cancelling the latest manual read never leaves its indicator spinning")
+        test(model.lastManualReloadAt == latestReplaySuccess, "a cancelled manual read cannot publish successful completion")
+
+        let obsoleteRead = Task { await model.load() }
+        _ = await waitUntil { model.loading }
+        model.reload()
+        let successorRead = Task { await model.load() }
+        try await Task.sleep(for: .milliseconds(20))
+        obsoleteRead.cancel(); await obsoleteRead.value
+        test(model.loading && model.manualReloading, "an older cancelled read cannot clear the newer manual read's loading indication")
+        test(model.lastManualReloadAt == latestReplaySuccess, "an obsolete generation cannot publish completion for a newer manual request")
+        await successorRead.value
+        test(!model.loading && !model.manualReloading, "only the newest completed read clears the manual indication")
+
+        let reloadFailurePath = scratch.appendingPathComponent("reload-failure.sqlite3")
+        try Data("not a SQLite database".utf8).write(to: reloadFailurePath)
+        let reloadFailure = InventoryBrowserModel(database: reloadFailurePath.path, readiness: readiness)
+        reloadFailure.reload(); await reloadFailure.load()
+        test(reloadFailure.error != nil && !reloadFailure.loading && !reloadFailure.manualReloading, "a failed manual reload keeps its error visible and clears progress")
+        test(reloadFailure.lastManualReloadAt == nil && reloadFailure.reloadNotice == nil, "a failed first read never announces manual success")
+        reloadFailure.refreshIfIdle(); await reloadFailure.load()
+        test(reloadFailure.error != nil && !reloadFailure.manualReloading, "background retry still exposes a catalog error without animating the manual control")
+        try fm.removeItem(at: reloadFailurePath)
+        try fm.copyItem(atPath: database, toPath: reloadFailurePath.path)
+        reloadFailure.reload(); await reloadFailure.load()
+        let recoveredReloadAt = reloadFailure.lastManualReloadAt, recoveredRoot = reloadFailure.root?.id
+        test(reloadFailure.error == nil && recoveredRoot != nil && recoveredReloadAt != nil,
+             "Retry after a read failure clears the error and records a successful manual completion")
+        try Data("not a SQLite database".utf8).write(to: reloadFailurePath)
+        reloadFailure.reload(); await reloadFailure.load()
+        test(reloadFailure.error != nil && reloadFailure.root?.id == recoveredRoot && reloadFailure.lastManualReloadAt == recoveredReloadAt && reloadFailure.reloadNotice == nil,
+             "a failed later Reload preserves the visible catalog and prior timestamp while hiding stale success feedback")
+        try fm.removeItem(at: reloadFailurePath)
+        try fm.copyItem(atPath: database, toPath: reloadFailurePath.path)
+        await reloadFailure.load()
+        test(reloadFailure.error == nil && reloadFailure.lastManualReloadAt == recoveredReloadAt && !reloadFailure.manualReloading,
+             "automatic recovery clears read failure without inventing a new manual reload timestamp")
 
         // Refresh requested while a load is running: it must run once that load ends, however many are asked for.
         model.search = "d"  // a search adds a short delay to each load, so the load is reliably in flight

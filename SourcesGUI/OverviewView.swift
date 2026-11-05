@@ -31,7 +31,7 @@ struct OverviewView: View {
             let presentation = CapacityPresentation(state: live.state, recorded: snapshot?.latest, now: context.date)
             VStack(alignment: .leading, spacing: compact ? 7 : 10) {
                 Label("Internal storage", systemImage: "internaldrive").font(.headline)
-                Text("Physical volume capacity · indexed file totals are separate; inaccessible folders limit coverage.")
+                Text("Disk capacity as macOS reports it. File sizes on the Storage screen are counted separately.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -140,9 +140,9 @@ struct OverviewView: View {
         if let comparison {
             Text("\(inline ? "· " : "")\(comparison.difference == 0 ? "No change since then" : "\(changeMagnitude(comparison.difference)) \(comparison.difference < 0 ? "less" : "more") available now")")
                 .lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
-                .help("Live \(exactBytes(comparison.live.free)) at \(comparison.live.timestamp.formatted(date:.omitted,time:.standard)) minus recorded \(exactBytes(comparison.recorded.free)). An observation comparison: not stored, not a recorded event, not an alert.")
+                .help("Live \(exactBytes(comparison.live.free)) at \(comparison.live.timestamp.formatted(date:.omitted,time:.standard)) minus recorded \(exactBytes(comparison.recorded.free)). A quick comparison, not a recorded event.")
         } else if live != nil {
-            Text("\(inline ? "· " : "")Live and recorded readings are from different containers; not compared").lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
+            Text("\(inline ? "· " : "")Not compared: the current and recorded readings are from different disks").lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
         }
     }
     @ViewBuilder private func baseline(_ title: String,seconds: Double,current: Measurement) -> some View {
@@ -237,8 +237,8 @@ struct CapacityChart: View {
                 Picker("Chart time range",selection:$range) { ForEach(EventTimeFilter.allCases.filter { $0 != .custom },id:\.self) { Text($0.rawValue).tag($0) } }.labelsHidden().frame(width:145).accessibilityIdentifier("chart.range")
             }
             HStack(spacing:10) {
-                Text("Orange/red: 25/15 GB thresholds")
-                Text("Colored points: loss or recovery ≥ 1 GB")
+                Text("Orange: under 25 GB free · Red: under 15 GB")
+                Text("Colored points: changes of 1 GB or more")
             }.font(.caption).foregroundStyle(.secondary)
             if points.isEmpty { Text("No recorded capacity measurements in this chart range.").font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,minHeight:80) }
             else {

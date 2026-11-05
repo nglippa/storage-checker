@@ -50,6 +50,13 @@ struct MonitorRootView: View {
 enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     case explorer = "Explorer", contents = "Contents", directories = "Largest folders", files = "Largest files", all = "Largest items", review = "Review Candidates"
     var id: Self { self }
+    /// What the Browse control shows; raw values stay stable for performance traces.
+    var title: String {
+        switch self {
+        case .explorer: "Explore"; case .contents: "Folder Contents"; case .directories: "Largest Folders"
+        case .files: "Largest Files"; case .all: "Largest Items"; case .review: "Review Cleanup"
+        }
+    }
 }
 
 @MainActor final class InventoryBrowserModel: ObservableObject {
@@ -61,6 +68,14 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     @Published var error: String?
     @Published var message: String?
     @Published var loading = false
+    /// Background catalog reads stay quiet; this describes only an explicit Reload/Retry request.
+    @Published private(set) var manualReloading = false
+    @Published private(set) var lastManualReloadAt: Date?
+    var reloadNotice: String? {
+        if manualReloading { return "Refreshing…" }
+        guard error == nil, root != nil, let lastManualReloadAt else { return nil }
+        return "Refreshed at \(lastManualReloadAt.formatted(date: .omitted, time: .standard))."
+    }
     @Published var selected: Int64?
     @Published var parentID: Int64?
     @Published var mode = InventoryBrowserMode.explorer
@@ -72,6 +87,8 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     @Published var hasMore = false
     @Published var initializationRequested = false
     @Published var indexingPaused = false
+    /// When the saved pause marker was written (shown as "paused since").
+    @Published var pausedSince: Date?
     @Published var deferredFolders = [InventoryNode]()
     enum ListState { case loading, loaded, failed }
     @Published var deferredFoldersState = ListState.loading
@@ -110,6 +127,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     private let focusWriter = InventoryFocusWriter()
     private var focusRevision: UInt64 = 0
     private var reloads = InventoryReloadGate()
+    private var pendingManualReload = false
     private var loadGeneration = 0
     private var requestedPath: String?
     private var lastFocusedNode: Int64?
@@ -118,7 +136,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     private var loadedPageHasQualifiedSize = false
     init(database: String, readiness: ViewerReadiness) { self.database = database; self.readiness = readiness; reader = InventoryReader(path: database) }
     func lifecycle(monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil) -> InventoryLifecyclePresentation {
-        InventoryLifecyclePresentation(hasRoot: root != nil, status: status, requested: initializationRequested, loading: loading, error: error, monitoringConfigured: monitoringConfigured, indexingFailure: indexingFailure, monitoringEnabled: monitoringEnabled)
+        InventoryLifecyclePresentation(hasRoot: root != nil, status: status, requested: initializationRequested, loading: loading, error: error, monitoringConfigured: monitoringConfigured, indexingFailure: indexingFailure, monitoringEnabled: monitoringEnabled, paused: indexingPaused, pausedSince: pausedSince)
     }
     var selectedNode: InventoryNode? { items.first { $0.id == selected } }
     var queryID: String { "\(mode.rawValue)|\(sort.rawValue)|\(search)|\(scopeToFolder)|\(offset)|\(revision)" }
@@ -154,37 +172,54 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         guard reloads.request(loading: loading) else { return }
         revision &+= 1
     }
+    func reload() {
+        pendingManualReload = true
+        manualReloading = true
+        refreshIfIdle()
+    }
     func load() async {
         await PerformanceTrace.measure("inventory.load", "mode=\(mode.rawValue) folder=\(parentID.map(String.init) ?? "root")") { await loadPage() }
     }
     private func loadPage() async {
         loadGeneration &+= 1
         let generation = loadGeneration
+        let isManualReload = manualReloading
+        pendingManualReload = false
         loading = true
         // Only the newest load clears the flag and replays a refresh requested meanwhile. A cancelled older load
         // must not clear its successor's flag, and a cancelled newest load must still replay the refresh.
         defer {
             if generation == loadGeneration {
                 loading = false
+                // A manual request arriving during this read belongs to the coalesced replay,
+                // not to the older read that is finishing now.
+                manualReloading = pendingManualReload
                 if reloads.finish() { revision &+= 1 }
             }
         }
         // Before background monitoring is enabled there is no database yet: that is "not started",
         // not an error to show (D4).
         let databasePath = database
-        let files = await Task.detached(priority: .utility) { () -> (exists: Bool, bytes: Int64, folder: Int64) in
+        let files = await Task.detached(priority: .utility) { () -> (exists: Bool, bytes: Int64, folder: Int64, paused: Bool, pausedSince: Date?) in
             let size = { (path: String) in ((try? FileManager.default.attributesOfItem(atPath: path)[.size]) as? NSNumber)?.int64Value ?? 0 }
             let folder = URL(fileURLWithPath: databasePath).deletingLastPathComponent()
             let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
             return (FileManager.default.fileExists(atPath: databasePath), size(databasePath) + size(databasePath + "-journal") + size(databasePath + "-wal"),
-                    names.reduce(0) { $0 + size(folder.appendingPathComponent($1).path) })
+                    names.reduce(0) { $0 + size(folder.appendingPathComponent($1).path) },
+                    FileManager.default.fileExists(atPath: folder.appendingPathComponent("inventory.cancel").path),
+                    (try? FileManager.default.attributesOfItem(atPath: folder.appendingPathComponent("inventory.cancel").path))?[.modificationDate] as? Date)
         }.value
+        guard !Task.isCancelled, generation == loadGeneration else { return }
         databaseBytes = files.exists ? files.bytes : nil
         ownDataBytes = files.exists ? files.folder : nil
+        indexingPaused = files.paused
+        pausedSince = files.paused ? files.pausedSince : nil
+        // A pause note must not outlive the pause (for example after Resume in Settings).
+        if !files.paused, message?.hasPrefix("Indexing paused") == true { message = nil }
         guard files.exists else {
             status = InventoryStatus(generation: nil, state: "uninitialized", rootPath: nil, totalNodes: 0, completedDirectories: 0, pendingDirectories: 0, staleDirectories: 0, unknownDirectories: 0, queuedDirectoryJobs: 0, hasReconciliationWork: false, hasInitialDiscoveryWork: false, progress: nil, completeness: .unknown, reason: nil, updatedAt: nil, createdAt: nil, initialCompletion: .notStarted)
             root = nil; directory = nil; parentID = nil; items = []; breadcrumbs = []; selected = nil; hasMore = false
-            accounting = nil; error = nil; progress = []; indexingPaused = false
+            accounting = nil; error = nil; progress = []; lastManualReloadAt = nil
             return
         }
         do {
@@ -197,19 +232,16 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
             // Publish progress before waiting for the selected directory page.
             status = newStatus
             // A refresh request's note gives way to the live status once the worker has picked it up.
-            if message?.hasPrefix("Full refresh requested") == true || message == "Folder refresh requested." {
+            if message?.hasPrefix("Recheck requested") == true {
                 if newStatus.hasReconciliationWork || InventoryStatusPresentation(status: newStatus).activeListings > 0 { message = nil }
             }
             if newStatus.generation != nil { initializationRequested = false }
-            let cancelPath = URL(fileURLWithPath: database).deletingLastPathComponent().appendingPathComponent("inventory.cancel").path
-            let paused = await Task.detached(priority: .utility) { FileManager.default.fileExists(atPath: cancelPath) }.value
-            try Task.checkCancellation()
-            indexingPaused = paused
             let newRoot = try await reader.root()
             try Task.checkCancellation()
             guard let newRoot else {
                 guard !Task.isCancelled else { return }
                 status = newStatus; root = nil; directory = nil; parentID = nil; items = []; breadcrumbs = []; selected = nil; hasMore = false; error = nil
+                lastManualReloadAt = nil
                 readiness.mark("inventory_status_data_ready")
                 return
             }
@@ -256,9 +288,10 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
             readiness.mark("inventory_status_data_ready")
             markPageDataReadyIfQualified()
             readiness.inventoryPageLoaded()
+            if isManualReload, generation == loadGeneration, !pendingManualReload { lastManualReloadAt = Date() }
             if requestedParent == nil { focus(folder) }
         } catch is CancellationError { }
-        catch { if !Task.isCancelled { self.error = String(describing: error) } }
+        catch { if !Task.isCancelled, generation == loadGeneration { self.error = String(describing: error) } }
     }
     func chooseFolder() {
         let panel = NSOpenPanel()
@@ -320,14 +353,15 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
                 } else {
                     _ = try await Task.detached(priority: .utility) { try InventoryRequests.enqueue(database: database, action: action, path: path) }.value
                 }
-                if action == "pause" { indexingPaused = true }
-                if action == "resume" { indexingPaused = false }
+                if action == "pause" { indexingPaused = true; pausedSince = Date() }
+                if action == "resume" { indexingPaused = false; pausedSince = nil }
                 if announce {
                     switch action {
                     case "focus": message = "“\(path.map { inventoryFolderName(path: $0, rootPath: root?.path) } ?? "This folder")” will be indexed before other folders. Existing sizes stay visible."
-                    case "pause": message = "Pause requested. Committed results remain available."
-                    case "resume": message = "Resume requested."
-                    default: message = path == nil ? "Full refresh requested: the background worker will recheck every folder, which can take a while on a large disk." : "Folder refresh requested."
+                    // The paused state explains itself; a second line would repeat it.
+                    case "pause": message = nil
+                    case "resume": message = "Indexing will resume in the next background run, usually within a few minutes."
+                    default: message = path == nil ? "Recheck requested: every folder will be checked again, which can take a while on a large disk." : "Recheck requested for this folder."
                     }
                 }
                 onSuccess?()
@@ -356,37 +390,40 @@ struct DiskInventoryView: View {
         return FileManager.default.fileExists(atPath: path)
     }
     private var inventoryUpdatesEnabled: Bool? { history.monitoring?.inventoryUpdatesEnabled }
-    private var showsInitialization: Bool { initialization.isVisible && inventoryUpdatesEnabled != false }
+    private var showsInitialization: Bool { initialization.isVisible && inventoryUpdatesEnabled != false && history.inventoryFailure == nil }
     private var indexingActive: Bool {
-        if inventoryUpdatesEnabled == false { return false }
+        if inventoryUpdatesEnabled == false || history.inventoryFailure != nil || model.indexingPaused || model.status?.lowSpacePaused == true { return false }
         guard let status = model.status else { return true }
         // Deferred folders retry on the worker's next scheduled update; they are not active indexing.
         return status.generation == nil || InventoryStatusPresentation(status: status).activeListings > 0 || status.hasReconciliationWork
     }
     private var lifecycle: InventoryLifecyclePresentation {
         let configured = history.monitoring.map { $0.state == .on || $0.state == .needsUpdate }
-        let tasks = history.monitoring?.launchd
-        let job = tasks?.jobs[(history.monitoring?.jobLabels ?? MonitoringSetupStatus.labels)[2]]
-        let failure: String?
-        if tasks?.reliable == true, let job, job.pid == nil, let exit = job.lastExitStatus, exit != 0 && exit != 75 {
-            failure = "The background indexer reported an error before folder results became available."
-        } else { failure = nil }
-        return model.lifecycle(monitoringConfigured: configured ?? (configuration.isQA ? workerAvailable : nil), indexingFailure: failure, monitoringEnabled: inventoryUpdatesEnabled)
+        return model.lifecycle(monitoringConfigured: configured ?? (configuration.isQA ? workerAvailable : nil), indexingFailure: history.inventoryFailure, monitoringEnabled: inventoryUpdatesEnabled)
     }
     @Environment(\.openSettings) private var openSettings
     @State private var showingDeferred = false
     @State private var showingAccounting = false
+    @State private var confirmingPause = false
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
             if lifecycle.showsBrowser { controls }
-            if let error = model.error, lifecycle.showsBrowser {
+            if let error = model.error ?? history.inventoryFailure, lifecycle.showsBrowser {
                 HStack(alignment: .top) {
-                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-                    Text(error).font(.callout).textSelection(.enabled)
-                    Spacer(); Button("Retry") { model.revision += 1 }
-                }.padding(14).accessibilityIdentifier("inventory.error")
+                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(lifecycle.detail).font(.callout).fixedSize(horizontal: false, vertical: true)
+                        DisclosureGroup("Technical details") { Text(error).font(.caption).textSelection(.enabled) }
+                    }
+                    Spacer(); Button("Retry") { model.reload() }
+                        .disabled(model.manualReloading)
+                        .accessibilityIdentifier("inventory.retry")
+                    if history.inventoryFailure != nil { Button("Open Settings…") { openSettings() } }
+                }.padding(14)
+                // A container element keeps the panel's identifier from replacing its Retry button's.
+                .accessibilityElement(children: .contain).accessibilityIdentifier("inventory.error")
                 Divider()
             }
             if !lifecycle.showsBrowser {
@@ -407,8 +444,9 @@ struct DiskInventoryView: View {
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 22).padding(.vertical, 9)
             }
             Divider()
-            Text("Indexed sizes describe accessible files, not all physical disk usage or guaranteed recoverable space. Protected folders may be missing.")
-                .help("File allocation may include shared APFS blocks. Totals count hard links once and do not represent reclaimable physical storage." + (model.databaseBytes.map { " Inventory database: " + ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) + "." } ?? ""))
+            // The one place the size caveat is stated; views above don't repeat it.
+            Text("Sizes show the disk space files take up. Files can share storage (APFS clones and snapshots), so removing something may free less than its size. Folders macOS protects may be missing.")
+                .help("Totals count hard links once and are not a measure of reclaimable physical storage." + (model.databaseBytes.map { " Inventory database: " + ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) + "." } ?? ""))
                 .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 22).padding(.vertical, 9)
         }
         .overlay(alignment: .top) { if NativeQARuntime.active != nil, let failure = qaWorker.failure { Text("QA fixture worker stopped: " + failure).font(.caption).padding().background(.background) } }
@@ -425,12 +463,43 @@ struct DiskInventoryView: View {
         .onChange(of: model.search) { _, _ in model.offset = 0 }
         .onChange(of: model.scopeToFolder) { _, _ in model.offset = 0 }
         .toolbar {
+            // Two verbs only: Refresh shows the latest saved results; the Indexing menu rechecks the disk.
             ToolbarItem(placement: .primaryAction) {
-                Button { model.revision += 1 } label: {
-                    if model.loading { ProgressView().controlSize(.small) } else { Label("Reload Inventory", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon) }
-                }
-                    .help("Reload indexed results. No filesystem scan is performed.").accessibilityLabel("Reload inventory").accessibilityIdentifier("inventory.reload")
+                Menu {
+                    if let directory = model.directory, indexingActive {
+                        Button("Check “\(model.displayName(directory))” First") { model.prioritizeCurrentFolder() }
+                    }
+                    Button("Recheck This Folder") { model.request("refresh", path: model.directory?.path) }
+                    Button("Recheck Everything") { model.request("refresh") }
+                    Divider()
+                    if model.indexingPaused { Button("Resume Indexing") { model.request("resume") } }
+                    else { Button("Pause Indexing Until Resumed…") { confirmingPause = true } }
+                } label: { Label("Indexing", systemImage: "arrow.triangle.2.circlepath").labelStyle(.titleAndIcon) }
+                    .disabled(!workerAvailable)
+                    .help("Recheck folders on disk, or pause and resume background indexing.")
+                    .accessibilityIdentifier("inventory.refresh")
             }
+            ToolbarItem(placement: .primaryAction) {
+                Button { model.reload() } label: {
+                    Label {
+                        Text("Refresh")
+                    } icon: {
+                        if model.manualReloading { ProgressView().controlSize(.small) }
+                        else { Image(systemName: "arrow.clockwise") }
+                    }.labelStyle(.titleAndIcon)
+                }
+                    .disabled(model.manualReloading)
+                    .help("Show the latest saved results. To scan folders on disk again, use Indexing → Recheck.")
+                    .accessibilityLabel("Refresh")
+                    .accessibilityValue(model.reloadNotice ?? "Shows the latest saved results")
+                    .accessibilityIdentifier("inventory.reload")
+            }
+        }
+        .alert("Pause disk indexing?", isPresented: $confirmingPause) {
+            Button("Pause Indexing") { model.request("pause") }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Indexing stays paused, even after app updates or restarts, until you choose Resume Indexing. Current results stay available, and free-space checks continue.")
         }
     }
     private var lifecyclePlaceholder: some View {
@@ -439,19 +508,30 @@ struct DiskInventoryView: View {
             else { Image(systemName: lifecycle.state == .failed ? "exclamationmark.triangle" : "internaldrive").font(.title).foregroundStyle(.secondary) }
             Text(lifecycle.title).font(.headline)
             Text(lifecycle.detail).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            if let technical = lifecycle.technicalDetail {
+                DisclosureGroup("Technical details") { Text(technical).font(.caption).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                    .font(.callout).frame(maxWidth: 440)
+            }
             switch lifecycle.action {
             case .openSettings:
                 HStack {
                     if lifecycle.state == .monitoringOff {
-                        Button("Enable Monitoring…") { openSettings() }
-                            .help("Open Settings to review and confirm background monitoring setup.")
+                        Button("Enable Monitoring…") { history.enableMonitoringRequested = true; openSettings() }
+                            .buttonStyle(.borderedProminent)
+                            .help("Shows what will be set up and asks you to confirm.")
                             .accessibilityIdentifier("inventory.setup")
+                    } else {
+                        Button("Open Settings…") { openSettings() }
                     }
-                    Button("Open Settings…") { openSettings() }
                 }
             case .startIndexing: Button("Start indexing") { model.request("refresh") }.disabled(!workerAvailable).accessibilityIdentifier("inventory.start")
+            case .resumeIndexing:
+                HStack {
+                    Button("Resume Indexing") { model.request("resume") }.disabled(!workerAvailable).accessibilityIdentifier("inventory.resume")
+                    Button("Open Settings…") { openSettings() }
+                }
             case .retry:
-                HStack { Button("Reload Inventory") { model.revision &+= 1 }; Button("Open Settings…") { openSettings() } }
+                HStack { Button("Retry") { model.reload() }.disabled(model.manualReloading).accessibilityIdentifier("inventory.retry"); Button("Open Settings…") { openSettings() } }
             case nil: EmptyView()
             }
         }.frame(maxWidth: 500).padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -460,36 +540,27 @@ struct DiskInventoryView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             InventoryCapacitySummary(live: history.live, recorded: history.snapshot?.latest)
-            HStack {
-                titleTrail
-                Spacer()
-                Menu("Folder updates") {
-                    if let directory = model.directory, indexingActive {
-                        Button("Update “\(model.displayName(directory))” first") { model.prioritizeCurrentFolder() }
-                    }
-                    Button("Recheck This Folder") { model.request("refresh", path: model.directory?.path) }
-                    Button("Recheck Entire Inventory") { model.request("refresh") }
-                    Divider()
-                    Button("Pause indexing") { model.request("pause") }
-                    Button("Resume indexing") { model.request("resume") }
-                }.disabled(!workerAvailable).accessibilityIdentifier("inventory.refresh")
-            }
+            titleTrail
             initializationProgress
             summaryLine
-            if lifecycle.state == .stale { Text(lifecycle.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            if let notice = model.reloadNotice {
+                Text(notice).font(.caption).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("inventory.reloadStatus")
+            }
+            if lifecycle.state == .stale || (lifecycle.state == .paused && lifecycle.showsBrowser) { Text(lifecycle.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             MigrationReadinessSummary(controller: model.migration, browser: model)
             if let status = model.status, !(showsInitialization && status.generation == nil) {
                 let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled)
                 if !showsInitialization {
                     if showingIndexDetails {
-                        Text("\(status.totalNodes.formatted()) items found · \(presentation.foundFolders.formatted()) folders found · \(presentation.activeListings.formatted()) listings queued")
+                        Text("\(status.totalNodes.formatted()) items found · \(presentation.foundFolders.formatted()) folders found · \(presentation.activeListings.formatted()) folders waiting to be checked")
                             .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     }
                 } else if presentation.phase == .reconciling && !model.indexingPaused {
                     // The first-index panel owns title and counts; add only overlapping reconciliation.
                     Text(status.hasEventGapRecheck && !presentation.updatesAreWaiting ? "Updating older measurements" : presentation.headline).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.status")
                 }
-                if showingIndexDetails || showsInitialization {
+                if (showingIndexDetails || showsInitialization) && !model.indexingPaused {
                     Text(presentation.detail + (status.unknownDirectories > 0 ? " \(status.unknownDirectories.formatted()) folders have partial or unavailable measurements." : ""))
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("inventory.statusDetail")
                 }
@@ -537,7 +608,27 @@ struct DiskInventoryView: View {
     /// One line: indexing status (details a click away), a full refresh's progress, and the storage accounting.
     @ViewBuilder private var summaryLine: some View {
         HStack(spacing: 6) {
-            if let status = model.status, !showsInitialization {
+            if model.error != nil {
+                Text(lifecycle.title).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.status")
+            } else if history.inventoryFailure != nil {
+                Text("Inventory needs attention").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.status")
+            } else if lifecycle.state == .waiting {
+                Text(lifecycle.title).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.status")
+                if lifecycle.showsBrowser {
+                    Button("Open Settings…") { openSettings() }.buttonStyle(.link).font(.caption).accessibilityIdentifier("inventory.waitingSettings")
+                }
+            } else if lifecycle.state == .paused {
+                Text(lifecycle.title).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.status")
+                if lifecycle.showsBrowser {
+                    if lifecycle.action == .resumeIndexing {
+                        Button("Resume Indexing") { model.request("resume") }
+                            .buttonStyle(.link).font(.caption).disabled(!workerAvailable).accessibilityIdentifier("inventory.resume")
+                    }
+                    if lifecycle.action == .openSettings || !workerAvailable {
+                        Button("Open Settings…") { openSettings() }.buttonStyle(.link).font(.caption)
+                    }
+                }
+            } else if let status = model.status, !showsInitialization {
                 let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled)
                 Text(status.hasEventGapRecheck && !presentation.updatesAreWaiting ? "Updating older measurements" : presentation.headline).font(.caption).foregroundStyle(.secondary).lineLimit(1).accessibilityIdentifier("inventory.status")
                 if !presentation.updatesAreWaiting, status.refreshIsManual, status.hasReconciliationWork, let fraction = status.refreshFraction {
@@ -663,7 +754,7 @@ struct DiskInventoryView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("inventory.initializationEstimate")
                 }
-                if presentation.showsGuidance {
+                if presentation.showsGuidance && !model.indexingPaused {
                     Text(InventoryInitializationPresentation.durationGuidance).font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(InventoryInitializationPresentation.laterChecksGuidance).font(.caption).foregroundStyle(.secondary)
@@ -676,16 +767,34 @@ struct DiskInventoryView: View {
     }
     private var controls: some View {
         VStack(alignment: .leading, spacing: 9) {
+            // Visible choices when there is room; the same picker as a dropdown in a narrow window.
+            ViewThatFits(in: .horizontal) {
+                browseRow(segmented: true)
+                browseRow(segmented: false)
+            }
+            if model.mode != .review && ((model.mode != .contents && model.mode != .explorer) || !model.search.isEmpty) {
+                Toggle("Only inside the selected folder", isOn: $model.scopeToFolder).font(.caption).accessibilityIdentifier("inventory.scope")
+            }
+            if model.mode != .review && model.mode != .contents && model.mode != .explorer, let status = model.status, InventoryStatusPresentation(status: status).rankingsArePartial {
+                Text("Ranked from what's been measured so far; the order can change as indexing continues.")
+                    .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.rankingQualification")
+            }
+        }.padding(.horizontal, 22).padding(.vertical, 10)
+    }
+    @ViewBuilder private func browseRow(segmented: Bool) -> some View {
             HStack {
-                Picker("Browse", selection: $model.mode) { ForEach(InventoryBrowserMode.allCases) { Text($0.rawValue).tag($0) } }
-                    .fixedSize().accessibilityIdentifier("inventory.mode")
+                if model.mode != .review {
+                    // The common question, "what is using my space?", is one click: Largest Files and Folders are visible choices.
+                    let picker = Picker("Browse", selection: $model.mode) { ForEach(InventoryBrowserMode.allCases.filter { $0 != .review }) { Text($0.title).tag($0) } }
+                    if segmented { picker.pickerStyle(.segmented).labelsHidden().fixedSize().accessibilityIdentifier("inventory.mode") }
+                    else { picker.pickerStyle(.menu).fixedSize().accessibilityIdentifier("inventory.mode") }
+                }
                 if model.mode != .review { Button("Go to folder…") { model.chooseFolder() }.accessibilityIdentifier("inventory.goToFolder") }
                 if model.mode == .review {
-                    Button { model.mode = .explorer } label: { Label("Back to Explorer", systemImage: "chevron.backward") }
+                    Button { model.mode = .explorer } label: { Label("Back to Browsing", systemImage: "chevron.backward") }
                         .help("Return to browsing folders").accessibilityIdentifier("inventory.backToExplorer")
                 } else {
                     Button { model.mode = .review } label: { Label("Review Cleanup", systemImage: "checklist") }
-                        .buttonStyle(.borderedProminent)
                         .help("Review storage candidates and their evidence. This list cannot move or delete files.")
                         .accessibilityIdentifier("inventory.reviewCleanup")
                 }
@@ -697,21 +806,9 @@ struct DiskInventoryView: View {
                 }
                 Spacer()
                 if model.mode != .review {
-                    TextField("Search name or path prefix", text: $model.search).textFieldStyle(.roundedBorder).frame(minWidth: 180, maxWidth: 290).accessibilityIdentifier("inventory.search")
+                    TextField("Search names or paths", text: $model.search).textFieldStyle(.roundedBorder).frame(minWidth: 160, idealWidth: 220, maxWidth: 290).accessibilityIdentifier("inventory.search")
                 }
             }
-            if model.mode == .explorer {
-                Text("Find large files and folders with the Largest files or Largest folders list in Browse.")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }
-            if model.mode != .review && ((model.mode != .contents && model.mode != .explorer) || !model.search.isEmpty) {
-                Toggle("Only inside the selected folder", isOn: $model.scopeToFolder).font(.caption).accessibilityIdentifier("inventory.scope")
-            }
-            if model.mode != .review && model.mode != .contents && model.mode != .explorer, let status = model.status, InventoryStatusPresentation(status: status).rankingsArePartial {
-                Text("Ranked from measurements available so far; incomplete folders can move as indexing continues.")
-                    .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("inventory.rankingQualification")
-            }
-        }.padding(.horizontal, 22).padding(.vertical, 10)
     }
     private var inventoryTable: some View {
         ZStack {
@@ -749,7 +846,7 @@ struct DiskInventoryView: View {
                 VStack(spacing: 9) {
                     Image(systemName: "folder").font(.title).foregroundStyle(.secondary)
                     Text("No disk inventory yet").font(.headline)
-                    Text(workerAvailable ? "Start background indexing to browse measured files and folders. The first pass over a large disk may take some time; you can explore results as they're discovered." : "Background indexing has not been installed. Monitoring history remains available.")
+                    Text(workerAvailable ? "Start background indexing to browse measured files and folders. The first pass over a large disk may take some time; you can explore results as they're found." : "Background indexing isn't set up yet. Turn on Background Monitoring in Settings. Free-space history is still available.")
                         .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     if workerAvailable { Button("Start indexing") { model.request("refresh") }.accessibilityIdentifier("inventory.start") }
                 }.frame(maxWidth: 430).padding(24)

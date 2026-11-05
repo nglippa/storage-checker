@@ -235,8 +235,6 @@ struct InventoryInspectorView: View {
                             if let date = info.measured { row("Measured", date.formatted(date: .abbreviated, time: .shortened)) }
                         }
                         if let explanation = info.explanation { Text(explanation).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
-                        Text("Indexed sizes may include shared APFS storage. They are not guaranteed recoverable space.")
-                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 .padding(StorageDesign.gutter)

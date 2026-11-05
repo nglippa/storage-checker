@@ -333,8 +333,8 @@ struct CleanupInspectorSection: View {
             HStack(spacing: 6) {
                 Text(shown.collected).font(.caption).foregroundStyle(.tertiary)
                 Spacer()
-                Button("Recheck Candidate", systemImage: "arrow.clockwise") { cleanup.refresh(node) }
-                    .buttonStyle(.borderless).font(.caption).help("Collect the evidence again").accessibilityLabel("Recheck Candidate")
+                Button("Check Again", systemImage: "arrow.clockwise") { cleanup.refresh(node) }
+                    .buttonStyle(.borderless).font(.caption).help("Collect the evidence again").accessibilityLabel("Check Again")
             }
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("inventory.cleanup")
@@ -593,7 +593,6 @@ struct CleanupTrashConfirmation: View {
                 Text("macOS moves the item to the Trash; nothing is deleted. Space is freed only when you empty the Trash, and APFS snapshots or shared storage can keep some of it. In a cloud-synced folder the removal may reach your other devices. \(CleanupTrashPolicy.residualRisk)")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if let preparedAt { Text("Checked at \(preparedAt.formatted(date: .omitted, time: .standard)). Confirm within 60 seconds, or review it again.").font(.caption).foregroundStyle(.secondary) }
-                Text("Filesystem identity \(node.identity.stableKey)").font(.caption2.monospaced()).foregroundStyle(.tertiary).textSelection(.enabled)
             }
             if override {
                 Toggle(isOn: $accepted) { Text("I understand Storage Monitor hasn't confirmed this is safe to remove.").font(.callout) }

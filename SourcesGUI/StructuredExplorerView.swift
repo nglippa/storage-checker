@@ -723,13 +723,15 @@ struct StructuredExplorerView: View {
             let hidden = layout.nodes.reduce(0) { $0 + $1.hidden }
             if hidden > 0 { parts.append("\(hidden.formatted()) more items inside (+N)") }
         }
-        if model.truncated { parts.append("reduced to keep the read short") }
-        parts.append("not reclaimable storage")
+        if model.truncated { parts.append("some items left out to keep this fast") }
         return parts.joined(separator: " · ")
     }
 
     private func filterStatus(_ visibility: StructuredExplorerVisibility) -> String {
-        var text = "Showing \(visibility.visibleFolders) of \(visibility.availableFolders) folders · \(visibility.matchingFolders) match · \(visibility.contextFolders) context"
+        var text = "Showing \(visibility.visibleFolders) of \(visibility.availableFolders) folders"
+        // Match counts only mean something while a filter is narrowing the view.
+        if visibility.matchingFolders < visibility.availableFolders { text += " · \(visibility.matchingFolders) match" }
+        if visibility.contextFolders > 0 { text += " · \(visibility.contextFolders) shown for context" }
         if state.filter.migrationReview {
             text += visibility.reviewHighlights.isEmpty ? " · no migration review items under this folder" : " · \(visibility.reviewHighlights.count) on migration review paths"
         }
@@ -831,7 +833,7 @@ struct StructuredExplorerView: View {
                 helpRow("See more or less", "Levels sets how many rings are shown. +N marks contents not shown.")
                 helpRow("Frame", "Fit frames the selected branch (F); Reset View restores zoom and pan (0). Geometry zoom keeps labels at a readable text size.")
             }
-            Text("Prefer a list? The Navigator and Atlas show the same folders.").font(.caption).foregroundStyle(.secondary)
+            Text("Prefer a list? The List and Atlas show the same folders.").font(.caption).foregroundStyle(.secondary)
         }
         .padding(16).frame(width: 440)
         .onExitCommand { showingHelp = false }

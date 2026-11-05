@@ -270,25 +270,25 @@ public struct InventoryStatusPresentation: Sendable {
         } else if status.hasReconciliationWork && status.hasEventGapRecheck {
             phase = .reconciling; condition = .needsReconciliation; affectedDirectories = 0
             headline = "Rechecking after missed file events"
-            detail = "Filesystem event history had a gap, so indexed folders are being checked again. Results remain available; some sizes may change."
+            detail = "macOS missed some file changes, so folders are being checked again. Current results stay available; some sizes may change."
         } else if status.hasReconciliationWork && status.refreshIsManual {
             phase = .reconciling; condition = .needsReconciliation; affectedDirectories = 0
             headline = "Refreshing the entire inventory" + (status.refreshFraction.map { " · about \(Int(($0 * 100).rounded(.down)))% rechecked" } ?? "")
-            detail = "Every folder is being listed again. Results remain available meanwhile; on a large disk this can take a while."
+            detail = "Every folder is being checked again. Current results stay available meanwhile; on a large disk this can take a while."
         } else if status.hasReconciliationWork {
             phase = .reconciling; condition = .needsReconciliation; affectedDirectories = 0
-            headline = "Reconciling filesystem changes"
-            detail = "Committed results remain available; some previously measured sizes may change."
+            headline = "Applying recent file changes"
+            detail = "Results so far stay available; some sizes may change."
         } else if activeListings > 0 || status.pendingDirectories > 0 {
             // After the recorded first pass, newly created folders are ordinary updates.
             if status.initialCompletion == .complete || !status.hasInitialDiscoveryWork {
                 phase = .updating; condition = .staleDirectories; affectedDirectories = activeListings
                 headline = "Updating changed folders"
-                detail = "Committed results remain available while queued folder listings run."
+                detail = "Results so far stay available while the remaining folders are checked."
             } else {
                 phase = .discovering; condition = .initialInventory; affectedDirectories = 0
                 headline = "Discovering files and folders"
-                detail = "Results are available as each folder listing is committed."
+                detail = "Results appear as each folder is checked."
             }
         } else if status.deferredDirectories > 0 {
             // One unstable folder (typically a browser cache) is reported, not hidden, and does not
@@ -304,7 +304,7 @@ public struct InventoryStatusPresentation: Sendable {
             phase = .idle; affectedDirectories = 0
             condition = status.initialCompletion == .inProgress ? .initialInventory : .current
             headline = status.completeness == .complete ? "Inventory is up to date" : "Showing available measurements"
-            detail = status.unknownDirectories > 0 ? "Some folders are inaccessible or have not produced a size." : "No folder listings are currently queued."
+            detail = status.unknownDirectories > 0 ? "Some folders are inaccessible or have not produced a size." : "No folders are waiting to be checked."
         }
     }
 }
@@ -473,30 +473,47 @@ public enum InventoryPlaceholder: Equatable, Sendable {
 
 /// Lifecycle is resolved before choosing Explorer, rankings or Review, so every renderer has a usable first run.
 public struct InventoryLifecyclePresentation: Equatable, Sendable {
-    public enum State: Equatable, Sendable { case checking, monitoringOff, notCreated, indexing, waiting, available, temporarilyUnavailable, failed, stale }
-    public enum Action: Equatable, Sendable { case openSettings, startIndexing, retry }
+    public enum State: Equatable, Sendable { case checking, monitoringOff, notCreated, indexing, paused, waiting, available, temporarilyUnavailable, failed, stale }
+    public enum Action: Equatable, Sendable { case openSettings, startIndexing, resumeIndexing, retry }
     public let state: State
     public let showsBrowser: Bool
     public let title: String
     public let detail: String
+    /// The raw error behind a failure state, for a Technical details disclosure; never part of `detail`.
+    public let technicalDetail: String?
     public let action: Action?
     public var showsProgress: Bool { state == .checking || state == .indexing }
-    public init(hasRoot: Bool, status: InventoryStatus?, requested: Bool, loading: Bool, error: String?, monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil) {
+    /// The one place users are sent when background work needs fixing.
+    public static let repairAdvice = "Open Settings and choose Repair under Background Monitoring."
+    static let repairIfRepeated = "If this keeps happening, open Settings and choose Repair under Background Monitoring."
+    public init(hasRoot: Bool, status: InventoryStatus?, requested: Bool, loading: Bool, error: String?, monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil, paused: Bool = false, pausedSince: Date? = nil) {
         showsBrowser = hasRoot
-        if let error = error ?? (!hasRoot ? indexingFailure : nil) {
+        technicalDetail = error ?? indexingFailure
+        if error != nil {
             state = hasRoot ? .temporarilyUnavailable : .failed
-            title = hasRoot ? "Inventory could not be updated" : "Inventory unavailable"
-            detail = error + (hasRoot ? " Previous catalog results remain visible. Reload to try again." : " Reload to try again, or check Background Monitoring in Settings.")
+            title = hasRoot ? "Couldn't refresh results" : "Saved results unavailable"
+            detail = hasRoot ? "Storage Monitor couldn't read its saved results just now. Your earlier results are still shown. Choose Retry. " + Self.repairIfRepeated
+                : "Storage Monitor couldn't read its saved results just now. Choose Retry. " + Self.repairIfRepeated
             action = .retry
-        } else if monitoringEnabled == false && ((!hasRoot && (requested || status?.initialCompletion == .inProgress)) || status.map { InventoryStatusPresentation(status: $0, monitoringEnabled: false).updatesAreWaiting } == true) {
+        } else if indexingFailure != nil {
+            state = hasRoot ? .temporarilyUnavailable : .failed
+            title = hasRoot ? "Disk indexing stopped" : "Disk indexing couldn't start"
+            detail = (hasRoot ? "The background indexer reported an error, so these results may be out of date. Earlier results are still shown. " : "The background indexer reported an error before it found any files. ") + Self.repairAdvice
+            action = .retry
+        } else if monitoringEnabled == false && (paused || (!hasRoot && (requested || status?.initialCompletion == .inProgress)) || status.map { InventoryStatusPresentation(status: $0, monitoringEnabled: false).updatesAreWaiting } == true) {
             state = .waiting; title = "Indexing is waiting"
-            detail = "Background indexing is off. Enable or repair monitoring in Settings to continue indexing. Previous measurements and queued work are kept."
+            detail = "Background indexing is turned off. Open Settings and turn on (or repair) Background Monitoring to continue. Earlier results and remaining work are kept."
             action = .openSettings
+        } else if paused {
+            state = .paused; title = "Indexing is paused"
+            detail = (pausedSince.map { "Indexing has been paused since " + $0.formatted(date: .abbreviated, time: .shortened) + ". " } ?? "")
+                + "A pause stays in effect, even after app updates or restarts, until you resume it. Resume continues from saved progress; current results are kept."
+            action = monitoringConfigured == true || monitoringEnabled == true ? .resumeIndexing : .openSettings
         } else if hasRoot {
             if status?.initialCompletion == .inProgress { state = .indexing; title = "Building your storage inventory" }
             else if status?.completeness == .stale || status?.eventHistoryUnavailable == true { state = .stale; title = "Previous inventory measurements" }
             else { state = .available; title = "Inventory available" }
-            detail = status.map { InventoryStatusPresentation(status: $0).detail } ?? "Catalog results remain qualified by coverage."
+            detail = status.map { InventoryStatusPresentation(status: $0).detail } ?? "Results found so far are shown."
             action = nil
         } else if requested || status?.initialCompletion == .inProgress {
             state = .indexing; title = "Building your storage inventory"
@@ -504,17 +521,17 @@ public struct InventoryLifecyclePresentation: Equatable, Sendable {
             action = .openSettings
         } else if status?.generation != nil {
             state = .temporarilyUnavailable; title = "Inventory folder unavailable"
-            detail = "The catalog exists, but its folder results could not be loaded. Reload the inventory, or check Background Monitoring and folder access in Settings."
+            detail = "Saved results exist but couldn't be shown. Choose Retry. " + Self.repairIfRepeated
             action = .retry
         } else if status == nil && loading {
             state = .checking; title = "Checking inventory status…"; detail = "Reading the local catalog."; action = nil
         } else if monitoringConfigured == false {
             state = .monitoringOff; title = "Background monitoring is not configured"
-            detail = "Enable Background Monitoring in Settings to record capacity and build your disk inventory. Storage Monitor asks before setting up the MacBook Storage Monitor helper for your account. The first inventory can take hours. Full Disk Access is optional."
+            detail = "Turn on background monitoring to record free space over time and build your disk inventory. You'll be asked to confirm before anything is set up. The first inventory can take hours. Full Disk Access is optional; without it, protected folders aren't measured."
             action = .openSettings
         } else {
             state = .notCreated; title = "No disk inventory yet"
-            detail = monitoringConfigured == true ? "Background monitoring is configured, but the inventory has not started. Start indexing to discover files and folders. The first pass can take hours; Full Disk Access is optional." : "The local inventory has not been created. Check Background Monitoring in Settings to enable or repair the helper. The first pass can take hours; Full Disk Access is optional."
+            detail = monitoringConfigured == true ? "Background monitoring is configured, but the inventory has not started. Start indexing to discover files and folders. The first pass can take hours; Full Disk Access is optional." : "The disk inventory hasn't been created yet. Open Settings to turn on or repair Background Monitoring. The first pass can take hours; Full Disk Access is optional."
             action = monitoringConfigured == true ? .startIndexing : .openSettings
         }
     }

@@ -49,6 +49,18 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
     try test(lifecycle(status: noInventory, requested: true).state == .indexing, "explicit first-index request waits for real results without a percentage")
     let failedIndexing = InventoryLifecyclePresentation(hasRoot: false, status: noInventory, requested: true, loading: false, error: nil, monitoringConfigured: true, indexingFailure: "Indexer could not start")
     try test(failedIndexing.state == .failed && failedIndexing.action == .retry && !failedIndexing.showsProgress, "an observed indexer failure ends initial waiting with recovery even before a database exists")
+    let pausedBeforeRoot = InventoryLifecyclePresentation(hasRoot: false, status: noInventory, requested: true, loading: false, error: nil,
+                                                         monitoringConfigured: true, monitoringEnabled: true, paused: true)
+    try test(pausedBeforeRoot.state == .paused && !pausedBeforeRoot.showsProgress && pausedBeforeRoot.action == .resumeIndexing && pausedBeforeRoot.detail.contains("after app updates"),
+             "a persisted pause before the first root offers Resume instead of indefinite indexing or another refresh")
+    let pausedWithoutSetup = InventoryLifecyclePresentation(hasRoot: false, status: noInventory, requested: false, loading: false, error: nil,
+                                                           monitoringConfigured: false, paused: true)
+    try test(pausedWithoutSetup.state == .paused && pausedWithoutSetup.action == .openSettings,
+             "a persisted pause without configured services directs to Settings rather than claiming it can resume")
+    let pausedWhileOff = InventoryLifecyclePresentation(hasRoot: false, status: noInventory, requested: false, loading: false, error: nil,
+                                                       monitoringConfigured: false, monitoringEnabled: false, paused: true)
+    try test(pausedWhileOff.state == .waiting && pausedWhileOff.action == .openSettings && !pausedWhileOff.showsProgress,
+             "known-off monitoring takes priority over a saved pause and offers setup")
     func indexed(_ initial: InventoryInitialCompletion, _ completeness: InventoryValueStatus = .complete, pending: Int64 = 0, reconciling: Bool = false) -> InventoryStatus {
         InventoryStatus(generation: 1, state: initial == .inProgress ? "building" : "complete", rootPath: "/private/tmp/fixture", totalNodes: 1, completedDirectories: 1, pendingDirectories: pending, staleDirectories: completeness == .stale ? 1 : 0, unknownDirectories: 0, queuedDirectoryJobs: pending, hasReconciliationWork: reconciling, hasInitialDiscoveryWork: initial == .inProgress, progress: nil, completeness: completeness, reason: nil, updatedAt: now, createdAt: now, initialCompletion: initial)
     }
@@ -56,12 +68,21 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
     try test(lifecycle(status: building, configured: true).state == .indexing && !lifecycle(status: building, configured: true).showsBrowser, "first indexing without a root has a renderer-independent waiting state")
     try test(lifecycle(root: true, status: building).state == .indexing && lifecycle(root: true, status: building).showsBrowser, "first indexed results unlock the browser while discovery continues")
     building = indexed(.complete)
+    let pausedWithCatalog = InventoryLifecyclePresentation(hasRoot: true, status: building, requested: false, loading: false, error: nil,
+                                                          monitoringConfigured: true, paused: true)
+    try test(pausedWithCatalog.state == .paused && pausedWithCatalog.showsBrowser && pausedWithCatalog.action == .resumeIndexing && !pausedWithCatalog.showsProgress,
+             "a saved pause keeps catalog browsing available and exposes Resume outside the updates menu")
     try test(lifecycle(status: building, configured: true).state == .temporarilyUnavailable && lifecycle(status: building, configured: true).action == .retry && !lifecycle(status: building, configured: true).showsProgress, "completed catalog without root offers recovery instead of perpetual indexing")
     try test(lifecycle(root: true, status: building).state == .available && lifecycle(root: true, status: building).showsBrowser, "completed inventory reaches ordinary browsing")
     building = indexed(.complete, .stale)
     try test(lifecycle(root: true, status: building).state == .stale && lifecycle(root: true, status: building).showsBrowser, "stale inventory remains browseable with a qualification")
     try test(lifecycle(error: "fixture failure").state == .failed && lifecycle(error: "fixture failure").action == .retry && !lifecycle(error: "fixture failure").showsProgress, "failed first catalog read offers retry and stops loading")
     try test(lifecycle(root: true, status: building, error: "fixture failure").state == .temporarilyUnavailable && lifecycle(root: true, status: building, error: "fixture failure").showsBrowser, "temporary read failure keeps prior catalog results visible")
+    let readFailure = lifecycle(root: true, status: indexed(.complete), error: "database is locked")
+    try test(readFailure.title == "Couldn't refresh results" && readFailure.detail.contains("earlier results are still shown") && readFailure.detail.contains("Retry") && !readFailure.detail.contains("database is locked"),
+             "a read failure overrides a current catalog with friendly recovery and retained-results guidance")
+    try test(!lifecycle(error: "database is locked").detail.contains("still shown") && lifecycle(error: "database is locked").detail.contains("Repair under Background Monitoring"),
+             "a first read failure offers Retry and Settings without claiming a retained catalog")
 
     // Disabling monitoring retains the catalog queue without advertising active work.
     let queued = indexed(.complete, .stale, pending: 2)
@@ -84,14 +105,14 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
     let stoppedBeforeRoot = InventoryLifecyclePresentation(hasRoot: false, status: indexed(.inProgress), requested: true, loading: false, error: nil, monitoringConfigured: false, monitoringEnabled: false)
     try test(stoppedBeforeRoot.state == .waiting && !stoppedBeforeRoot.showsProgress && stoppedBeforeRoot.action == .openSettings, "disabled first indexing before a readable root stops its indefinite spinner and offers Settings")
     let stoppedFailure = InventoryLifecyclePresentation(hasRoot: false, status: indexed(.inProgress), requested: true, loading: false, error: nil, monitoringConfigured: false, indexingFailure: "fixture indexer failure", monitoringEnabled: false)
-    try test(stoppedFailure.state == .failed && stoppedFailure.detail.contains("fixture indexer failure") && stoppedFailure.action == .retry, "known-off indexing preserves an observed failure and recovery instead of hiding it as waiting")
+    try test(stoppedFailure.state == .failed && stoppedFailure.technicalDetail?.contains("fixture indexer failure") == true && !stoppedFailure.detail.contains("fixture indexer failure") && stoppedFailure.action == .retry, "known-off indexing preserves an observed failure and recovery instead of hiding it as waiting")
     let completedAfterRequest = InventoryLifecyclePresentation(hasRoot: true, status: indexed(.complete), requested: true, loading: false, error: nil, monitoringConfigured: false, monitoringEnabled: false)
     try test(completedAfterRequest.state == .available && completedAfterRequest.showsBrowser && !completedAfterRequest.showsProgress, "a retained initial request does not invent waiting after a root is complete with no queue")
     var missingGeneration = noInventory; missingGeneration.initialCompletion = .inProgress
     let missingGenerationStopped = InventoryLifecyclePresentation(hasRoot: false, status: missingGeneration, requested: false, loading: false, error: nil, monitoringConfigured: false, monitoringEnabled: false)
     try test(missingGenerationStopped.state == .waiting && !missingGenerationStopped.showsProgress, "disabled initial work without a generation or request flag cannot remain spinning")
     let stoppedReadFailure = InventoryLifecyclePresentation(hasRoot: true, status: queued, requested: false, loading: false, error: "fixture catalog error", monitoringConfigured: false, monitoringEnabled: false)
-    try test(stoppedReadFailure.state == .temporarilyUnavailable && stoppedReadFailure.showsBrowser && stoppedReadFailure.detail.contains("fixture catalog error"), "disabling monitoring preserves catalog read failures and existing browser results")
+    try test(stoppedReadFailure.state == .temporarilyUnavailable && stoppedReadFailure.showsBrowser && stoppedReadFailure.action == .retry && stoppedReadFailure.title == "Couldn't refresh results", "disabling monitoring preserves catalog read failures and existing browser results")
 
     let previousSizeNote = InventoryNodePresentation.sharedFreshnessText("Previously measured")
     try test(previousSizeNote?.contains("last completed measurement") == true && previousSizeNote?.contains("being rechecked") == false, "shared stale-size explanation qualifies earlier measurements without claiming a running recheck")
@@ -148,8 +169,55 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
     func workerEvidence(_ offset: TimeInterval, _ payload: String) -> String { ISO8601DateFormatter().string(from: now.addingTimeInterval(offset)) + " inventory " + payload + "\n" }
     let failedWorker = InventoryWorkerEvidence.parse(workerEvidence(-60, "{\"outcome\":\"failed\"}"), now: now)
     try test(failedWorker?.outcome == "failed", "timestamped inventory failure is read independently of exit zero")
+    let startupLine = ISO8601DateFormatter().string(from: now.addingTimeInterval(-60)) + " ERROR inventory-work failed: Startup Data volume unavailable\n"
+    let startupFailure = InventoryWorkerEvidence.parse(startupLine, now: now)
+    try test(startupFailure?.outcome == "failed" && startupFailure?.reason == "Startup Data volume unavailable",
+             "an early worker startup error retains its timestamped reason before a JSON summary exists")
+    try test(setup().inventoryFailure(startupFailure)?.contains("Startup Data volume unavailable") == true,
+             "configured exit-zero services cannot hide a timestamped worker startup failure")
+    let failedSummary = InventoryWorkerEvidence.parse(workerEvidence(-30, "{\"outcome\":\"failed\",\"reason\":\"fixture read failed\"}"), now: now)
+    let failedFirstUse = InventoryLifecyclePresentation(hasRoot: false, status: noInventory, requested: true, loading: false, error: nil,
+                                                      monitoringConfigured: true, indexingFailure: setup().inventoryFailure(failedSummary))
+    try test(failedFirstUse.state == .failed && !failedFirstUse.showsProgress && failedFirstUse.technicalDetail?.contains("fixture read failed") == true && failedFirstUse.action == .retry,
+             "an exit-zero worker failure ends first-use waiting and shows its reason with recovery")
+    let failedWithRoot = InventoryLifecyclePresentation(hasRoot: true, status: indexed(.inProgress), requested: false, loading: false, error: nil,
+                                                      monitoringConfigured: true, indexingFailure: setup().inventoryFailure(failedSummary))
+    try test(failedWithRoot.state == .temporarilyUnavailable && failedWithRoot.showsBrowser && !failedWithRoot.showsProgress && failedWithRoot.technicalDetail?.contains("fixture read failed") == true,
+             "a root created before worker failure keeps its catalog browseable without hiding the failure behind first-pass progress")
+    try test(MonitoringHealthPresentation(setup: setup(), lastSuccess: now, inventory: startupFailure, now: now).detail.contains("Startup Data volume unavailable"),
+             "Settings monitoring health includes the actual bounded startup failure reason")
+    try test(setup(workerExit: 78).inventoryFailure(nil)?.contains("78") == true && setup(workerExit: 75).inventoryFailure(nil) == nil,
+             "an idle failed indexer reports its exit status while resumable work is not an error")
+    var runningIndexer = setup(workerExit: 78); runningIndexer.launchd?.jobs[worker] = .init(pid: 123, lastExitStatus: 78)
+    try test(runningIndexer.inventoryFailure(nil) == nil && runningIndexer.inventoryFailure(startupFailure) != nil,
+             "a running retry supersedes historical exit status but does not claim committed recovery from a logged failure")
+    let startupRecovered = InventoryWorkerEvidence.parse(startupLine + workerEvidence(-30, "{\"outcome\":\"partial\"}"), now: now)
+    try test(startupRecovered?.outcome == "partial" && setup().inventoryFailure(startupRecovered) == nil
+             && InventoryWorkerEvidence.retainingFailure(startupFailure, observed: startupRecovered) == startupRecovered,
+             "later committed inventory progress clears an early startup failure in parsing and first-use presentation")
+    try test(InventoryWorkerEvidence.parse(startupLine + workerEvidence(-30, "{\"outcome\":\"busy\"}"), now: now) == startupFailure,
+             "a busy retry cannot erase the startup failure reason")
+    try test(InventoryWorkerEvidence.retainingFailure(startupFailure, observed: failedSummary) == failedSummary,
+             "a later worker failure replaces the retained reason without falsely reporting recovery")
+    try test(InventoryWorkerEvidence.parse(ISO8601DateFormatter().string(from: now.addingTimeInterval(60)) + " ERROR inventory-work failed: future\n", now: now) == nil
+             && InventoryWorkerEvidence.parse(startupLine.replacingOccurrences(of: "inventory-work", with: "inventory-status"), now: now) == nil,
+             "future startup errors and read-only query errors cannot establish worker failure")
     let hiddenFailure = MonitoringHealthPresentation(setup: setup(), lastSuccess: now, inventory: failedWorker, now: now)
-    try test(hiddenFailure.state == .failed && hiddenFailure.title.contains("inventory") && hiddenFailure.detail.contains("do not clear"), "recent capacity plus registered exit-zero jobs cannot mask a recorded inventory failure")
+    try test(hiddenFailure.state == .failed && hiddenFailure.title.contains("indexing") && hiddenFailure.offersRepair && hiddenFailure.detail.contains("Repair"), "recent capacity plus registered exit-zero jobs cannot mask a recorded inventory failure")
+    // Studio incident: a saved pause with healthy capacity checks must not read as "working normally".
+    let pausedAt = now.addingTimeInterval(-11 * 86_400)
+    let pausedHealth = MonitoringHealthPresentation(setup: setup(), lastSuccess: now, inventoryPausedSince: pausedAt, now: now)
+    try test(pausedHealth.state == .paused && pausedHealth.title == "Disk indexing is paused" && pausedHealth.detail.contains(pausedAt.formatted(date: .abbreviated, time: .shortened))
+             && pausedHealth.detail.contains("Resume Indexing") && !pausedHealth.offersRepair,
+             "Settings reports a saved pause with its date and Resume, even while capacity checks are recent")
+    try test(MonitoringHealthPresentation(setup: setup(), lastSuccess: now, inventory: failedWorker, inventoryPausedSince: pausedAt, now: now).state == .failed,
+             "a recorded inventory failure still outranks a saved pause")
+    try test(MonitoringHealthPresentation(setup: setup(), lastSuccess: now, now: now).state == .healthy
+             && !MonitoringHealthPresentation(setup: setup(), lastSuccess: now, now: now).detail.contains("PID"),
+             "without a pause marker healthy monitoring is unchanged, and process IDs stay out of the main explanation")
+    let pausedLifecycle = InventoryLifecyclePresentation(hasRoot: true, status: nil, requested: false, loading: false, error: nil, monitoringConfigured: true, paused: true, pausedSince: pausedAt)
+    try test(pausedLifecycle.state == .paused && pausedLifecycle.detail.contains("paused since " + pausedAt.formatted(date: .abbreviated, time: .shortened)) && pausedLifecycle.action == .resumeIndexing,
+             "the Storage screen says how long indexing has been paused")
     let skipped = InventoryWorkerEvidence.parse(workerEvidence(-60, "{\"outcome\":\"failed\"}") + workerEvidence(-30, "{\"outcome\":\"busy\"}"), now: now)
     try test(skipped == failedWorker, "busy inventory attempt does not erase prior failure")
     let workerRecovered = InventoryWorkerEvidence.parse(workerEvidence(-60, "{\"outcome\":\"failed\"}") + workerEvidence(-30, "{\"outcome\":\"partial\"}"), now: now)

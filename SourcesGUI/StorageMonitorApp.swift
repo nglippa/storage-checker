@@ -76,6 +76,10 @@ struct ViewerConfiguration {
     @Published private(set) var inventoryRefreshTick = 0
     @Published private(set) var monitoring: MonitoringSetupStatus?
     @Published private(set) var lastWake: Date?
+    /// When the saved inventory pause marker was written; nil when indexing is not paused.
+    @Published private(set) var inventoryPausedSince: Date?
+    /// Set by the Storage screen's Enable Monitoring button so Settings opens straight to the consent prompt.
+    @Published var enableMonitoringRequested = false
     private var healthEvidence = MonitoringHealthEvidence()
     private var inventoryHealthEvidence: InventoryWorkerEvidence?
     private var monitoringTask: Task<Void, Never>?
@@ -152,13 +156,31 @@ struct ViewerConfiguration {
                 }.value
                 inventoryHealthEvidence = InventoryWorkerEvidence.retainingFailure(inventoryHealthEvidence, observed: observed)
             }
+            inventoryPausedSince = await Task.detached(priority: .utility) {
+                let marker = URL(fileURLWithPath: configuration.database).deletingLastPathComponent().appendingPathComponent("inventory.cancel").path
+                return (try? FileManager.default.attributesOfItem(atPath: marker))?[.modificationDate] as? Date
+            }.value
             healthEvidence.observe(status.launchd, at: Date(), labels: status.jobLabels)
             monitoring = status
             monitoringTask = nil
         }
     }
     func monitoringHealth(at now: Date) -> MonitoringHealthPresentation {
-        MonitoringHealthPresentation(setup: monitoring, lastSuccess: snapshot?.latest?.timestamp, evidence: healthEvidence, lastWake: lastWake, inventory: inventoryHealthEvidence, now: now)
+        MonitoringHealthPresentation(setup: monitoring, lastSuccess: snapshot?.latest?.timestamp, evidence: healthEvidence, lastWake: lastWake, inventory: inventoryHealthEvidence, inventoryPausedSince: inventoryPausedSince, now: now)
+    }
+    var inventoryEvidence: InventoryWorkerEvidence? { inventoryHealthEvidence }
+    /// The same request the Storage screen's Resume Indexing sends: the worker clears the saved pause and continues.
+    func resumeIndexing() async -> String {
+        let database = configuration.database
+        do {
+            _ = try await Task.detached(priority: .utility) { try InventoryRequests.enqueue(database: database, action: "resume", path: nil) }.value
+            refreshMonitoring()
+            return "Resume requested. Disk indexing continues in the next background run, usually within a few minutes."
+        } catch { return "Couldn't resume indexing: \(error.localizedDescription)" }
+    }
+    var inventoryFailure: String? {
+        if let monitoring { return monitoring.inventoryFailure(inventoryHealthEvidence) }
+        return inventoryHealthEvidence?.failureDescription
     }
     func woke() { lastWake = Date(); refreshAll() }
     func refreshAll() {
@@ -271,7 +293,7 @@ struct StorageMonitorApplication: App {
         .commands {
             CommandGroup(replacing:.newItem) { Button("Show Storage Monitor") { openWindow(id:"main") }.keyboardShortcut("0") }
             CommandGroup(after:.toolbar) {
-                Button("Reload Data and Check Capacity") { store.refreshAll() }.keyboardShortcut("r")
+                Button("Refresh") { store.refreshAll() }.keyboardShortcut("r")
                 Picker("Appearance",selection:$store.appearance) { ForEach(AppAppearance.allCases) { Text($0.title).tag($0) } }
                 Toggle("Show Event Details",isOn:$store.showInspector).keyboardShortcut("i",modifiers:[.command,.option])
             }
@@ -365,18 +387,28 @@ private struct AppearanceSettings: View {
     @State private var pending: MonitoringSetupAction?
     @State private var working = false
     @State private var result: String?
+    @State private var resultDetail: String?
+    @State private var showResultDetail = false
+    @State private var showTechnical = false
     @ViewState private var showPrivacyDetails = false
     private var monitoring: MonitoringSetupStatus? { store.monitoring }
     private func refreshMonitoring() { store.refreshMonitoring() }
     private func perform(_ action: MonitoringSetupAction) {
         guard NativeQARuntime.active == nil else { return }
         guard let helper = monitoring?.helperExecutable else { return }
-        working = true; result = nil
+        working = true; result = nil; resultDetail = nil
         Task {
             let outcome = await action.run(helper: helper, scope: LifecycleQAScope.active)
-            working = false; result = outcome.ok ? outcome.output : "Could not complete: \(outcome.output)"
+            working = false
+            // Helper output is technical: success shows it plainly; a failure leads with a sentence and folds the output away.
+            if outcome.ok { result = outcome.output }
+            else { result = "That didn't finish. Try again, or see the details below."; resultDetail = outcome.output }
             refreshMonitoring()
         }
+    }
+    private func resume() {
+        working = true; result = nil; resultDetail = nil
+        Task { result = await store.resumeIndexing(); working = false }
     }
     // QA/development configurations never change the person's real LaunchAgents.
     private var actionsAllowed: Bool { (!store.configuration.isQA || LifecycleQAScope.active != nil) && monitoring?.helperExecutable != nil && !working }
@@ -388,6 +420,7 @@ private struct AppearanceSettings: View {
             case .needsUpdate: Button("Update Background Monitor…") { pending = .enable }; Button("Disable…") { pending = .disable }
             case .incomplete: Button("Repair…") { pending = .enable }; Button("Disable…") { pending = .disable }
             case .on:
+                if store.monitoringHealth(at: Date()).offersRepair { Button("Repair…") { pending = .enable } }
                 Button("Disable…") { pending = .disable }
                 // macOS prompts only while the choice is undecided; otherwise its settings decide.
                 if LifecycleQAScope.active == nil {
@@ -408,15 +441,15 @@ private struct AppearanceSettings: View {
             Text(monitoring.notifications.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.notifications")
         }
     }
+    /// The Storage screen's Enable Monitoring asks for consent directly; nothing is set up without it.
+    private func openRequestedConsent() {
+        guard store.enableMonitoringRequested, let monitoring else { return }
+        store.enableMonitoringRequested = false
+        if monitoring.state == .off && actionsAllowed { pending = .enable }
+    }
     var body: some View {
         Form {
-            Section {
-                Picker("Appearance",selection:$store.appearance) { ForEach(AppAppearance.allCases) { Text($0.title).tag($0) } }
-                    .pickerStyle(.radioGroup)
-                    .accessibilityIdentifier("settings.appearance")
-                Text("Applies to Storage Monitor only. System follows your Mac's appearance.").font(.subheadline).foregroundStyle(.secondary)
-                    .fixedSize(horizontal:false,vertical:true)
-            }
+            // Setup comes first: it is what a new user opens Settings for.
             Section("Background Monitoring") {
                 if let monitoring { monitoringControls(monitoring) }
                 else { Text("Checking background monitoring…").foregroundStyle(.secondary).accessibilityIdentifier("settings.monitoring.status") }
@@ -425,11 +458,29 @@ private struct AppearanceSettings: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(health.title).font(.callout.weight(.medium))
                         Text(health.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        ForEach(health.jobDetails, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                        if health.state == .paused {
+                            Button("Resume Indexing") { resume() }.disabled(working).accessibilityIdentifier("settings.monitoring.resume")
+                        }
+                        InspectorDisclosure("Technical details", isExpanded: $showTechnical) {
+                            ForEach(health.technicalLines(inventory: store.inventoryEvidence), id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true) }
+                        }
                     }.accessibilityIdentifier("settings.monitoring.health")
                 }
-                Button("Reload Monitoring Status") { store.refresh(); refreshMonitoring() }
+                Button("Check Again") { store.refresh(); refreshMonitoring() }
+                    .help("Read the background monitor's current status again.")
                 if let result { Text(result).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.result") }
+                if let resultDetail {
+                    InspectorDisclosure("Details", isExpanded: $showResultDetail) {
+                        Text(resultDetail).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal:false,vertical:true)
+                    }
+                }
+            }
+            Section("Appearance") {
+                Picker("Appearance",selection:$store.appearance) { ForEach(AppAppearance.allCases) { Text($0.title).tag($0) } }
+                    .pickerStyle(.radioGroup)
+                    .accessibilityIdentifier("settings.appearance")
+                Text("Applies to Storage Monitor only. System follows your Mac's appearance.").font(.subheadline).foregroundStyle(.secondary)
+                    .fixedSize(horizontal:false,vertical:true)
             }
             Section("Privacy") {
                 Text("Storage Monitor reads local capacity and optional folder measurements. It does not upload your storage history.")
@@ -456,7 +507,10 @@ private struct AppearanceSettings: View {
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)) { _ in store.woke() }
         .onAppear {
             refreshMonitoring()
+            openRequestedConsent()
         }
+        .onChange(of: store.enableMonitoringRequested) { _, _ in openRequestedConsent() }
+        .onChange(of: monitoring?.state) { _, _ in openRequestedConsent() }
         .alert(pending == .disable ? "Disable background monitoring?" : (monitoring?.state == .off ? "Enable background monitoring?" : "Update background monitoring?"),
                isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
             Button(pending == .disable ? "Disable" : (monitoring?.state == .off ? "Enable" : "Update")) { if let action = pending { perform(action) }; pending = nil }

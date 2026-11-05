@@ -416,26 +416,26 @@ struct InventoryExplorerView: View {
         HStack(spacing: 10) {
             if visualization == .tree && showMap {
                 Button { treeNavigatorExpanded.toggle() } label: {
-                    Label(treeNavigatorExpanded ? "Hide Navigator" : "Show Navigator", systemImage: "list.bullet.indent")
+                    Label(treeNavigatorExpanded ? "Hide List" : "Show List", systemImage: "list.bullet.indent")
                 }.controlSize(.small).accessibilityIdentifier("inventory.navigatorToggle")
                 if treeNavigatorExpanded {
                     Menu("List style") {
-                        Picker("List style", selection: $technicalView) { Text("Navigator").tag(false); Text("Detailed table").tag(true) }
+                        Picker("List style", selection: $technicalView) { Text("List").tag(false); Text("Table").tag(true) }
                     }.controlSize(.small).fixedSize()
                 }
             } else {
                 Picker("View", selection: $technicalView) {
-                    Text("Navigator").tag(false)
+                    Text("List").tag(false)
                     Text("Table").tag(true)
                 }.pickerStyle(.segmented).labelsHidden().fixedSize().controlSize(.small)
-                .help("Navigator, or the detailed table with every column")
+                .help("A folder list, or a table with every column")
             }
                 Spacer()
                 if showMap {
                     Picker("Visualization", selection: $visualization) {
                         ForEach(InventoryVisualization.allCases) { Text($0.title).tag($0) }
                     }.pickerStyle(.segmented).labelsHidden().fixedSize().controlSize(.small)
-                    .help("Storage Atlas, or the Living Tree of the same folder")
+                    .help("Two pictures of the same folder: Atlas (rectangles) or Living Tree (branches)")
                     .accessibilityIdentifier("inventory.visualization")
                 }
                 Toggle(isOn: $showMap) { Image(systemName: "square.grid.2x2") }.toggleStyle(.button).controlSize(.small)

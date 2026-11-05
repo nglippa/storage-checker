@@ -117,8 +117,10 @@ struct MigrationReadinessSummary: View {
     let browser: InventoryBrowserModel
     @State private var showingDetails = false
 
+    /// Shown only when something needs review: a clean result is not worth a line on every Storage screen.
+    private var hasFindings: Bool { controller.report.map { !MigrationReadinessController.targets($0).isEmpty } ?? false }
     var body: some View {
-        if controller.enabled {
+        if controller.enabled && hasFindings {
             HStack(spacing: 6) {
                 Image(systemName: symbol).foregroundStyle(tint).imageScale(.small).accessibilityHidden(true)
                 Text("Migration readiness:").font(.caption.weight(.medium))
@@ -135,7 +137,7 @@ struct MigrationReadinessSummary: View {
                 }
             }
             .accessibilityElement(children: .contain).accessibilityIdentifier("migration.summary")
-            .help("Sparse disk images and virtual disks found in the disk inventory. Read-only; nothing is changed.")
+            .help("Disk images and virtual machine disks that may need attention before moving to a new Mac. Read-only; nothing is changed.")
         }
     }
 

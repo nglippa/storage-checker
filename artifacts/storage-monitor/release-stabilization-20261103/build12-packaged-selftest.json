@@ -1,0 +1,14 @@
+{
+  "dmg": "/Users/nicholaslippa/orca/projects/storage-checker/build/dist/Storage-Monitor-2.2.0-Studio-reload-build12-20261105.dmg",
+  "dmg_sha256": "e3154e41fab3b74e956822be8ac0f157e47756bce468f0d1991a48e37c4dad24",
+  "mount": "/private/tmp/storage-monitor-build12-selftest-ly6bksji",
+  "viewer_sha256": "914b87af3cc1090bad047f08ee82d19885ea1102ae15c76710ab4ad8d9d66077",
+  "viewer_architectures": "x86_64 arm64",
+  "monitor_sha256": "459e3fd2c45dbdce2262847df2a292281d8268a344a20cb6b7eb997bdf9a5384",
+  "monitor_architectures": "x86_64 arm64",
+  "codesign_exit": 0,
+  "selftest_exit": 0,
+  "selftest_last_line": "Storage Monitor: walk of hard did not return; marked blocked",
+  "detach_exit": 0,
+  "selftest_summary": "238 tests passed"
+}

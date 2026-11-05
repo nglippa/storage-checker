@@ -1199,7 +1199,7 @@ struct LivingTreeView: View {
                 helpRow("See everything", "Fit frames the whole tree. Reset (0) also undoes turning.")
                 helpRow("Find the selection", "View Selection (F) frames it; Isolate (I) hides the rest.")
             }
-            Text("Prefer a list? Choose Atlas, or use the Navigator below. They show the same folders.").font(.caption).foregroundStyle(.secondary)
+            Text("Prefer a list? Use the List below, or switch to Atlas. They show the same folders.").font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16).frame(width: 420)
@@ -1215,13 +1215,13 @@ struct LivingTreeView: View {
 
     private var footerText: String {
         guard let model = tree.model else { return " " }
-        var parts = ["Width ≈ indexed allocation; length and position show hierarchy, not bytes", "not reclaimable storage", "\(model.count.formatted()) elements"]
+        var parts = ["Branch width shows size; length and position show folder structure", "\(model.count.formatted()) items"]
         let unmeasured = model.order.reduce(Int64(0)) { total, key in
             let element = model[key]!
             return total + (element.role == .unmeasured ? 1 : (element.role == .rest ? element.unmeasured : 0))
         }
         if unmeasured > 0 { parts.append("\(unmeasured.formatted()) without a measured size, never drawn as zero") }
-        if model.truncated { parts.append("reduced to keep the read short") }
+        if model.truncated { parts.append("some items left out to keep this fast") }
         return parts.joined(separator: " · ")
     }
 }
@@ -1684,7 +1684,7 @@ enum LivingTreeText {
             title = "Other items in \(folder)"
             value = "\(element.count.formatted()) items" + (element.bytes.map { " · \(AtlasText.bytes($0))" } ?? "")
             if element.unmeasured > 0 { notes.append("\(element.unmeasured.formatted()) without a measured size, not counted as zero") }
-            notes.append("Click to list them in the Navigator")
+            notes.append("Click to show them in the List")
         case .unmeasured:
             title = element.name
             value = "Size unknown"

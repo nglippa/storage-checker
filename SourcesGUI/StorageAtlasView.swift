@@ -231,8 +231,9 @@ struct StorageAtlasView: View {
                     .buttonStyle(.borderless).help("Up to \(parentNode.parentID == nil ? "Startup Data" : parentNode.name)")
                     .accessibilityLabel("Enclosing folder")
             }
-            Label("Showing indexed allocation · Shared APFS blocks may be counted more than once", systemImage: "info.circle")
-                .labelStyle(.titleAndIcon).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            // The caveat lives in the window footer; keep only an info icon here for the full explanation.
+            Image(systemName: "info.circle").font(.caption).foregroundStyle(.secondary)
+                .accessibilityLabel("About these sizes")
                 .help("Areas show each item's allocated size as indexed. APFS clones and snapshots share blocks, so the same physical space can appear in several places, and deleting an item frees only the blocks nothing else shares. This is not a measure of reclaimable space.")
                 .accessibilityIdentifier("inventory.map.basis")
             if let folder, let start = explorer.mapWindows[folder.id]?.last {

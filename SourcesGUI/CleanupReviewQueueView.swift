@@ -212,8 +212,8 @@ struct CleanupReviewQueueView: View {
                     Text("Understand an item before deciding what to keep.").font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Restart Indexed Review") { queue.restart() }.disabled(queue.loading)
-                    .help("Restart the bounded read-only review of the existing index. This does not scan or change files.")
+                Button("Start Review Again") { queue.restart() }.disabled(queue.loading)
+                    .help("Review the saved inventory again from the start. This doesn't scan or change files.")
             }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { assessmentFilter; filterButton; Spacer(minLength: 4); sortPicker }
@@ -229,8 +229,8 @@ struct CleanupReviewQueueView: View {
             .popover(isPresented: $showingFilters) {
                 Form {
                     kindFilter; toolFilter
-                    Toggle("Include potential matches awaiting evidence", isOn: $queue.includesPotentialMatches)
-                    Text("Names and paths alone do not establish an item exists or is removable. Filters apply to this bounded review page.")
+                    Toggle("Include possible matches that haven't been checked yet", isOn: $queue.includesPotentialMatches)
+                    Text("A matching name or path doesn't prove an item is safe to remove. Filters apply to the items loaded on this page.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.formStyle(.grouped).frame(width: 400).padding(8)
             }
@@ -283,7 +283,7 @@ struct CleanupReviewQueueView: View {
                     Text(entry.recoverableBytes(at: queue.freshnessNow).map { "≈ " + AtlasText.bytes($0) + " may be recoverable" } ?? "Recovery unknown")
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }.padding(.vertical, 5)
-                    .help("Indexed size is not physical recovery. APFS sharing and snapshots may retain data; moving to Trash may not increase available space.")
+                    .help("Moving an item to the Trash may free less than its size, because files can share storage with other files and snapshots.")
             }.width(min: 130, ideal: 175)
         }
         .tableStyle(.inset(alternatesRowBackgrounds: false))
@@ -291,7 +291,7 @@ struct CleanupReviewQueueView: View {
         .accessibilityIdentifier("inventory.reviewQueue.table")
         .contextMenu(forSelectionType: Int64.self) { ids in
             if let id = ids.sorted().first, let entry = queue.snapshot?.entries.first(where: { $0.id == id }) {
-                Button("Recheck Candidate") { queue.selection = [id]; queue.reviewSelection(cleanup: browser.cleanup); showingInspector = true }
+                Button("Check Again") { queue.selection = [id]; queue.reviewSelection(cleanup: browser.cleanup); showingInspector = true }
                 revealMenu(entry.node)
             }
         } primaryAction: { ids in
@@ -314,7 +314,7 @@ struct CleanupReviewQueueView: View {
                 HStack(spacing: 12) {
                     Button("See all assessments") { queue.status = nil; queue.kind = nil; queue.tool = nil; queue.includesPotentialMatches = true }
                         .buttonStyle(.bordered)
-                    if expiredEvidence { Button("Restart Indexed Review") { queue.restart() } }
+                    if expiredEvidence { Button("Start Review Again") { queue.restart() } }
                 }
             }
         }.padding(24)
@@ -332,21 +332,21 @@ struct CleanupReviewQueueView: View {
                 if queue.loading { Button("Cancel") { queue.cancel() } }
                 else if queue.snapshot?.progress.hasMore != false {
                     Button(queue.snapshot?.progress.stopReason?.contains("memory budget") == true ? "Next artifact page" : "Continue discovery") { queue.discover() }
-                        .help("Continues from the indexed cursor. At the artifact memory limit, this replaces the retained page and its selection; earlier artifacts are not kept in memory. Sorting and filtering cover the current page.")
+                        .help("Loads the next items. To save memory, earlier items may be cleared from this page. Sorting and filters apply to the items shown.")
                 }
             }
             Text(queue.snapshot?.progress.stopReason ?? "Coverage is incomplete. Discovery is paginated and bounded; unindexed or inaccessible locations are not assessed.")
                 .font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let pagedOut = queue.snapshot?.progress.pagedOutEntries, pagedOut > 0 {
-                Text("\(pagedOut.formatted()) earlier artifacts were released from memory. Filters, sorting and selection apply to the current page.").font(.caption2).foregroundStyle(.secondary)
+                Text("\(pagedOut.formatted()) earlier items were cleared to save memory. Filters, sorting and selection apply to the items shown.").font(.caption2).foregroundStyle(.secondary)
             }
             HStack(spacing: 10) {
                 Text("\(queue.selection.count) selected · Review only; nothing is moved here").font(.caption).foregroundStyle(.secondary)
                 if queue.reviewing { ProgressView().controlSize(.mini); Text("Rechecking selected evidence…").font(.caption).foregroundStyle(.secondary) }
                 if let node = queue.inspectorNode {
                     if compact { Button("Review evidence") { showingInspector = true } }
-                    Button("Recheck Candidate") { queue.reviewSelection(cleanup: browser.cleanup) }.disabled(queue.reviewing)
-                    Menu("Reveal in…") { revealMenu(node) }
+                    Button("Check Again") { queue.reviewSelection(cleanup: browser.cleanup) }.disabled(queue.reviewing)
+                    Menu("Show in…") { revealMenu(node) }
                 }
                 Spacer()
                 Button("Review plan…") { showingPlan = true }.disabled(queue.plan.count == 0)
@@ -356,9 +356,9 @@ struct CleanupReviewQueueView: View {
     }
 
     @ViewBuilder private func revealMenu(_ node: InventoryNode) -> some View {
-        Button("Reveal in Navigator") { reveal(node, visualization: nil) }
-        Button("Reveal in Atlas") { reveal(node, visualization: .atlas) }
-        Button("Reveal in Living Tree") { reveal(node, visualization: .tree) }
+        Button("Show in List") { reveal(node, visualization: nil) }
+        Button("Show in Atlas") { reveal(node, visualization: .atlas) }
+        Button("Show in Living Tree") { reveal(node, visualization: .tree) }
     }
 
     private func reveal(_ node: InventoryNode, visualization: InventoryVisualization?) {
@@ -399,7 +399,7 @@ struct CleanupReviewPlanView: View {
                     notes("Risks and uncertainty", plan.risks)
                     notes("Require revalidation", plan.requiresRevalidation)
                     notes("Protected related artifacts", plan.protectedRelated.map { "\($0.path) · \($0.roles.map(\.rawValue).joined(separator: ", "))" })
-                    Text("All items require fresh identity, protection, Git and active-use checks before any separately requested single-item Trash action.").font(.caption).foregroundStyle(.secondary)
+                    Text("Before any item is moved to the Trash, it's checked again: that it's the same item, isn't protected, isn't part of an active Git project and isn't in use.").font(.caption).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
         }.padding(20).frame(width: 620, height: 580).accessibilityIdentifier("inventory.reviewQueue.plan")

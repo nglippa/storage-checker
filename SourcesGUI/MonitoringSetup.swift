@@ -66,6 +66,15 @@ struct MonitoringSetupStatus: Equatable {
         }
     }
 
+    /// Registration and exit zero do not establish that the indexer produced results.
+    func inventoryFailure(_ evidence: InventoryWorkerEvidence?) -> String? {
+        if let failure = evidence?.failureDescription { return failure }
+        guard let launchd, launchd.reliable, jobLabels.count > 2,
+              let job = launchd.jobs[jobLabels[2]], job.pid == nil,
+              let exit = job.lastExitStatus, exit != 0 && exit != 75 else { return nil }
+        return "Disk indexing stopped unexpectedly (exit code \(exit)) before it produced results."
+    }
+
     static func bundledHelper(in bundle: URL) -> URL { bundle.appendingPathComponent("Contents/Helpers/MacBook Storage Monitor.app") }
 
     static func evaluate(home: URL, bundledHelper: URL?, launchd: LaunchdState? = nil, labels: [String] = MonitoringSetupStatus.labels) -> MonitoringSetupStatus {
@@ -223,8 +232,13 @@ struct InventoryWorkerEvidence: Equatable, Sendable {
     let timestamp: Date
     let outcome: String
     let position: Position?
-    init(timestamp: Date, outcome: String, position: Position? = nil) {
-        self.timestamp = timestamp; self.outcome = outcome; self.position = position
+    let reason: String?
+    init(timestamp: Date, outcome: String, position: Position? = nil, reason: String? = nil) {
+        self.timestamp = timestamp; self.outcome = outcome; self.position = position; self.reason = reason
+    }
+    var failureDescription: String? {
+        guard outcome == "failed" else { return nil }
+        return "Disk indexing stopped with an error." + (reason.map { " " + $0 } ?? "")
     }
     static func parse(_ text: String, now: Date) -> Self? { parse(Data(text.utf8), now: now) }
     private static func parse(_ data: Data, now: Date, stream: Stream? = nil, start: UInt64 = 0) -> Self? {
@@ -234,12 +248,20 @@ struct InventoryWorkerEvidence: Equatable, Sendable {
             let position = stream.map { Position(stream: $0, offset: offset) }
             offset += UInt64(bytes.count) + 1
             let line = String(decoding: bytes, as: UTF8.self)
+            if let marker = line.range(of: " ERROR inventory-work failed: "),
+               let date = formatter.date(from: String(line[..<marker.lowerBound])), date <= now {
+                let reason = String(line[marker.upperBound...].prefix(512)).trimmingCharacters(in: .whitespacesAndNewlines)
+                return Self(timestamp: date, outcome: "failed", position: position, reason: reason.isEmpty ? nil : reason)
+            }
             guard let marker = line.range(of: " inventory "),
                   let date = formatter.date(from: String(line[..<marker.lowerBound])), date <= now else { return nil }
             let data = Data(line[marker.upperBound...].utf8)
             guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let outcome = json["outcome"] as? String else { return Self(timestamp: date, outcome: "unknown", position: position) }
-            if outcome == "failed" { return Self(timestamp: date, outcome: "failed", position: position) }
+            if outcome == "failed" {
+                let reason = (json["reason"] as? String).map { String($0.prefix(512)).trimmingCharacters(in: .whitespacesAndNewlines) }
+                return Self(timestamp: date, outcome: "failed", position: position, reason: reason?.isEmpty == false ? reason : nil)
+            }
             if let status = json["status"] as? String {
                 if ["skipped", "paused"].contains(status) { return nil }
                 if ["completed", "continuing", "deferred"].contains(status), ["complete", "partial", "interrupted", "stale"].contains(outcome) {
@@ -255,7 +277,7 @@ struct InventoryWorkerEvidence: Equatable, Sendable {
         guard let previous else { return observed }
         guard observed.timestamp >= previous.timestamp else { return previous }
         if previous.outcome == "failed" {
-            guard ["complete", "partial"].contains(observed.outcome) else { return previous }
+            guard ["failed", "complete", "partial"].contains(observed.outcome) else { return previous }
             if observed.timestamp == previous.timestamp {
                 // Log timestamps have second resolution. Only physical order in the same
                 // opened log stream proves recovery; a rotated/temporarily missing tail cannot.
@@ -294,18 +316,23 @@ struct InventoryWorkerEvidence: Equatable, Sendable {
 }
 
 struct MonitoringHealthPresentation: Equatable {
-    enum State: Equatable { case off, configurationNeedsAttention, unknown, waiting, running, healthy, failed, stale, resuming, waking }
+    enum State: Equatable { case off, configurationNeedsAttention, unknown, waiting, running, healthy, failed, stale, resuming, waking, paused }
     let state: State
     let title: String
     let detail: String
     let lastSuccess: Date?
     /// Only supplied by timestamped evidence; launchctl list alone never sets this.
     let lastAttempt: Date?
+    /// Technical per-task lines (process IDs, exit codes), shown under a Technical details disclosure.
     let jobDetails: [String]
+    /// When a saved pause marker exists, the time it was written.
+    let pausedSince: Date?
+    /// Repair reinstalls the background tasks; offer it whenever something has failed.
+    var offersRepair: Bool { state == .failed || state == .configurationNeedsAttention }
     static let staleAfter: TimeInterval = 75 * 60
     static let wakeGrace: TimeInterval = 10 * 60
-    init(setup: MonitoringSetupStatus?, lastSuccess: Date?, evidence: MonitoringHealthEvidence = .init(), lastAttempt: Date? = nil, lastWake: Date? = nil, inventory: InventoryWorkerEvidence? = nil, now: Date) {
-        self.lastSuccess = lastSuccess; self.lastAttempt = lastAttempt
+    init(setup: MonitoringSetupStatus?, lastSuccess: Date?, evidence: MonitoringHealthEvidence = .init(), lastAttempt: Date? = nil, lastWake: Date? = nil, inventory: InventoryWorkerEvidence? = nil, inventoryPausedSince: Date? = nil, now: Date) {
+        self.lastSuccess = lastSuccess; self.lastAttempt = lastAttempt; self.pausedSince = inventoryPausedSince
         let jobs = setup?.launchd?.jobs ?? [:]
         let labels = setup?.jobLabels ?? MonitoringSetupStatus.labels
         let main = labels[0], baseline = labels[1], worker = labels[2]
@@ -320,39 +347,63 @@ struct MonitoringHealthPresentation: Equatable {
             if label == main, let observed = evidence.failures[label], let lastSuccess, lastSuccess > observed { return false }
             return true
         }
-        if setup == nil { state = .unknown; title = "Checking background monitoring" }
+        let configured = setup != nil && setup?.state != .off && setup?.state != .incomplete
+        if setup == nil { state = .unknown; title = "Checking background monitoring…" }
         else if setup?.state == .off { state = .off; title = "Background monitoring is off" }
-        else if setup?.state == .incomplete { state = .configurationNeedsAttention; title = "Background setup needs attention" }
-        else if setup?.launchd?.reliable != true { state = .unknown; title = "Background execution is unknown" }
+        else if setup?.state == .incomplete { state = .configurationNeedsAttention; title = "Background monitoring needs repair" }
+        else if setup?.launchd?.reliable != true { state = .unknown; title = "Couldn't confirm the background tasks are running" }
         else if !failed.isEmpty {
             state = .failed
-            title = "Monitoring enabled · attention needed"
+            title = "A background task stopped unexpectedly"
         } else if inventory?.outcome == "failed" {
-            state = .failed; title = "Monitoring enabled · inventory needs attention"
+            state = .failed; title = "Disk indexing stopped with an error"
+        } else if configured, inventoryPausedSince != nil {
+            // A saved pause outlives updates; capacity checks alone must never make this look healthy.
+            state = .paused; title = "Disk indexing is paused"
         } else if inventory?.outcome == "unknown" {
-            state = .unknown; title = "Inventory execution needs rechecking"
-        } else if jobs[main]?.pid != nil { state = .running; title = "A capacity check is running" }
-        else if let lastSuccess, lastSuccess > now { state = .unknown; title = "Background reading time needs rechecking" }
+            state = .unknown; title = "Couldn't confirm disk indexing ran"
+        } else if jobs[main]?.pid != nil { state = .running; title = "Checking free space now" }
+        else if let lastSuccess, lastSuccess > now { state = .unknown; title = "The last reading's time looks wrong" }
         else if let lastSuccess, now.timeIntervalSince(lastSuccess) <= Self.staleAfter {
-            state = .healthy; title = "Recent background reading received"
+            state = .healthy; title = "Working normally"
         } else if let lastWake, now.timeIntervalSince(lastWake) >= 0, now.timeIntervalSince(lastWake) < Self.wakeGrace {
             state = .waking; title = "Waiting for a check after wake"
-        } else if lastSuccess != nil { state = .stale; title = "Background readings are older than expected" }
-        else if jobs[worker]?.lastExitStatus == 75 || jobs[baseline]?.lastExitStatus == 75 { state = .resuming; title = "Folder indexing will resume" }
-        else { state = .waiting; title = "Waiting for the first background reading" }
-        let successText = lastSuccess.map { "Last successful capacity reading: " + $0.formatted(date: .abbreviated, time: .standard) + "." } ?? "No successful capacity reading is recorded."
-        let attemptText = lastAttempt.map { "Last attempt: " + $0.formatted(date: .abbreviated, time: .standard) + "." } ?? "Last attempt time is unknown; macOS does not report it here."
+        } else if lastSuccess != nil { state = .stale; title = "Readings are older than expected" }
+        else if jobs[worker]?.lastExitStatus == 75 || jobs[baseline]?.lastExitStatus == 75 { state = .resuming; title = "Disk indexing will continue" }
+        else { state = .waiting; title = "Waiting for the first reading" }
+        let successText = lastSuccess.map { "Last free-space reading: " + $0.formatted(date: .abbreviated, time: .shortened) + "." } ?? "No free-space reading has been recorded yet."
         let recovery: String
         switch state {
-        case .failed: recovery = "Check Background Monitoring in Settings and repair the helper if needed. A later running task or successful check can show recovery; a registered task alone does not prove it is working."
-        case .stale, .waking, .waiting: recovery = "Checks are scheduled at login and every 30 minutes for your account. They do not run while logged out; sleep can delay them. After wake, allow the next scheduled check, then reload status or check setup if readings remain old."
-        case .resuming: recovery = "Folder indexing saved its progress; the next background run can resume it. This is not a fatal failure."
-        case .configurationNeedsAttention: recovery = setup?.summary ?? "Check setup in Settings."
-        case .unknown: recovery = "Configuration and registration do not establish successful execution. Reload status to try again."
-        default: recovery = "Capacity checks are scheduled at login and every 30 minutes while your account is logged in. Sleep can delay checks."
+        case .failed: recovery = "Choose Repair to reinstall the background tasks. Your history is kept."
+        case .paused: recovery = "Disk indexing has been paused since " + (inventoryPausedSince ?? now).formatted(date: .abbreviated, time: .shortened) + ". A pause stays in effect, even after app updates, until you choose Resume Indexing. Free-space checks continue."
+        case .stale, .waking, .waiting: recovery = "Checks run at login and every 30 minutes while you're logged in; sleep can delay them. If readings stay old, choose Check Again, or Repair."
+        case .resuming: recovery = "Disk indexing saved its progress and continues in the next background run. Nothing needs fixing."
+        case .configurationNeedsAttention: recovery = setup?.summary ?? "Choose Repair to fix the setup."
+        case .unknown: recovery = setup == nil ? "" : "macOS didn't report whether the background tasks ran. Choose Check Again."
+        case .off: recovery = "Turn it on to record free space and build your disk inventory."
+        default: recovery = "Free space is checked at login and every 30 minutes while you're logged in."
         }
-        let inventoryText = inventory.map { " Last recorded inventory outcome: " + $0.outcome + " at " + $0.timestamp.formatted(date: .abbreviated, time: .standard) + ". Capacity readings do not clear an inventory failure." } ?? ""
-        detail = successText + " " + attemptText + " " + recovery + inventoryText
+        let inventoryText: String
+        if state == .paused { inventoryText = "" }
+        else if let inventory {
+            let when = inventory.timestamp.formatted(date: .abbreviated, time: .shortened)
+            switch inventory.outcome {
+            case "complete": inventoryText = " Disk indexing last finished normally (" + when + ")."
+            case "partial": inventoryText = " Disk indexing last saved its progress (" + when + ") and continues in the next run."
+            case "failed": inventoryText = " Disk indexing stopped with an error (" + when + ")" + (inventory.reason.map { ": " + $0 } ?? "") + "."
+            default: inventoryText = " Disk indexing's last result couldn't be read (" + when + ")."
+            }
+        } else { inventoryText = "" }
+        detail = [successText, recovery].filter { !$0.isEmpty }.joined(separator: " ") + inventoryText
+    }
+    /// Raw evidence for the Technical details disclosure.
+    func technicalLines(inventory: InventoryWorkerEvidence?) -> [String] {
+        var lines = jobDetails
+        if let lastAttempt { lines.append("Last attempt: " + lastAttempt.formatted(date: .abbreviated, time: .standard)) }
+        if let inventory {
+            lines.append("Last inventory outcome: " + inventory.outcome + " at " + inventory.timestamp.formatted(date: .abbreviated, time: .standard) + (inventory.reason.map { " — " + $0 } ?? ""))
+        }
+        return lines
     }
 }
 

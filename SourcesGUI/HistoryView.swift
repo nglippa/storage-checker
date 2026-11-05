@@ -140,7 +140,7 @@ struct HistoryView: View {
                 if let selection = store.selectedEvent { Text("· \(selection.category)").lineLimit(1) }
                 Spacer()
                 if store.isLoading { ProgressView().controlSize(.mini).scaleEffect(0.7) }
-                Text("Read-only · background monitor is independent")
+                Text("View only · the background monitor records history on its own")
             }.font(.caption).foregroundStyle(.secondary).padding(.horizontal,22).padding(.vertical,8)
         }
     }
@@ -216,7 +216,7 @@ struct HistoryView: View {
                     DatePicker("From",selection:Binding(get:{store.filters.start},set:{store.filters.start = minuteBoundary($0)}),displayedComponents:[.date,.hourAndMinute]).accessibilityIdentifier("filter.start")
                     DatePicker("Through",selection:Binding(get:{store.filters.end},set:{store.filters.end = minuteBoundary($0)}),displayedComponents:[.date,.hourAndMinute]).accessibilityIdentifier("filter.end")
                 }
-                Text("Local time · endpoints at :00 seconds, inclusive").font(.caption).foregroundStyle(.secondary)
+                Text("Local time · start and end times are included").font(.caption).foregroundStyle(.secondary)
             }
             if store.filters.size == .custom {
                 HStack {
@@ -224,7 +224,7 @@ struct HistoryView: View {
                     TextField("Threshold",text:$store.filters.customThreshold).frame(width:80).accessibilityIdentifier("filter.threshold")
                     Picker("Units",selection:$store.filters.customUnit) { Text("MB").tag("MB"); Text("GB").tag("GB") }.labelsHidden().frame(width:70).accessibilityIdentifier("filter.units")
                 }
-                Text("Decimal units · unknown changes excluded").font(.caption).foregroundStyle(.secondary)
+                Text("1 GB = 1,000,000,000 bytes · changes of unknown size are left out").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
