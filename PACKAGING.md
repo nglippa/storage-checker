@@ -201,7 +201,7 @@ Failure and interruption:
 
 ## Verification status
 
-For the 2.2.0 (build 10) release, see [the release record](STORAGE-MONITOR-2.2.0-RELEASE.md) for automated checks, packaging verification and remaining native acceptance gaps.
+For the 2.3.0 (build 17) controlled public test, see [its release notes](STORAGE-MONITOR-2.3.0-RELEASE.md). For the 2.2.0 (build 10) release, see [the release record](STORAGE-MONITOR-2.2.0-RELEASE.md) for automated checks, packaging verification and remaining native acceptance gaps.
 
 Latest packaged build (2026-10-29): `build/dist/Storage-Monitor-2.2.0.dmg`, 15,673,130 bytes (14.95 MiB), sha256 `9464630294e5b4265a958b0b4f4e77f63ba2ce7b102ca28f4c3676339304ea04`.
 
