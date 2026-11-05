@@ -1,0 +1,109 @@
+PASS 25 GB boundary is normal
+PASS strict low threshold
+PASS 15 GB boundary warning
+PASS critical below 15 GB
+PASS 3 GB previous reading boundary
+PASS below 3 GB excluded
+PASS 5 GB inclusive two-hour boundary
+PASS outside two-hour window excluded
+PASS container isolation
+PASS 30-day retention readings
+PASS 30-day retention alerts
+PASS 30-day retention diagnostics
+PASS unchanged warning deduplicated persistently
+PASS critical escalates warning
+PASS recovery rearms warning
+PASS new warning requests notification
+PASS delivered persistent warning never duplicates
+PASS critical escalation bypasses retry delay
+PASS failed delivery retry rate limited
+PASS failed delivery retries after thirty minutes
+PASS resolved growth does not renotify unchanged low condition
+PASS SQLite lifecycle low plus growth alerts
+PASS SQLite reopen growth resolves without duplicate low alert
+PASS SQLite critical escalation
+PASS SQLite recovery clears acknowledged state
+PASS SQLite recovery rearms and denied delivery stays pending
+PASS SQLite failed retry rate limit
+PASS SQLite failed notification retries after cooldown
+PASS SQLite successful retry deduplicates
+PASS SQLite container change resets baseline
+PASS single calendar schedule and login startup
+PASS calendar wake catch-up
+PASS LaunchAgent absolute executable/data arguments with spaces
+PASS overlapping check lock
+PASS subprocess deadlines enforced
+PASS noisy stderr cannot displace directory-size stdout
+PASS continuous output cannot starve deadline or exceed capture cap
+PASS timed-out subprocess is terminated and reaped, not orphaned
+PASS truncated APFS plist output is rejected
+PASS complete APFS plist output parses
+PASS complete directory measurement is exact
+PASS directory measurement records its duration
+PASS permission refusals make a usable partial lower bound
+PASS repeated permission refusals are aggregated (12 counted, 3 examples kept)
+PASS permission count is persisted, not raw error text
+PASS directory time budget marks the measurement incomplete
+PASS entry cap marks the measurement incomplete
+PASS absent optional location is not an error
+PASS exhausted total budget skips instead of blocking
+PASS swap allocation and usage are separate exact values
+PASS VM counters collected in-process
+PASS diagnostic snapshot launches no subprocesses and finishes quickly (0.06 s)
+PASS snapshot is structured, omits absent locations, and stays small
+PASS snapshot contains no raw error dumps or XML
+PASS no broad protected or whole-library scan targets
+PASS nested and symlinked roots are rejected (no double counting, no symlink following)
+PASS first measurement is only a baseline; no growth inferred from one snapshot
+PASS no file activity claimed before an event marker exists
+PASS file creation measured as folder growth
+PASS file growth measured
+PASS file deletion measured as shrinkage
+PASS move between folders shows as shrink plus growth, not net new storage
+PASS APFS clone appears as logical folder growth (documented: not physical)
+PASS sparse file: large logical growth, tiny allocated growth, both recorded
+PASS simultaneous writers into separate folders measured independently
+PASS folder created during the interval reported as new
+PASS untouched folder carried forward without re-measuring
+PASS permission-denied folder is deferred as unavailable, never a change or a retry every check
+PASS file activity replayed from FSEvents history between readings
+PASS clone flagged in file activity
+PASS deletion and rename flagged in file activity
+PASS no activity invented for untouched folders
+PASS process holding a writable file in a grown folder is correlated
+PASS no process linked to a grown folder without open-file evidence
+PASS evidence row is bounded (9417 bytes)
+PASS quiet interval reports no changes
+PASS quiet interval re-measures only pending folders (0 measured, 686 ms)
+PASS FSEvents database change detected; folders fully re-measured
+PASS growth still measured across an event gap, from folder sizes valid at the previous reading
+PASS after an event-database change nothing is carried forward as unchanged
+PASS FSEvents gap: every folder re-measured, none assumed unchanged
+PASS change during a gap is still found by re-measuring
+PASS event marker older than 6 h: no carry-forward
+PASS change made immediately before the reading is not missed
+PASS after a missed collection, changes are not invented across a longer interval
+PASS event cap marks activity incomplete
+PASS attribution rows are removed with their reading
+PASS initialization completes without a scheduled check (state ready)
+PASS every accessible folder baselined (4 of 4)
+PASS each folder keeps its own measurement marker; none is tied to a reading
+PASS folders keep individual measurement times (no shared baseline timestamp)
+PASS first scheduled check trusts initializer values without re-walking (0 measured)
+PASS first measurement is never growth (4 first measurements, 0 changes)
+PASS growth after initialization is measured exactly; untouched folders carried
+PASS historical interval evidence is unchanged by a later initialization
+PASS markers older than 6 h are re-measured, never carried
+PASS FSEvents gap after initialization: nothing carried, coverage reported degraded
+PASS interrupted initialization reports progress (2 of 6) and stays initializing
+PASS resume after restart measures only the remaining 4 folders
+PASS folder created during initialization gets its own baseline
+PASS folder modified after its measurement is reconciled (stored 2100000 bytes, actual 2,100,000)
+PASS folder deleted during initialization is dropped
+PASS deleted folder produces no negative growth
+PASS gap during initialization re-measures every affected folder, bounded to 3 rounds
+PASS permission-denied and timed-out folders recorded separately (partial: 1 baselined, 1 unavailable, 1 incomplete)
+PASS timed-out folder stops after 3 attempts and is never marked complete
+PASS no retry loop: a second run measures nothing
+PASS scheduled checks defer unavailable and exhausted folders instead of retrying every 30 minutes
+PASS a second initializer exits immediately

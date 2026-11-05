@@ -9,3 +9,7 @@ The full local `evidence/` directory is intentionally ignored. It also contains 
 Selected receipts are explicitly force-added from the ignored directory. New generated evidence must be reviewed before committing; never add the whole directory. Distribution images, mounted volumes, test databases, and generated application bundles do not belong in Git.
 
 The source selected for this milestone is the existing `migration-readiness` branch. The source manifest and current regression record identify its content independently of later documentation commits. Package verification, when performed, must name the exact source commit, version/build, image filename and SHA-256; it must not imply notarization or public-release acceptance.
+
+## Committed development package
+
+[Package verification](PACKAGE-VERIFICATION-3670499.md) records the image built from committed source `3670499`. Its structural/native ARM checks passed; the extra Rosetta full suite failed twice and remains unresolved. Gatekeeper rejected the ad-hoc package. This later report commit does not change compiler inputs or designate an accepted release.

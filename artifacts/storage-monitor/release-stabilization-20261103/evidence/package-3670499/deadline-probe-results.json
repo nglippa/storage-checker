@@ -1,0 +1,55 @@
+{
+  "source": {
+    "source_commit": "367049910dce2fec3700c9a86f916f09488fe623",
+    "span": "Sources/StorageMonitor.swift CommandResult and exact run implementation",
+    "sha256": "b0024ac73f0755b4ed972e843d5ea812fa99bf73fca085a6d3713342e03dca09",
+    "application_source_changed": false
+  },
+  "observations_from_captured_tool_output": [
+    {
+      "case": "continuous yes",
+      "sample": 1,
+      "duration": 0.22722792625427246,
+      "exit": 15,
+      "pidReaped": true,
+      "stderrBytes": 0,
+      "stdoutBytes": 16,
+      "timedOut": true,
+      "truncated": true
+    },
+    {
+      "case": "continuous yes",
+      "sample": 2,
+      "duration": 0.1997450590133667,
+      "exit": 15,
+      "pidReaped": true,
+      "stderrBytes": 0,
+      "stdoutBytes": 16,
+      "timedOut": true,
+      "truncated": true
+    },
+    {
+      "case": "continuous yes",
+      "sample": 3,
+      "duration": 0.21164000034332275,
+      "exit": 15,
+      "pidReaped": true,
+      "stderrBytes": 0,
+      "stdoutBytes": 16,
+      "timedOut": true,
+      "truncated": true
+    },
+    {
+      "case": "no output before deadline",
+      "duration": 0.2213829755783081,
+      "exit": 15,
+      "pidReaped": true,
+      "stderrBytes": 0,
+      "stdoutBytes": 0,
+      "timedOut": true,
+      "truncated": false
+    }
+  ],
+  "first_packaged_failure_values": "not printed by packaged self-test; exact failed conjunct unknown",
+  "cold_translation_cause": "inference, not proven"
+}

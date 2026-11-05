@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/usr/bin/arch",
+    "-x86_64",
+    "/private/tmp/storage-monitor-package-20261104-aljajo8e/lock-collection-diagnostic-x86_64"
+  ],
+  "exit": 0,
+  "seconds": 4.169,
+  "stdout": "{\"descriptorAfter\":0,\"descriptorBefore\":0,\"elapsed\":0.53811895847320557,\"extended\":false,\"foldersStatus\":\"busy\",\"ownerAcquired\":true,\"ownerAliveAfterCollection\":true,\"reportedDurationMS\":537,\"sample\":1}\n{\"descriptorAfter\":0,\"descriptorBefore\":0,\"elapsed\":0.52236199378967285,\"extended\":true,\"foldersStatus\":\"busy\",\"ownerAcquired\":true,\"ownerAliveAfterCollection\":true,\"reportedDurationMS\":522,\"sample\":1}\n{\"descriptorAfter\":0,\"descriptorBefore\":0,\"elapsed\":0.52783691883087158,\"extended\":false,\"foldersStatus\":\"busy\",\"ownerAcquired\":true,\"ownerAliveAfterCollection\":true,\"reportedDurationMS\":527,\"sample\":2}\n{\"descriptorAfter\":0,\"descriptorBefore\":0,\"elapsed\":0.55008196830749512,\"extended\":true,\"foldersStatus\":\"busy\",\"ownerAcquired\":true,\"ownerAliveAfterCollection\":true,\"reportedDurationMS\":550,\"sample\":2}\n",
+  "stderr": "",
+  "scope": "Exact committed collector with disposable fixtures, process sampling disabled. DB and marker setup precede measured collector call; total duration also recorded."
+}

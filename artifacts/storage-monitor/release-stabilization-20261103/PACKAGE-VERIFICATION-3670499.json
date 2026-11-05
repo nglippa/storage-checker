@@ -1,0 +1,621 @@
+{
+  "source_commit": "367049910dce2fec3700c9a86f916f09488fe623",
+  "source_branch": "migration-readiness",
+  "source_tree": "c18836907fb9728029e7e611e8b51c7979aa6c2e",
+  "source_content_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+  "source_manifest_files": 160,
+  "version": "2.2.0",
+  "build": {
+    "argv": [
+      "/bin/sh",
+      "scripts/build-dmg.sh"
+    ],
+    "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e/source",
+    "environment_overrides": {
+      "STORAGE_MONITOR_VERSION": "2.2.0",
+      "STORAGE_MONITOR_BUILD": "10",
+      "STORAGE_MONITOR_SIGN_IDENTITY": "-",
+      "STORAGE_MONITOR_ARCHS": "arm64 x86_64",
+      "STORAGE_MONITOR_SDK_PATH": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+      "STORAGE_MONITOR_DMG_NAME": "Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg",
+      "STORAGE_MONITOR_APP_ONLY": "0",
+      "STORAGE_MONITOR_SKIP_VERIFY": "0",
+      "SOURCE_DATE_EPOCH": "1793807679",
+      "TMPDIR": "/private/tmp/storage-monitor-package-20261104-aljajo8e/Temporary/",
+      "SQLITE_TMPDIR": "/private/tmp/storage-monitor-package-20261104-aljajo8e/Temporary"
+    },
+    "source_commit": "367049910dce2fec3700c9a86f916f09488fe623",
+    "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+    "started_utc": "2026-11-04T15:55:57Z",
+    "events": [
+      {
+        "seconds": 0.014,
+        "text": "==> Icon (Assets/AppIcon.png)"
+      },
+      {
+        "seconds": 35.932,
+        "text": "==> Compile background monitor (arm64, macOS 14.0+)"
+      },
+      {
+        "seconds": 123.185,
+        "text": "==> Compile desktop app (arm64, macOS 14.0+)"
+      },
+      {
+        "seconds": 280.204,
+        "text": "==> Compile background monitor (x86_64, macOS 14.0+)"
+      },
+      {
+        "seconds": 435.967,
+        "text": "==> Compile desktop app (x86_64, macOS 14.0+)"
+      },
+      {
+        "seconds": 581.008,
+        "text": "==> Normalize permissions, attributes and timestamps"
+      },
+      {
+        "seconds": 581.027,
+        "text": "==> Sign (identity: -)"
+      },
+      {
+        "seconds": 581.167,
+        "text": "==> Disk image"
+      },
+      {
+        "seconds": 588.386,
+        "text": "Built /private/tmp/storage-monitor-package-20261104-aljajo8e/source/build/dist/Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg ( 16M)"
+      },
+      {
+        "seconds": 589.564,
+        "text": "PASS image checksum verifies"
+      },
+      {
+        "seconds": 589.701,
+        "text": "PASS image mounts read-only without Finder (-nobrowse, -noautoopen)"
+      },
+      {
+        "seconds": 589.706,
+        "text": "PASS volume contains exactly Storage Monitor.app and Applications (Applications|Storage Monitor.app|)"
+      },
+      {
+        "seconds": 589.71,
+        "text": "PASS Applications shortcut is a symlink to /Applications"
+      },
+      {
+        "seconds": 589.715,
+        "text": "PASS app bundle identifier is local.macbook.storage-monitor.viewer"
+      },
+      {
+        "seconds": 589.724,
+        "text": "PASS app display name is Storage Monitor"
+      },
+      {
+        "seconds": 589.733,
+        "text": "PASS bundled helper is local.macbook.storage-monitor and background-only"
+      },
+      {
+        "seconds": 589.75,
+        "text": "PASS app and helper version 2.2.0 (10)"
+      },
+      {
+        "seconds": 589.757,
+        "text": "PASS both bundles declare minimum macOS 14.0"
+      },
+      {
+        "seconds": 589.759,
+        "text": "PASS StorageMonitorViewer is executable"
+      },
+      {
+        "seconds": 589.776,
+        "text": "PASS StorageMonitorViewer is universal (arm64 x86_64 )"
+      },
+      {
+        "seconds": 589.823,
+        "text": "PASS StorageMonitorViewer deployment target is macOS 14.0 for every architecture"
+      },
+      {
+        "seconds": 589.853,
+        "text": "PASS StorageMonitorViewer links only system libraries"
+      },
+      {
+        "seconds": 589.877,
+        "text": "PASS StorageMonitorViewer searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain"
+      },
+      {
+        "seconds": 589.925,
+        "text": "PASS StorageMonitorViewer embeds no build-machine home or repository path"
+      },
+      {
+        "seconds": 589.927,
+        "text": "PASS StorageMonitor is executable"
+      },
+      {
+        "seconds": 589.941,
+        "text": "PASS StorageMonitor is universal (arm64 x86_64 )"
+      },
+      {
+        "seconds": 589.961,
+        "text": "PASS StorageMonitor deployment target is macOS 14.0 for every architecture"
+      },
+      {
+        "seconds": 589.971,
+        "text": "PASS StorageMonitor links only system libraries"
+      },
+      {
+        "seconds": 589.994,
+        "text": "PASS StorageMonitor searches only system runtime paths (rpaths: /usr/lib/swift ) and no developer toolchain"
+      },
+      {
+        "seconds": 590.018,
+        "text": "PASS StorageMonitor embeds no build-machine home or repository path"
+      },
+      {
+        "seconds": 590.022,
+        "text": "PASS both bundles carry the approved icon"
+      },
+      {
+        "seconds": 590.026,
+        "text": "PASS Info.plists are valid"
+      },
+      {
+        "seconds": 590.062,
+        "text": "PASS code signature verifies (deep, strict)"
+      },
+      {
+        "seconds": 590.072,
+        "text": "INFO app signature: Signature=adhoc"
+      },
+      {
+        "seconds": 590.081,
+        "text": "INFO helper signature: Signature=adhoc"
+      },
+      {
+        "seconds": 590.492,
+        "text": "INFO Gatekeeper assessment (informational): /private/tmp/storage-monitor-dmg-verify.VpHVSg/Storage Monitor.app: rejected"
+      },
+      {
+        "seconds": 674.233,
+        "text": "PASS bundled background monitor runs from the image (235 tests passed)"
+      },
+      {
+        "seconds": 674.234,
+        "text": "DMG verification passed: /private/tmp/storage-monitor-package-20261104-aljajo8e/source/build/dist/Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg"
+      }
+    ],
+    "pid": 43072,
+    "exit": 0,
+    "seconds": 674.279,
+    "finished_utc": "2026-11-04T16:07:11Z",
+    "warning_lines": [],
+    "pass_count": 25,
+    "failure_lines": []
+  },
+  "artifact": {
+    "filename": "Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg",
+    "repository_relative_path": "build/dist/Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg",
+    "bytes": 16900513,
+    "sha256": "c3f900c652029ccd23d9ebb28df048459c1c1fc171ff7caab02b07e1ec612af5",
+    "copied_sidecar_verified": true
+  },
+  "verification": [
+    {
+      "name": "sidecar-check",
+      "argv": [
+        "/usr/bin/shasum",
+        "-a",
+        "256",
+        "-c",
+        "Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg.sha256"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e/source/build/dist",
+      "exit": 0,
+      "seconds": 0.069,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg: OK"
+      ],
+      "stderr_summary": []
+    },
+    {
+      "name": "independent-image-check",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "verify",
+        "-quiet",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/source/build/dist/Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 3.275,
+      "expected_exit": 0,
+      "stdout_summary": [],
+      "stderr_summary": []
+    },
+    {
+      "name": "independent-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "attach",
+        "-plist",
+        "-readonly",
+        "-nobrowse",
+        "-noautoopen",
+        "-mountpoint",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/source/build/dist/Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.161,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "</dict>",
+        "</plist>"
+      ],
+      "stderr_summary": [
+        "hdiutil: WARNING: 'hdiutil attach -readonly -nobrowse -mountpoint ...' is deprecated. Please use 'diskutil image attach --readOnly --mountOptions nobrowse --mountPoint ...' instead."
+      ]
+    },
+    {
+      "name": "viewer-architectures",
+      "argv": [
+        "/usr/bin/lipo",
+        "-archs",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.014,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "x86_64 arm64"
+      ],
+      "stderr_summary": []
+    },
+    {
+      "name": "monitor-architectures",
+      "argv": [
+        "/usr/bin/lipo",
+        "-archs",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.011,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "x86_64 arm64"
+      ],
+      "stderr_summary": []
+    },
+    {
+      "name": "strict-signature",
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.04,
+      "expected_exit": 0,
+      "stdout_summary": [],
+      "stderr_summary": []
+    },
+    {
+      "name": "signature-details",
+      "argv": [
+        "/usr/bin/codesign",
+        "-dv",
+        "--verbose=4",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.01,
+      "expected_exit": 0,
+      "stdout_summary": [],
+      "stderr_summary": [
+        "Internal requirements count=0 size=12",
+        "Total signatures=1",
+        "Chosen signature=1"
+      ]
+    },
+    {
+      "name": "distribution-qa-refusal",
+      "argv": [
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "status",
+        "--lifecycle-qa-root",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/refused-runtime"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 1,
+      "seconds": 0.021,
+      "expected_exit": null,
+      "stdout_summary": [],
+      "stderr_summary": [
+        "Storage Monitor: QA runtime refused: lifecycle installation: unavailable in distribution builds"
+      ]
+    },
+    {
+      "name": "bundled-arm64-self-test",
+      "argv": [
+        "/usr/bin/arch",
+        "-arm64",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "self-test"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 84.769,
+      "expected_exit": 0,
+      "test_count": 235,
+      "stdout_summary": [
+        "PASS a quarantined (downloaded) helper is detected so setup can explain Gatekeeper",
+        "235 tests passed"
+      ],
+      "stderr_summary": [
+        "Storage Monitor: walk of hard did not return; marked blocked",
+        "Storage Monitor: walk of hard did not return; marked blocked"
+      ]
+    },
+    {
+      "name": "rosetta-installed",
+      "argv": [
+        "/usr/sbin/pkgutil",
+        "--pkg-info",
+        "com.apple.pkg.RosettaUpdateAuto"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.032,
+      "expected_exit": null,
+      "stdout_summary": [
+        "location: /",
+        "install-time: 1789361409"
+      ],
+      "stderr_summary": []
+    },
+    {
+      "name": "rosetta-existing-execution",
+      "argv": [
+        "/usr/bin/arch",
+        "-x86_64",
+        "/usr/bin/true"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 1.452,
+      "expected_exit": 0,
+      "stdout_summary": [],
+      "stderr_summary": []
+    },
+    {
+      "name": "bundled-x86_64-self-test",
+      "argv": [
+        "/usr/bin/arch",
+        "-x86_64",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "self-test"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 1,
+      "seconds": 1.517,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "PASS subprocess deadlines enforced",
+        "PASS noisy stderr cannot displace directory-size stdout"
+      ],
+      "stderr_summary": [
+        "Storage Monitor: FAIL: continuous output cannot starve deadline or exceed capture cap"
+      ]
+    },
+    {
+      "name": "detach-owned-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "detach",
+        "-quiet",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.063,
+      "expected_exit": 0,
+      "stdout_summary": [],
+      "stderr_summary": []
+    },
+    {
+      "name": "retry-readonly-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "attach",
+        "-plist",
+        "-readonly",
+        "-nobrowse",
+        "-noautoopen",
+        "-mountpoint",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/source/build/dist/Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.199,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "</dict>",
+        "</plist>"
+      ],
+      "stderr_summary": [
+        "hdiutil: WARNING: 'hdiutil attach -readonly -nobrowse -mountpoint ...' is deprecated. Please use 'diskutil image attach --readOnly --mountOptions nobrowse --mountPoint ...' instead."
+      ]
+    },
+    {
+      "name": "bundled-x86_64-self-test-warm",
+      "argv": [
+        "/usr/bin/arch",
+        "-x86_64",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "self-test"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 1,
+      "seconds": 37.697,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "PASS scheduled checks defer unavailable and exhausted folders instead of retrying every 30 minutes",
+        "PASS a second initializer exits immediately"
+      ],
+      "stderr_summary": [
+        "Storage Monitor: FAIL: scheduled check skips folder evidence after a bounded wait while the baseline is busy"
+      ]
+    },
+    {
+      "name": "detach-retry-owned-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "detach",
+        "-quiet",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.161,
+      "expected_exit": 0,
+      "stdout_summary": [],
+      "stderr_summary": []
+    },
+    {
+      "name": "final-readonly-assessment-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "attach",
+        "-plist",
+        "-readonly",
+        "-nobrowse",
+        "-noautoopen",
+        "-mountpoint",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/source/build/dist/Storage-Monitor-2.2.0-stabilization-3670499-20261104.dmg"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.189,
+      "expected_exit": 0,
+      "stdout_summary": [
+        "</dict>",
+        "</plist>"
+      ],
+      "stderr_summary": [
+        "hdiutil: WARNING: 'hdiutil attach -readonly -nobrowse -mountpoint ...' is deprecated. Please use 'diskutil image attach --readOnly --mountOptions nobrowse --mountPoint ...' instead."
+      ]
+    },
+    {
+      "name": "gatekeeper-assessment",
+      "argv": [
+        "/usr/sbin/spctl",
+        "--assess",
+        "--type",
+        "execute",
+        "--verbose=2",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 3,
+      "seconds": 0.394,
+      "expected_exit": null,
+      "distribution_acceptance": "rejected",
+      "stdout_summary": [],
+      "stderr_summary": [
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app: rejected"
+      ]
+    },
+    {
+      "name": "detach-final-owned-mount",
+      "argv": [
+        "/usr/bin/hdiutil",
+        "detach",
+        "-quiet",
+        "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image"
+      ],
+      "cwd": "/private/tmp/storage-monitor-package-20261104-aljajo8e",
+      "exit": 0,
+      "seconds": 0.095,
+      "expected_exit": 0,
+      "stdout_summary": [],
+      "stderr_summary": []
+    }
+  ],
+  "verification_status": "PARTIAL: extra Rosetta full self-tests failed twice; exact cause unresolved",
+  "structural_checks": {
+    "passed": 25,
+    "failed": 0
+  },
+  "independent_arm64_tests": {
+    "passed": 235,
+    "exit": 0,
+    "seconds": 84.769
+  },
+  "x86_64_Rosetta_full_suite": {
+    "status": "FAILED twice",
+    "first_exit": 1,
+    "first_seconds": 1.517,
+    "first_error": "Storage Monitor: FAIL: continuous output cannot starve deadline or exceed capture cap\n",
+    "second_exit": 1,
+    "second_seconds": 37.697,
+    "second_error": "Storage Monitor: FAIL: scheduled check skips folder evidence after a bounded wait while the baseline is busy\n",
+    "cause": "UNRESOLVED; cold translation/timing is an inference, not a confirmed cause",
+    "focused_probes": "Passed; do not substitute for a passing full suite",
+    "further_retries": false,
+    "source_or_tests_changed": false
+  },
+  "focused_deadline_probe": "evidence/package-3670499/deadline-probe-results.json",
+  "focused_collector_probe": "evidence/package-3670499/lock-collection-diagnostic-results.json",
+  "bundle_metadata": {
+    "viewer": {
+      "CFBundleShortVersionString": "2.2.0",
+      "CFBundleVersion": "10",
+      "CFBundleIdentifier": "local.macbook.storage-monitor.viewer",
+      "LSMinimumSystemVersion": "14.0"
+    },
+    "helper": {
+      "CFBundleShortVersionString": "2.2.0",
+      "CFBundleVersion": "10",
+      "CFBundleIdentifier": "local.macbook.storage-monitor",
+      "LSMinimumSystemVersion": "14.0"
+    }
+  },
+  "binary_path_observations": {
+    "viewer": {
+      "sha256": "34f83bca027e162f6d1d4a2d18f180dc6bffaec7028fe88838a4d0e35222420b",
+      "embedded_development_paths": [],
+      "note": "Observed strings only; runtime dependencies are assessed separately by the existing library/rpath verifier"
+    },
+    "monitor": {
+      "sha256": "9b8316ee548bd100aa4d951cb4261d89030fba656600d309bd0e2d787887c0ce",
+      "embedded_development_paths": [],
+      "note": "Observed strings only; runtime dependencies are assessed separately by the existing library/rpath verifier"
+    }
+  },
+  "gatekeeper": {
+    "exit": 3,
+    "result": "rejected",
+    "output": "/private/tmp/storage-monitor-package-20261104-aljajo8e/mounted-image/Storage Monitor.app: rejected\n"
+  },
+  "protected_existing_DMG_files_unchanged": 8,
+  "owned_mounts_detached": true,
+  "gui_launched": false,
+  "installed": false,
+  "version_metadata_changed": false,
+  "signing": "Existing ad-hoc app/helper signing; no Developer ID or notarization",
+  "not_verified": [
+    "Packaged viewer first launch and drag installation",
+    "Packaged native setup/update/rollback/quarantine behavior",
+    "Physical Intel/macOS14 runtime",
+    "Remaining accessibility, permissions, login/logout and sleep/wake acceptance"
+  ],
+  "recorded_utc": "2026-11-05T04:51:12Z",
+  "documentation_commit_note": "Recorded after the source commit; the later documentation-only commit changes no compiler inputs."
+}
