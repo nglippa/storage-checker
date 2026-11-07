@@ -23,6 +23,18 @@ enum LiveCapacityError: Error, LocalizedError {
 
 enum LiveCapacityProbe {
     static let dataVolume = "/System/Volumes/Data"
+    static func read(descriptor: ExternalVolumeDescriptor, now: Date = Date()) throws -> LiveCapacityReading {
+        let before = try ExternalMountProbe.read(descriptor.mountPath)
+        guard before.volumeUUID == (try descriptor.identity().uuid), before.device == descriptor.device else {
+            throw LiveCapacityError.unavailable("the selected mount identity changed")
+        }
+        let value = try read(path: descriptor.mountPath, now: now)
+        guard try ExternalMountProbe.read(descriptor.mountPath) == before,
+              value.dataVolumeUUID.flatMap({ try? ExternalVolumeIdentity($0).uuid }) == before.volumeUUID else {
+            throw LiveCapacityError.unavailable("the selected volume disconnected during the probe")
+        }
+        return value
+    }
     static func read(path: String = dataVolume, now: Date = Date()) throws -> LiveCapacityReading {
         var info = statfs()
         guard statfs(path, &info) == 0 else { throw LiveCapacityError.unavailable(String(cString: strerror(errno))) }
@@ -70,13 +82,21 @@ extension Measurement: Equatable {
 // Refreshes live capacity without overlapping requests.
 @MainActor final class LiveCapacityMonitor: ObservableObject {
     @Published private(set) var state = LiveCapacityState()
-    private let source: @Sendable () throws -> LiveCapacityReading
+    private var source: @Sendable () throws -> LiveCapacityReading
     private var inFlight = false
+    private var sourceRevision: UInt64 = 0
     private(set) var started = 0, skipped = 0
     // Conservative cadence while the window is visible and the app is active.
     static let visibleInterval: TimeInterval = 60
 
     init(source: @escaping @Sendable () throws -> LiveCapacityReading = { try LiveCapacityProbe.read() }) { self.source = source }
+
+    func selectSource(preserveReading: Bool = false, _ source: @escaping @Sendable () throws -> LiveCapacityReading) {
+        sourceRevision &+= 1
+        self.source = source
+        inFlight = false
+        if !preserveReading { state = LiveCapacityState() }
+    }
 
     var isRefreshing: Bool { inFlight }
     func isDue(at now: Date) -> Bool { state.lastAttempt.map { now.timeIntervalSince($0) >= Self.visibleInterval } ?? true }
@@ -85,9 +105,11 @@ extension Measurement: Equatable {
     @discardableResult func refresh() async -> Bool {
         guard !inFlight else { skipped += 1; return false }
         inFlight = true; started += 1
-        defer { inFlight = false }
+        let revision = sourceRevision
+        defer { if revision == sourceRevision { inFlight = false } }
         let source = self.source
         let result = await Task.detached(priority: .utility) { Result { try source() } }.value
+        guard revision == sourceRevision, !Task.isCancelled else { return false }
         var next = state
         next.lastAttempt = Date()
         switch result {

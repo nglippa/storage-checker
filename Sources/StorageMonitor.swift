@@ -82,8 +82,9 @@ final class Database {
     var db: OpaquePointer?
     /// The busy timeout covers the moments another process (the check or the inventory worker) commits.
     /// Background work can afford to wait; 10 s keeps the scheduled check from being starved (D9).
-    init(_ path: String, busyTimeout: Int32 = 10_000) throws {
-        try required(sqlite3_open(path, &db) == SQLITE_OK, "Cannot open SQLite history")
+    init(_ path: String, busyTimeout: Int32 = 10_000, noFollow: Bool = false) throws {
+        let opened = noFollow ? sqlite3_open_v2(path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW, nil) : sqlite3_open(path, &db)
+        if opened != SQLITE_OK { sqlite3_close(db); db = nil; throw Failure("Cannot open SQLite history") }
         sqlite3_busy_timeout(db, busyTimeout)
         try exec("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA auto_vacuum=INCREMENTAL; CREATE TABLE IF NOT EXISTS readings (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, container TEXT NOT NULL, free INTEGER NOT NULL, used INTEGER NOT NULL, volumes TEXT NOT NULL); CREATE INDEX IF NOT EXISTS readings_time ON readings(timestamp); CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, severity TEXT NOT NULL, reasons TEXT NOT NULL, free INTEGER NOT NULL, delta INTEGER, notification TEXT NOT NULL); CREATE TABLE IF NOT EXISTS diagnostics (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, snapshot TEXT NOT NULL); CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS interval_evidence (reading_id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, evidence TEXT NOT NULL); " +
             // Comprehensive coverage (additive; see Coverage.swift). Current state, not history: no retention.
@@ -106,7 +107,7 @@ final class Database {
     func write(_ sql: String, _ values: [Any] = []) throws { let s = try statement(sql, values); defer { sqlite3_finalize(s) }; try required(sqlite3_step(s) == SQLITE_DONE, "SQLite write failed") }
     func rows(_ sql: String, _ values: [Any] = []) throws -> [[String: String]] {
         let s = try statement(sql, values); defer { sqlite3_finalize(s) }; var result = [[String: String]]()
-        while true { let rc = sqlite3_step(s); if rc == SQLITE_DONE { return result }; try required(rc == SQLITE_ROW, "SQLite read failed")
+        while true { let rc = sqlite3_step(s); if rc == SQLITE_DONE { return result }; try required(rc == SQLITE_ROW, "SQLite read failed: \(String(cString: sqlite3_errmsg(db)))")
             var row = [String: String](); for i in 0..<sqlite3_column_count(s) { if let v = sqlite3_column_text(s, i) { row[String(cString: sqlite3_column_name(s, i))] = String(cString: v) } }; result.append(row)
         }
     }
@@ -209,7 +210,9 @@ let defaultData = home.appendingPathComponent("Library/Application Support/MacBo
 let installedApp = home.appendingPathComponent("Applications/MacBook Storage Monitor.app")
 let agentURL = home.appendingPathComponent("Library/LaunchAgents/\(label).plist")
 func agentPlist(_ executable: String, _ data: String) -> [String: Any] {
-    ["Label": label, "ProgramArguments": [executable, "check", "--data-dir", data], "RunAtLoad": true, "StartCalendarInterval": [["Minute": 0], ["Minute": 30]], "ProcessType": "Background", "LowPriorityIO": true, "Nice": 10, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
+    ["Label": label, "ProgramArguments": [executable, "check", "--data-dir", data], "RunAtLoad": true, "StartOnMount": true,
+     "WatchPaths": [URL(fileURLWithPath: data).appendingPathComponent("external-volumes/registry.json").path],
+     "StartCalendarInterval": [["Minute": 0], ["Minute": 30]], "ProcessType": "Background", "LowPriorityIO": true, "Nice": 10, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
 }
 // One-time baseline initializer. It runs at load (install/login), exits 0 once coverage
 // reaches a terminal state and is then idle; a non-zero exit (time limit, busy) lets
@@ -371,6 +374,22 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
     try required(lockFD >= 0, "Cannot open execution lock")
     defer { _ = flock(lockFD, LOCK_UN); close(lockFD) }
     guard flock(lockFD, LOCK_EX | LOCK_NB) == 0 else { print("A check is already running; skipped."); return }
+    var internalFinished = false
+    defer {
+        if NativeQARuntime.active == nil,
+           directory.standardizedFileURL == defaultData.standardizedFileURL || fm.fileExists(atPath: directory.appendingPathComponent("external-volumes").path) {
+            do {
+                let observations = ExternalVolumeDiscovery.discover()
+                try ExternalVolumeObservationStore(baseDirectory: directory).write(observations)
+                try ExternalCapacityMonitoring.sample(baseDirectory: directory, observations: observations)
+                if (try? ExternalVolumeRegistry(baseDirectory: directory).read().volumes.values.contains(where: \.enabled)) == true {
+                    try ExternalVolumeControl(baseDirectory: directory).signal()
+                }
+                if !internalFinished, (try? ExternalVolumeRegistry(baseDirectory: directory).read().volumes.values.contains(where: \.enabled)) == true,
+                   let wake = scheduledInventoryWake(directory: directory) { _ = try? run("/bin/launchctl", wake, timeout: 2) }
+            } catch { log(directory, "external capacity check stopped: \(error)") }
+        }
+    }
     do {
         let db = try Database(directory.appendingPathComponent("history.sqlite3").path)
         let current = try measure()
@@ -440,6 +459,7 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
             try? db.state("notification_authorization", notificationStatus().1)
         }
         if let wake = scheduledInventoryWake(directory: directory) { _ = try? run("/bin/launchctl", wake, timeout: 2) }
+          internalFinished = true
     } catch { log(directory, "ERROR \(error)"); throw error }
 }
 
@@ -614,6 +634,8 @@ func logBackgroundFailure(_ directory: URL, command: String, error: Error) {
 
 @MainActor private func runCommand(_ command: String, args: [String], directory: URL, limit: Int) async throws {
     switch command {
+    case let value where value.hasPrefix("external-"):
+        try externalVolumeCommand(value, args: args, directory: directory)
     case let value where value.hasPrefix("inventory-"):
         try await inventoryCommand(value, args: args, directory: directory)
     case "check": try check(directory, retryNotifications: args.contains("--retry-notifications"))

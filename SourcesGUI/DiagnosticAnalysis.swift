@@ -222,6 +222,11 @@ enum CauseAnalyzer {
     // MARK: Breakdown
 
     static func breakdown(_ event: StorageEvent) -> StorageBreakdown {
+        if event.measurement?.container.hasPrefix("filesystem:") == true {
+            return StorageBreakdown(previousFree: event.previousFree, currentFree: event.currentFree, net: event.delta,
+                start: event.previousTime, end: event.timestamp, volumes: [], unmatchedVolumes: [],
+                reconciliation: .unavailable("Only overall filesystem capacity was recorded; independent allocation attribution is unavailable."))
+        }
         var changes = [VolumeChange](), unmatched = [String]()
         if let current = event.measurement, let previous = event.previousMeasurement {
             for volume in current.volumes {
@@ -256,6 +261,9 @@ enum CauseAnalyzer {
     // MARK: Ranking
 
     static func rank(_ event: StorageEvent, breakdown: StorageBreakdown) -> ([LikelyCause], String?) {
+        if event.measurement?.container.hasPrefix("filesystem:") == true {
+            return ([], "These filesystem readings do not identify which files caused the change.")
+        }
         guard event.measurement != nil || !event.diagnostics.isEmpty || !event.alerts.isEmpty else { return ([], "Insufficient diagnostic evidence.") }
         guard let net = breakdown.net else { return ([], event.measurement == nil ? "This record has no capacity readings to compare." : "This is the first reading for this container, so there is no earlier measurement to compare.") }
         guard net != 0 else { return ([], "Available capacity did not change, so there is nothing to attribute.") }

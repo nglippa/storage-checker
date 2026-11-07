@@ -64,7 +64,14 @@ struct HistoryView: View {
     /// Current storage, the latest notable change and the chart.
     @ViewBuilder private func summary(compact: Bool) -> some View {
         VStack(spacing:0) {
-            OverviewView(snapshot:store.snapshot,live:store.live,historyMissing:store.historyMissing,historyLoading:store.isLoading && store.snapshot == nil,compact:compact)
+            OverviewView(snapshot:store.snapshot,live:store.live,historyMissing:store.historyMissing,historyLoading:store.isLoading && store.snapshot == nil,compact:compact,target:store.target)
+            if store.target.uuid != nil {
+                HStack {
+                    Text(store.target.status)
+                    if store.target.registration?.capacityScope.hasPrefix("apfs:") == true { Text("Capacity history is shared by this APFS container.") }
+                    Spacer()
+                }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 22).padding(.bottom, 6)
+            }
             Divider()
             if let error = store.error {
                 HStack(alignment:.top) {

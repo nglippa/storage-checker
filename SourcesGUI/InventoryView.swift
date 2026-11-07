@@ -5,11 +5,11 @@ struct MonitorRootView: View {
     @ObservedObject var store: ViewerStore
     /// Every launch opens on the storage browser. The section is never restored from saved state.
     /// QA-only capture aid: `--open-monitoring` opens Monitoring; ignored unless the viewer was opened on a QA database.
-    @State private var section = ViewerConfiguration.current.isQA && CommandLine.arguments.contains("--open-monitoring") ? "history" : "inventory"
+    private var section: String { store.section }
     @StateObject private var inventory: InventoryBrowserModel
     init(store: ViewerStore) {
         self.store = store
-        _inventory = StateObject(wrappedValue: InventoryBrowserModel(database: store.configuration.database, readiness: store.readiness))
+        _inventory = StateObject(wrappedValue: InventoryBrowserModel(database: store.configuration.inventoryDatabase, readiness: store.readiness, target: store.target, baseDirectory: store.externalBaseDirectory))
     }
     var body: some View {
         Group {
@@ -27,8 +27,11 @@ struct MonitorRootView: View {
         // rows of the overview in tall windows (1.0.3 report, D6). QA windows name their database in
         // the window title.
         .toolbar {
+            if !store.configuration.isQA {
+                ToolbarItem(placement: .navigation) { ExternalVolumePicker(store: store) }
+            }
             ToolbarItem(placement: .principal) {
-                Picker("Section", selection: $section) {
+                Picker("Section", selection: $store.section) {
                     Text("Storage").tag("inventory")
                     Text("Monitoring").tag("history")
                 }.pickerStyle(.segmented).fixedSize().help("Storage shows what is using your disk. Monitoring shows how free space changed over time and why.")
@@ -37,7 +40,7 @@ struct MonitorRootView: View {
         }
         .onAppear {
             store.setInventoryVisible(section == "inventory")
-            PerformanceScript.shared.setSection = { section = $0 }
+            PerformanceScript.shared.setSection = { store.section = $0 }
             PerformanceScript.shared.start(store: store, inventory: inventory)
         }
         .onChange(of: section) { _, value in
@@ -81,6 +84,12 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     /// Storage Monitor's own data folder (database, journal, update snapshots): outside the index.
     @Published var ownDataBytes: Int64?
     let database: String
+    let target: StorageTargetContext?
+    let baseDirectory: URL?
+    var requestDatabase: String { target?.requestDatabase ?? database }
+    var allowsCleanup: Bool { target?.allowsCleanup ?? true }
+    var canRequest: Bool { target?.canRequest ?? true }
+    private var statusReader: InventoryReader { target?.uuid == nil ? reader : InventoryReader(path: requestDatabase) }
     /// Explorer outline and storage-map state, shared by both and kept across browse-mode changes.
     lazy var explorer = InventoryExplorerController(database: database)
     /// The Living Tree of the explorer's current folder; created the first time the tree is shown.
@@ -110,7 +119,18 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     private var focusReadyNode: Int64?
     private var loadedPageNode: Int64?
     private var loadedPageHasQualifiedSize = false
-    init(database: String, readiness: ViewerReadiness) { self.database = database; self.readiness = readiness; reader = InventoryReader(path: database) }
+    init(database: String, readiness: ViewerReadiness, target: StorageTargetContext? = nil, baseDirectory: URL? = nil) {
+        self.database = database; self.readiness = readiness; self.target = target; self.baseDirectory = baseDirectory; reader = InventoryReader(path: database)
+    }
+    func livePath(_ node: InventoryNode) -> String? {
+        guard let target, target.uuid != nil else { return node.path }
+        guard let descriptor = target.descriptor, let root else { return nil }
+        return try? ExternalLivePath.resolve(node.path, catalogRoot: root.path, descriptor: descriptor)
+    }
+    func revealInFinder(_ node: InventoryNode) {
+        guard let path = livePath(node) else { message = "Reconnect and verify this drive to reveal items in Finder."; return }
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
     var selectedNode: InventoryNode? { items.first { $0.id == selected } }
     var queryID: String { "\(mode.rawValue)|\(sort.rawValue)|\(search)|\(scopeToFolder)|\(offset)|\(revision)" }
     /// The mode that shows a folder after navigating: the explorer stays the explorer; the rankings and
@@ -175,15 +195,22 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         guard files.exists else {
             status = InventoryStatus(generation: nil, state: "uninitialized", rootPath: nil, totalNodes: 0, completedDirectories: 0, pendingDirectories: 0, staleDirectories: 0, unknownDirectories: 0, queuedDirectoryJobs: 0, hasReconciliationWork: false, hasInitialDiscoveryWork: false, progress: nil, completeness: .unknown, reason: nil, updatedAt: nil, createdAt: nil, initialCompletion: .notStarted)
             root = nil; directory = nil; items = []; error = nil; progress = []
+            if target?.uuid != nil, FileManager.default.fileExists(atPath: requestDatabase) {
+                status = try? await statusReader.status()
+                progress = (try? await statusReader.progressSamples()) ?? []
+                indexingPaused = target?.registration?.indexingPaused ?? false
+            }
             return
         }
         do {
             if mode != .review && !search.isEmpty { try await Task.sleep(for: .milliseconds(180)) }
-            let newStatus = try await reader.status()
+            let newStatus: InventoryStatus
+            if target?.uuid != nil, let current = try? await statusReader.status() { newStatus = current }
+            else { newStatus = try await reader.status() }
             try Task.checkCancellation()
             accounting = try? await reader.accounting()
             // Samples are read only while a first pass is shown (one small indexed query).
-            progress = newStatus.initialCompletion == .inProgress ? ((try? await reader.progressSamples()) ?? []) : []
+            progress = newStatus.initialCompletion == .inProgress ? ((try? await statusReader.progressSamples()) ?? []) : []
             // Publish progress before waiting for the selected directory page.
             status = newStatus
             // A refresh request's note gives way to the live status once the worker has picked it up.
@@ -191,10 +218,10 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
                 if newStatus.hasReconciliationWork || InventoryStatusPresentation(status: newStatus).activeListings > 0 { message = nil }
             }
             if newStatus.generation != nil { initializationRequested = false }
-            let cancelPath = URL(fileURLWithPath: database).deletingLastPathComponent().appendingPathComponent("inventory.cancel").path
+            let cancelPath = URL(fileURLWithPath: requestDatabase).deletingLastPathComponent().appendingPathComponent("inventory.cancel").path
             let paused = await Task.detached(priority: .utility) { FileManager.default.fileExists(atPath: cancelPath) }.value
             try Task.checkCancellation()
-            indexingPaused = paused
+            indexingPaused = target?.registration?.indexingPaused ?? paused
             let newRoot = try await reader.root()
             try Task.checkCancellation()
             guard let newRoot else {
@@ -251,9 +278,11 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         catch { if !Task.isCancelled { self.error = String(describing: error) } }
     }
     func chooseFolder() {
+        guard canRequest else { message = "Reconnect this drive before choosing a live folder."; return }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
-        panel.prompt = "Explore"; panel.message = "Choose a folder on the startup Data volume. Discovered parents appear immediately."
+        panel.prompt = "Explore"; panel.message = "Choose a folder on \(target?.uuid == nil ? "the startup Data volume" : target?.title ?? "the selected drive"). Discovered parents appear immediately."
+        if let mount = target?.descriptor?.mountPath { panel.directoryURL = URL(fileURLWithPath: mount) }
         panel.begin { [weak self] response in
             guard response == .OK, let path = panel.url?.path else { return }
             Task { await self?.openPath(path) }
@@ -261,6 +290,13 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     }
     func openPath(_ path: String) async {
         do {
+            var path = path
+            if let target, target.uuid != nil, let mount = target.descriptor?.mountPath, let root {
+                guard path == mount || path.hasPrefix(mount + "/") || path == root.path || path.hasPrefix(root.path + "/") else {
+                    throw ExternalVolumeError.unsupported("Choose a folder on the selected drive.")
+                }
+                if path == mount || path.hasPrefix(mount + "/") { path = root.path + path.dropFirst(mount.count) }
+            }
             let location = try await reader.locateDirectory(path: path)
             requestedPath = location.exact ? nil : path
             lastFocusedNode = location.node.id
@@ -275,7 +311,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         } catch { self.error = String(describing: error) }
     }
     /// The name shown for a folder: the inventory root reads "Startup Data".
-    func displayName(_ node: InventoryNode) -> String { node.parentID == nil ? "Startup Data" : node.name }
+    func displayName(_ node: InventoryNode) -> String { node.parentID == nil ? target?.title ?? "Startup Data" : node.name }
     func prioritizeCurrentFolder() {
         guard let directory else { return }
         focus(directory, explicit: true)
@@ -297,7 +333,16 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         if loadedPageHasQualifiedSize, loadedPageNode == focusReadyNode { readiness.mark("inventory_page_data_ready") }
     }
     func request(_ action: String, path: String? = nil, announce: Bool = true, onSuccess: (() -> Void)? = nil) {
-        let database = database
+        guard canRequest else { if announce { message = "The selected drive is disconnected, disabled, or awaiting verification." }; return }
+        let database = requestDatabase
+        var path = path
+        if let target, target.uuid != nil, let supplied = path {
+            guard let descriptor = target.descriptor, let root,
+                  let resolved = try? ExternalLivePath.resolve(supplied, catalogRoot: root.path, descriptor: descriptor) else {
+                if announce { message = "Reconnect and verify this drive before requesting a folder update." }; return
+            }
+            path = resolved
+        }
         let starting = action == "refresh" && status?.generation == nil
         if starting { initializationRequested = true }
         let sequence: UInt64?
@@ -307,8 +352,13 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
                 if let sequence {
                     let published = try await focusWriter.enqueue(database: database, path: path, revision: sequence)
                     guard published && sequence == focusRevision else { return }
+                    if let uuid = target?.uuid, let baseDirectory { try ExternalVolumeControl(baseDirectory: baseDirectory).signal(uuid: uuid) }
                 } else {
-                    _ = try await Task.detached(priority: .utility) { try InventoryRequests.enqueue(database: database, action: action, path: path) }.value
+                    let requestPath = path, uuid = target?.uuid, base = baseDirectory
+                    _ = try await Task.detached(priority: .utility) {
+                        if let uuid, let base { return try ExternalVolumeControl(baseDirectory: base).request(uuid: uuid, action: action, path: requestPath) }
+                        return try InventoryRequests.enqueue(database: database, action: action, path: requestPath)
+                    }.value
                 }
                 if action == "pause" { indexingPaused = true }
                 if action == "resume" { indexingPaused = false }
@@ -337,12 +387,14 @@ struct DiskInventoryView: View {
     @AppStorage("inventory.header.details", store: ViewerStore.viewPreferences) private var showingIndexDetails = false
     @ObservedObject private var qaWorker = NativeQAWorker.shared
     private var workerAvailable: Bool {
+        if history.target.uuid != nil { return history.target.canRequest && history.externalSupportReady }
         let data = URL(fileURLWithPath: configuration.database).deletingLastPathComponent()
         let path = configuration.isQA ? data.appendingPathComponent("inventory-worker.plist").path : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/local.macbook.storage-monitor.inventory.plist").path
         if NativeQARuntime.active != nil { return qaWorker.failure == nil }
         return FileManager.default.fileExists(atPath: path)
     }
     private var indexingActive: Bool {
+        if history.target.uuid != nil && (!history.target.canRequest || history.target.registration?.indexingPaused == true) { return false }
         guard let status = model.status else { return true }
         // Deferred folders retry on the worker's next scheduled update; they are not active indexing.
         return status.generation == nil || InventoryStatusPresentation(status: status).activeListings > 0 || status.hasReconciliationWork
@@ -362,7 +414,7 @@ struct DiskInventoryView: View {
                 }.padding(14).accessibilityIdentifier("inventory.error")
                 Divider()
             }
-            if model.mode == .review {
+            if model.mode == .review && model.allowsCleanup {
                 CleanupReviewQueueView(browser: model, queue: model.reviewQueue)
             } else if model.mode == .explorer && model.search.isEmpty {
                 InventoryExplorerView(browser: model)
@@ -404,6 +456,18 @@ struct DiskInventoryView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             InventoryCapacitySummary(live: history.live, recorded: history.snapshot?.latest)
+            if history.target.uuid != nil {
+                Text(history.target.title + " · " + history.target.status).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                if let published = history.target.snapshot {
+                    Text("Catalog measured \(published.measuredAt.formatted(date: .abbreviated, time: .shortened)) · \(published.completeness)").font(.caption).foregroundStyle(.secondary)
+                }
+                if history.target.registration?.capacityScope.hasPrefix("apfs:") == true {
+                    Text("Capacity is shared by this APFS container; indexed file sizes belong to this volume.").font(.caption).foregroundStyle(.secondary)
+                }
+                if history.target.descriptor?.filesystem.lowercased() == "exfat" {
+                    Text("exFAT folders refresh on the monitoring schedule and on request; continuous file-event history is unavailable.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
             HStack {
                 titleTrail
                 Spacer()
@@ -461,7 +525,7 @@ struct DiskInventoryView: View {
             ForEach(Array(shown.enumerated()), id: \.offset) { index, node in
                 if index > 0 { Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary) }
                 if let node {
-                    let name = node.parentID == nil ? "Startup Data" : node.name
+                    let name = model.displayName(node)
                     if node.id == model.directory?.id {
                         // The current folder is the title, not a (dimmed, disabled) control.
                         Text(name).font(.title2.weight(.semibold)).lineLimit(1).help(node.path)
@@ -615,13 +679,13 @@ struct DiskInventoryView: View {
     private var controls: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                Picker("Browse", selection: $model.mode) { ForEach(InventoryBrowserMode.allCases) { Text($0.rawValue).tag($0) } }
+                Picker("Browse", selection: $model.mode) { ForEach(InventoryBrowserMode.allCases.filter { model.allowsCleanup || $0 != .review }) { Text($0.rawValue).tag($0) } }
                     .labelsHidden().fixedSize().accessibilityIdentifier("inventory.mode")
-                if model.mode != .review { Button("Go to folder…") { model.chooseFolder() }.accessibilityIdentifier("inventory.goToFolder") }
+                if model.mode != .review { Button("Go to folder…") { model.chooseFolder() }.disabled(!model.canRequest).accessibilityIdentifier("inventory.goToFolder") }
                 if model.mode == .review {
                     Button { model.mode = .explorer } label: { Label("Back to Explorer", systemImage: "chevron.backward") }
                         .help("Return to browsing folders").accessibilityIdentifier("inventory.backToExplorer")
-                } else {
+                } else if model.allowsCleanup {
                     Button { model.mode = .review } label: { Label("Review Cleanup", systemImage: "checklist") }
                         .buttonStyle(.borderedProminent)
                         .help("Review storage candidates and their evidence. This list cannot move or delete files.")

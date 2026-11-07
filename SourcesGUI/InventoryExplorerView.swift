@@ -599,7 +599,7 @@ struct InventoryExplorerView: View {
                 Text(node.path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                 Spacer(minLength: 8)
                 if node.kind == .directory { Button("Show Contents") { browser.navigate(node) }.controlSize(.small) }
-                Button("Reveal in Finder") { reveal(node) }.controlSize(.small)
+                Button("Reveal in Finder") { reveal(node) }.controlSize(.small).disabled(browser.livePath(node) == nil)
                 Button("Copy Path") { copy(node) }.controlSize(.small)
             } else {
                 Text("Select an item to see its path. ← and → collapse and expand; Return or double-click opens a folder.")
@@ -614,7 +614,7 @@ struct InventoryExplorerView: View {
     }
 
     private func reveal(_ node: InventoryNode) {
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: node.path)])
+        browser.revealInFinder(node)
     }
 
     private func copy(_ node: InventoryNode) {

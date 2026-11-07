@@ -59,7 +59,9 @@ var inventoryReplayInjectedEvents: ((UInt64) -> [(String, UInt32, UInt64)])?
 
 @discardableResult
 func reconcileInventoryEvents(database: String, directory: URL, region: CoverageRegion, timeout: TimeInterval? = nil, markerOverride: EventMarker? = nil,
-                              pathMemoryLimit: Int = 262_144, simulateLoss: Bool = false) throws -> InventoryEventReplay {
+                              pathMemoryLimit: Int = 262_144, simulateLoss: Bool = false, rootValidator: InventoryRootValidator? = nil, deadline: Date? = nil) throws -> InventoryEventReplay {
+    func validate() throws { try rootValidator?(region, .beforeRequestService) }
+    try validate()
     let profile = InventoryProfile.current, began = DispatchTime.now().uptimeNanoseconds, started = Date()
     defer { if let profile { profile.nanoseconds["fsevents_reconciliation", default: 0] += DispatchTime.now().uptimeNanoseconds - began } }
     func result(_ outcome: InventoryEventReplay.Outcome, events: Int = 0, paths: Int = 0, _ reason: String) -> InventoryEventReplay {
@@ -67,7 +69,9 @@ func reconcileInventoryEvents(database: String, directory: URL, region: Coverage
         log(directory, "inventory events {\"outcome\":\"\(outcome.rawValue)\",\"events\":\(events),\"paths\":\(paths),\"seconds\":\(String(format: "%.2f", replay.seconds)),\"reason\":\"\(reason)\"}")
         return replay
     }
+    if let deadline, deadline.timeIntervalSinceNow <= 0 { return result(.retry, "slice budget exhausted before replay") }
     let marker = markerOverride ?? currentEventMarker(region.root)
+    try validate()
     guard let uuid = marker.device else {
         try noteInventoryEventIdentityUnavailable(databasePath: database, reason: "File-event history identity unavailable; inventory values remain stale until event identity recovers")
         return result(.identity, "event identity unavailable")
@@ -88,7 +92,7 @@ func reconcileInventoryEvents(database: String, directory: URL, region: Coverage
     // durable invalidations; IDs arrive out of order, so the cursor only ever moves to the marker.
     var paths = Set<String>(), recursive = Set<String>(), events = 0, spilled = 0
     var spillError: Error?, dropped = false
-    let operational = region.relative(fromDevice: dataRelative(directory.path) ?? directory.path)
+    let operational = dataRelative(directory.path, mount: region.mount, links: region.usesFirmlinks ? systemFirmlinks : []).flatMap { region.relative(fromDevice: $0) }
     // Spilled paths are durable before they leave memory; the cursor is acknowledged only after
     // every write succeeded. Any failure aborts without acknowledgement, so history is replayed again.
     func spill(_ batch: [String], subtree: Bool = false) {
@@ -98,6 +102,7 @@ func reconcileInventoryEvents(database: String, directory: URL, region: Coverage
             if let fault = inventoryReplaySpillFault { throw fault }
             #endif
             for start in stride(from: 0, to: batch.count, by: 4_096) {
+                try validate()
                 try invalidateInventory(databasePath: database, paths: Array(batch[start..<min(batch.count, start + 4_096)]), eventID: nil, gap: subtree,
                                         reason: subtree ? "Subtree file-event gap" : "Filesystem activity", deviceIdentifier: uuid)
             }
@@ -122,17 +127,19 @@ func reconcileInventoryEvents(database: String, directory: URL, region: Coverage
             paths.removeAll(keepingCapacity: true); recursive.removeAll(keepingCapacity: true)
         }
     }
-    let budget = timeout ?? inventoryReplayBudget(cursorAge: cursor.age())
+    let remaining = deadline?.timeIntervalSinceNow ?? inventoryReplayCeiling
+    let budget = max(0, min(timeout ?? inventoryReplayBudget(cursorAge: cursor.age()), remaining))
     #if INVENTORY_TESTS
     for (path, flags, id) in inventoryReplayInjectedEvents?(marker.eventId) ?? [] { activity.handle(path, flags, id) }
     #endif
-    replayCoverage(activity, since: cursor.eventID, timeout: budget, whileDelivering: true, ceiling: inventoryReplayCeiling)
+    replayCoverage(activity, since: cursor.eventID, timeout: budget, whileDelivering: true, ceiling: max(0, min(inventoryReplayCeiling, remaining)))
     #if INVENTORY_TESTS
     if inventoryReplaySimulatedTimeout { activity.timedOut = true }
     #endif
     if let spillError { throw spillError }
     let changed = spilled + paths.count
     if activity.lossDetected || dropped || simulateLoss {
+        try validate()
         try invalidateInventory(databasePath: database, paths: [], eventID: marker.eventId, gap: true,
                                 reason: "File-event gap; bounded reconciliation required", deviceIdentifier: uuid)
         return result(.gap, events: events, paths: changed, activity.gaps.first ?? (dropped ? "File events were dropped by macOS" : "simulated event loss"))
@@ -146,25 +153,30 @@ func reconcileInventoryEvents(database: String, directory: URL, region: Coverage
     }
     let all = Array(paths)
     for start in stride(from: 0, to: max(all.count, 1), by: 4_096) where start < all.count {
+        try validate()
         try invalidateInventory(databasePath: database, paths: Array(all[start..<min(all.count, start + 4_096)]), eventID: nil, gap: false, reason: "Filesystem activity", deviceIdentifier: uuid)
     }
     let subtrees = Array(recursive)
     for start in stride(from: 0, to: subtrees.count, by: 4_096) {
+        try validate()
         try invalidateInventory(databasePath: database, paths: Array(subtrees[start..<min(subtrees.count, start + 4_096)]), eventID: nil, gap: true, reason: "Subtree file-event gap", deviceIdentifier: uuid)
     }
     // Acknowledge only after every changed directory is durably queued.
+    try validate()
     try invalidateInventory(databasePath: database, paths: [], eventID: marker.eventId, gap: false, reason: "Filesystem activity", deviceIdentifier: uuid)
     return result(.applied, events: events, paths: changed, "replayed")
 }
 
-func consumeInventoryRequests(database: String, directory: URL, region: CoverageRegion) throws {
+func consumeInventoryRequests(database: String, directory: URL, region: CoverageRegion, rootValidator: InventoryRootValidator? = nil) throws {
     // Runs on every batch inside one long worker task, which never drains an autorelease pool: each
     // FileManager enumeration left its enumerator, URLs and errors alive for the rest of the run
     // (about 1 MB a minute in the 1.0.3 production worker; `heap` showed one set per call).
-    try autoreleasepool { try consumeInventoryRequestsNow(database: database, directory: directory, region: region) }
+    try autoreleasepool { try consumeInventoryRequestsNow(database: database, directory: directory, region: region, rootValidator: rootValidator) }
 }
 
-private func consumeInventoryRequestsNow(database: String, directory: URL, region: CoverageRegion) throws {
+private func consumeInventoryRequestsNow(database: String, directory: URL, region: CoverageRegion, rootValidator: InventoryRootValidator?) throws {
+    func validate() throws { try rootValidator?(region, .beforeRequestService) }
+    try validate()
     let folder = InventoryRequests.directory(database: database)
     guard let entries = fm.enumerator(at: folder, includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles]) else { return }
     // Atomically claim the coalesced slot before decoding. A newer navigation can
@@ -183,12 +195,13 @@ private func consumeInventoryRequestsNow(database: String, directory: URL, regio
             catch is DecodingError { log(directory, "Ignored malformed inventory focus request") }
         } else { log(directory, "Ignored invalid inventory focus request metadata") }
         if let request, request.action == "focus", let path = request.path {
+            try validate()
             try NativeQARuntime.active?.validateRequest(path, action: request.action)
             do { try requestInventoryFocus(databasePath: database, path: path, requestedAt: request.requestedAt.timeIntervalSince1970) }
             catch InventoryEngineError.invalidRoot(_) { log(directory, "Ignored out-of-scope inventory focus request") }
             // SQL/I/O failures propagate with the claimed file retained for recovery.
         }
-        try fm.removeItem(at: claimed)
+        try validate(); try fm.removeItem(at: claimed)
     }
     var count = 0
     for case let url as URL in entries {
@@ -197,12 +210,13 @@ private func consumeInventoryRequestsNow(database: String, directory: URL, regio
         var info = stat()
         guard lstat(url.path, &info) == 0, info.st_mode & S_IFMT == S_IFREG, info.st_uid == getuid(), info.st_size <= 65_536 else { continue }
         let request = try JSONDecoder().decode(InventoryWorkRequest.self, from: Data(contentsOf: url))
+        try validate()
         try NativeQARuntime.active?.validateRequest(request.path, action: request.action)
         switch request.action {
         case "pause", "resume": break // enqueue applies current intent immediately; old requests cannot reverse it
         case "refresh":
             var path = request.path ?? region.root
-            if let relative = dataRelative(path, mount: region.mount).flatMap({ region.relative(fromDevice: $0) }) { path = region.absolute(relative) }
+            if let relative = dataRelative(path, mount: region.mount, links: region.usesFirmlinks ? systemFirmlinks : []).flatMap({ region.relative(fromDevice: $0) }) { path = region.absolute(relative) }
             try required(path == region.root || path.hasPrefix(region.root + "/"), "Refresh path is outside the inventory root")
             let boundary = request.boundary
             let applicable = try boundary.map { try inventoryRequestBoundaryIsCurrent(databasePath: database, boundary: $0) } ?? false
@@ -210,7 +224,7 @@ private func consumeInventoryRequestsNow(database: String, directory: URL, regio
         default: throw Failure("Unrecognized inventory request")
         }
         // Only this immutable UUID request is consumed; concurrent requests have different names.
-        try fm.removeItem(at: url); count += 1
+        try validate(); try fm.removeItem(at: url); count += 1
     }
 }
 
@@ -241,8 +255,20 @@ func inventoryRunStatus(_ main: InventoryRunResult) -> String {
     return "completed"
 }
 
-func inventoryCommand(_ command: String, args: [String], directory: URL) async throws {
+@discardableResult func inventoryCommand(_ command: String, args: [String], directory: URL, coordinated: Bool = false) async throws -> InventoryRunResult? {
+    let commandStarted = Date()
     func value(_ key: String) -> String? { guard let i = args.firstIndex(of: key), args.count > i + 1 else { return nil }; return args[i + 1] }
+    if command == "inventory-work", !coordinated, value("--root") == nil, NativeQARuntime.active == nil {
+        if try await dispatchExternalInventory(directory: directory, args: args) { exit(75) }
+        return nil
+    }
+    var dispatcherLock: FileLock?
+    if ["inventory-initialize", "inventory-update", "inventory-work"].contains(command), !coordinated {
+        try privateDirectory(directory)
+        guard let lock = FileLock(directory.appendingPathComponent("inventory-dispatch.lock").path, wait: 0) else { return nil }
+        dispatcherLock = lock
+    }
+    defer { withExtendedLifetime(dispatcherLock) {} }
     let database = directory.appendingPathComponent("history.sqlite3").path
     let reader = InventoryReader(path: database)
     func output<T: Encodable>(_ value: T) throws { let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]; encoder.dateEncodingStrategy = .iso8601; print(String(decoding: try encoder.encode(value), as: UTF8.self)) }
@@ -254,7 +280,7 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
     case "inventory-children":
         var id = args.dropFirst().first.flatMap(Int64.init)
         if id == nil { id = try await reader.root()?.id }
-        guard let id else { print("No inventory root"); return }
+        guard let id else { print("No inventory root"); return nil }
         try await output(reader.children(parentID: id, offset: offset, limit: limit, sort: InventorySort(rawValue: value("--sort") ?? "name") ?? .name))
     case "inventory-largest": try await output(reader.largest(kind: InventoryLargestKind(rawValue: args.dropFirst().first ?? "files") ?? .files, under: under, offset: offset, limit: limit))
     case "inventory-search": try await output(reader.search(text: args.dropFirst().first ?? "", under: under, offset: offset, limit: limit))
@@ -263,6 +289,8 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
     case "inventory-cancel": try cancelInventory(directory: directory); print("Inventory pause requested; committed partial results are retained.")
     case "inventory-resume": _ = try InventoryRequests.enqueue(database: database, action: "resume"); print("Inventory resume requested.")
     case "inventory-initialize", "inventory-update", "inventory-work":
+        let budget = min(3_600, max(0.01, Double(value("--budget") ?? "20") ?? 20))
+        let deadline = coordinated ? commandStarted.addingTimeInterval(budget) : nil
         try privateDirectory(directory)
         guard let commandLock = FileLock(directory.appendingPathComponent("inventory-command.lock").path, wait: 0) else { throw Failure("Another inventory command is active") }
         defer { withExtendedLifetime(commandLock) {} }
@@ -311,25 +339,26 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
             let cancel = directory.appendingPathComponent("inventory.cancel")
             if fm.fileExists(atPath: cancel.path) { try fm.removeItem(at: cancel) }
         }
-        if try await reader.root() != nil { try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil) }
-        let budget = min(3_600, max(0.01, Double(value("--budget") ?? "20") ?? 20))
+        if try await reader.root() != nil { try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil, deadline: deadline) }
         var result = runInventory(databasePath: database, directory: directory, region: region,
-                                  options: InventoryRunOptions(maxDuration: budget, batchSize: Int(value("--batch") ?? "256") ?? 256,
+                                  options: InventoryRunOptions(maxDuration: deadline.map { max(0, $0.timeIntervalSinceNow) } ?? budget, batchSize: Int(value("--batch") ?? "256") ?? 256,
                                                                stopAfterEntries: value("--stop-after").flatMap(Int.init), cancelFile: directory.appendingPathComponent("inventory.cancel").path, serviceRequests: true),
                                   fdaOverride: fda, gatedOverride: gate)
-        let main = result
-        if ["complete", "partial"].contains(result.outcome), result.reason != "cancelled" {
+        var main = result
+        if ["complete", "partial"].contains(result.outcome), result.reason != "cancelled", deadline.map({ $0.timeIntervalSinceNow > 0 }) ?? true {
             // A successful final batch must not acknowledge events that arrived while it
             // was walking. Replay once more and persist invalidation before going idle.
             // Do not extend this process into an unbounded catch-up loop on a busy disk.
             try consumeInventoryRequests(database: database, directory: directory, region: region)
-            try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil)
+            try reconcileInventoryEvents(database: database, directory: directory, region: region, timeout: NativeQARuntime.active != nil ? 0.1 : nil, deadline: deadline)
             let final = runInventory(databasePath: database, directory: directory, region: region,
                                      options: InventoryRunOptions(maxDuration: 0, cancelFile: directory.appendingPathComponent("inventory.cancel").path),
                                      fdaOverride: fda, gatedOverride: gate)
             result = InventoryRunResult(outcome: final.outcome, generation: final.generation,
                                         entries: result.entries, directories: result.directories,
                                         pending: final.pending, reason: final.reason)
+        } else if coordinated, ["complete", "partial"].contains(result.outcome), result.reason != "cancelled" {
+            main.runnableWorkRemains = true
         }
         let summary: [String: Any] = ["outcome": result.outcome, "generation": result.generation as Any, "entries": result.entries, "directories": result.directories,
                                       "pending": result.pending, "reason": result.reason ?? "", "seconds": Date().timeIntervalSince(started), "peak_memory_bytes": peakMemoryBytes(), "full_disk_access": fda,
@@ -343,6 +372,8 @@ func inventoryCommand(_ command: String, args: [String], directory: URL) async t
             throw Failure(result.reason ?? "Inventory failed")
         }
         if command == "inventory-work", let code = inventoryWorkExitCode(main) { exit(code) }
+        return main
     default: throw Failure("Unknown inventory command")
     }
+    return nil
 }

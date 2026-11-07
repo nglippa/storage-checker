@@ -102,7 +102,7 @@ PLIST
 info local.macbook.storage-monitor.viewer "Storage Monitor" StorageMonitorViewer \
   '<key>NSPrincipalClass</key><string>NSApplication</string>
 <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>' > "$APP/Contents/Info.plist"
-info local.macbook.storage-monitor "MacBook Storage Monitor" StorageMonitor '<key>LSUIElement</key><true/>' > "$HELPER/Contents/Info.plist"
+info local.macbook.storage-monitor "MacBook Storage Monitor" StorageMonitor '<key>LSUIElement</key><true/><key>StorageMonitorExternalVolumeSupport</key><integer>1</integer>' > "$HELPER/Contents/Info.plist"
 /usr/bin/plutil -lint "$APP/Contents/Info.plist" "$HELPER/Contents/Info.plist" >/dev/null
 
 echo "==> Normalize permissions, attributes and timestamps"

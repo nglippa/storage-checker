@@ -149,17 +149,17 @@ private struct NavigatorRow: View {
 }
 
 /// Actions on an entry, shared by the Navigator, the technical table and the Inspector.
-struct InventoryActions {
+@MainActor struct InventoryActions {
     let browser: InventoryBrowserModel
     let node: InventoryNode
 
     @ViewBuilder var menu: some View {
         if node.kind == .directory { Button("Open") { browser.navigate(node) } }
-        Button("Reveal in Finder") { reveal() }
+        Button("Reveal in Finder") { reveal() }.disabled(browser.livePath(node) == nil)
         Button("Copy Path") { copy() }
     }
 
-    func reveal() { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: node.path)]) }
+    func reveal() { browser.revealInFinder(node) }
     func copy() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(node.path, forType: .string) }
 }
 
@@ -207,12 +207,12 @@ struct InventoryInspectorView: View {
                     actions(node)
                     largestContents(node)
                     Divider()
-                    if subject.isSelection || node.parentID != nil {
+                    if browser.allowsCleanup && (subject.isSelection || node.parentID != nil) {
                         cleanupSummary(node)
                         InspectorDisclosure("Cleanup & safety", isExpanded: $showingCleanup) {
                             CleanupInspectorSection(cleanup: cleanup, node: node, showsTrash: showsTrash)
                         }
-                    } else {
+                    } else if browser.allowsCleanup {
                         Text("Choose a folder or file to see its cleanup review options.").font(.callout).foregroundStyle(.secondary)
                     }
                     Divider()
@@ -239,15 +239,15 @@ struct InventoryInspectorView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .windowBackgroundColor))
         .accessibilityIdentifier("inventory.inspector")
-        .onAppear { if !usesQueueEvidence { cleanup.update(subject?.node) { explorer.state.node($0) != nil } } }
+        .onAppear { if browser.allowsCleanup && !usesQueueEvidence { cleanup.update(subject?.node) { explorer.state.node($0) != nil } } }
         .onChange(of: subject.map { CleanupInspectorController.fingerprint($0.node) }) { _, _ in
-            if !usesQueueEvidence { cleanup.update(subject?.node) { explorer.state.node($0) != nil } }
+            if browser.allowsCleanup && !usesQueueEvidence { cleanup.update(subject?.node) { explorer.state.node($0) != nil } }
         }
         .onChange(of: subject?.node.id) { _, _ in showingAccounting = false; showingCleanup = false }
         .onChange(of: showingCleanup) { _, shown in
             if !shown { cleanup.cancelTrashConfirmation(); cleanup.closePreview() }
         }
-        .onChange(of: browser.revision) { _, _ in if !usesQueueEvidence { cleanup.inventoryChanged(subject?.node) } }
+        .onChange(of: browser.revision) { _, _ in if browser.allowsCleanup && !usesQueueEvidence { cleanup.inventoryChanged(subject?.node) } }
     }
 
     private func identity(_ node: InventoryNode, info: InventoryInspectorPresentation, isSelection: Bool) -> some View {
@@ -330,6 +330,7 @@ struct InventoryInspectorView: View {
             HStack(spacing: 12) {
                 Button { actions.reveal() } label: { Label("Finder", systemImage: "folder") }
                     .help("Reveal in Finder")
+                    .disabled(browser.livePath(node) == nil)
                 Button { actions.copy() } label: { Image(systemName: "doc.on.doc") }
                     .accessibilityLabel("Copy path").help("Copy full path")
             }.buttonStyle(.borderless).font(.callout)

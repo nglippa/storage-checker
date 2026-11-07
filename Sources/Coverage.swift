@@ -105,12 +105,13 @@ struct CoverageRegion {
     let prefix: String         // device-relative path of the covered root; "" is the whole volume
     let device: dev_t
     let deviceIdentifier: String
+    var usesFirmlinks = true
     var root: String { prefix.isEmpty ? mount : mount + "/" + prefix }
     func absolute(_ rel: String) -> String { rel.isEmpty ? root : root + "/" + rel }
     func deviceRelative(_ rel: String) -> String { prefix.isEmpty ? rel : (rel.isEmpty ? prefix : prefix + "/" + rel) }
-    func display(_ rel: String) -> String { tilde(displayPath(deviceRelative(rel), mount: mount)) }
+    func display(_ rel: String) -> String { tilde(displayPath(deviceRelative(rel), mount: mount, links: usesFirmlinks ? systemFirmlinks : [])) }
     // Firmlinked and Data-volume spellings, for matching open-file paths.
-    func absoluteForms(_ rel: String) -> [String] { Array(Set([displayPath(deviceRelative(rel), mount: mount), absolute(rel)])) }
+    func absoluteForms(_ rel: String) -> [String] { Array(Set([displayPath(deviceRelative(rel), mount: mount, links: usesFirmlinks ? systemFirmlinks : []), absolute(rel)])) }
     // A device-relative event path as a unit-relative path; nil outside the region.
     func relative(fromDevice path: String) -> String? {
         var p = Substring(path)
@@ -192,7 +193,7 @@ struct ConsentGate: ExpressibleByArrayLiteral {
     }
 }
 func consentGatedPaths(_ region: CoverageRegion, homePath: String = home.path, provenReadable: Set<String> = []) -> ConsentGate {
-    guard let homeDevice = dataRelative(canonicalPath(homePath) ?? homePath, mount: region.mount) else { return [] }
+    guard let homeDevice = dataRelative(canonicalPath(homePath) ?? homePath, mount: region.mount, links: region.usesFirmlinks ? systemFirmlinks : []) else { return [] }
     func rel(_ suffix: String) -> String? { region.relative(fromDevice: homeDevice + "/" + suffix) }
     let exact = ["Desktop", "Documents", "Downloads", "Pictures", "Music", "Movies", "Library/Mobile Documents", "Library/CloudStorage", "Library/Containers", "Library/Group Containers"].compactMap(rel)
     var children = [String: Set<String>]()

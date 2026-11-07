@@ -448,11 +448,13 @@ struct HistorySnapshot: Sendable {
     let loadedAt: Date
     var folderMonitoring: FolderMonitoringStatus? = nil
     var filesystemCoverage: FilesystemCoverageStatus? = nil
+    var segmentStarts: Set<Int64> = []
     var latest: Measurement? { measurements.last }
     func baseline(seconds: TimeInterval) -> Measurement? {
         guard let latest else { return nil }
         let target = latest.timestamp.addingTimeInterval(-seconds)
-        return measurements.last { $0.container == latest.container && $0.timestamp <= target && target.timeIntervalSince($0.timestamp) <= 2100 }
+        let start = measurements.last { $0.container == latest.container && segmentStarts.contains($0.id) }?.timestamp ?? .distantPast
+        return measurements.last { $0.container == latest.container && $0.timestamp >= start && $0.timestamp <= target && target.timeIntervalSince($0.timestamp) <= 2100 }
     }
 }
 
@@ -547,7 +549,7 @@ struct EventFilters: Codable, Equatable, Sendable {
 enum EvidenceParser {
     static func volumes(_ value: Any?) -> [VolumeAllocation] {
         (value as? [[String: Any]] ?? []).compactMap {
-            guard let uuid = $0["APFSVolumeUUID"] as? String, let bytes = $0["CapacityInUse"] as? NSNumber, bytes.int64Value >= 0 else { return nil }
+            guard let uuid = ($0["APFSVolumeUUID"] ?? $0["VolumeUUID"]) as? String, let bytes = $0["CapacityInUse"] as? NSNumber, bytes.int64Value >= 0 else { return nil }
             return VolumeAllocation(id: uuid, name: $0["Name"] as? String ?? "Unnamed volume", bytes: bytes.int64Value, roles: $0["Roles"] as? [String] ?? [])
         }
     }
@@ -656,12 +658,12 @@ enum EventProjector {
             return EvidenceComparison(current: metric, currentTime: metric.observedAt ?? current.timestamp, previous: prior, previousTime: prior.map { $0.observedAt ?? previous!.timestamp })
         }
     }
-    static func project(measurements: [Measurement], alerts: [AlertRecord], diagnostics: [DiagnosticRecord], intervals: [Int64: IntervalEvidence] = [:], loadedAt: Date = Date()) -> HistorySnapshot {
+    static func project(measurements: [Measurement], alerts: [AlertRecord], diagnostics: [DiagnosticRecord], intervals: [Int64: IntervalEvidence] = [:], loadedAt: Date = Date(), segmentStarts: Set<Int64> = []) -> HistorySnapshot {
         let readings = measurements.sorted { $0.timestamp == $1.timestamp ? $0.id < $1.id : $0.timestamp < $1.timestamp }
         let snapshots = diagnostics.sorted { $0.timestamp == $1.timestamp ? $0.id < $1.id : $0.timestamp < $1.timestamp }
         var attachedAlerts = Set<Int64>(), attachedDiagnostics = Set<Int64>(), previous = [String: Measurement](), events = [StorageEvent]()
         for reading in readings {
-            let prior = previous[reading.container]
+            let prior = segmentStarts.contains(reading.id) ? nil : previous[reading.container]
             let delta = prior.map { reading.free - $0.free }
             let relatedAlerts = alerts.filter { abs($0.timestamp.timeIntervalSince(reading.timestamp)) < 0.001 && $0.free == reading.free && !attachedAlerts.contains($0.id) }
             let relatedDiagnostics = snapshots.filter { abs($0.timestamp.timeIntervalSince(reading.timestamp)) < 0.001 && $0.container == reading.container && !attachedDiagnostics.contains($0.id) }
@@ -681,7 +683,9 @@ enum EventProjector {
         for diagnostic in snapshots where !attachedDiagnostics.contains(diagnostic.id) {
             events.append(make(id: "diagnostic:\(diagnostic.id)", time: diagnostic.timestamp, category: "Diagnostic snapshot", delta: nil, prior: nil, free: diagnostic.free, severity: .information, measurement: nil, alerts: [], diagnostics: [diagnostic], comparisons: comparisons(diagnostic, all: snapshots), source: "diagnostics #\(diagnostic.id); no matching capacity reading"))
         }
-        return HistorySnapshot(measurements: readings, events: events, loadedAt: loadedAt)
+        var snapshot = HistorySnapshot(measurements: readings, events: events, loadedAt: loadedAt)
+        snapshot.segmentStarts = segmentStarts
+        return snapshot
     }
     private static func make(id: String, time: Date, category: String, delta: Int64?, prior: Measurement?, free: Int64?, severity: EventSeverity, measurement: Measurement?, alerts: [AlertRecord], diagnostics: [DiagnosticRecord], comparisons: [EvidenceComparison], source: String) -> StorageEvent {
         let volumeText = (measurement?.volumes ?? []).flatMap { [$0.name,$0.id,$0.roles.joined(separator:" ")] }

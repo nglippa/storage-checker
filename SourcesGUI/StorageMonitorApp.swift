@@ -8,6 +8,8 @@ struct ViewerConfiguration {
     let windowSize: CGSize?
     let isQA: Bool
     let readinessOutput: String?
+    var selectedTarget: StorageTargetContext? = nil
+    var inventoryDatabase: String { selectedTarget?.inventoryDatabase ?? database }
     var windowTitle: String { ViewerIdentity.windowTitle(isQA: isQA, nativeQA: NativeQARuntime.active != nil, database: database) }
     static let current: Self = {
         if let runtime = NativeQARuntime.active { return Self(database: runtime.database, appearance: nil, windowSize: nil, isQA: true, readinessOutput: runtime.readiness) }
@@ -71,9 +73,27 @@ struct ViewerConfiguration {
     @Published var appearance: AppAppearance = .system { didSet { if configuration.appearance == nil { appearance.save(preferences) }; applyAppearance() } }
     @Published private(set) var inventoryRefreshTick = 0
     let live = LiveCapacityMonitor()
-    let configuration: ViewerConfiguration
+    private let baseConfiguration: ViewerConfiguration
+    @Published private(set) var target: StorageTargetContext
+    @Published private(set) var targetRevision: UInt64 = 0
+    @Published private(set) var externalSettings = ExternalVolumeRegistryDocument()
+    @Published private(set) var externalObservations: ExternalVolumeObservations?
+    @Published var externalError: String?
+    @Published private(set) var externalRuntime: LaunchdState?
+    private var runtimeTask: Task<Void, Never>?
+    private var lastRuntimeCheck: Date?
+    @Published var section = ViewerConfiguration.current.isQA && CommandLine.arguments.contains("--open-monitoring") ? "history" : "inventory"
+    private var selectionSerial: UInt64 = 0
+    private var targetsTask: Task<Void, Never>?
+    private var targetLoadSerial: UInt64 = 0
+    var externalBaseDirectory: URL { URL(fileURLWithPath: baseConfiguration.database).deletingLastPathComponent() }
+    var configuration: ViewerConfiguration {
+        ViewerConfiguration(database: target.historyDatabase, appearance: baseConfiguration.appearance, windowSize: baseConfiguration.windowSize,
+                            isQA: baseConfiguration.isQA, readinessOutput: baseConfiguration.readinessOutput, selectedTarget: target)
+    }
     let readiness: ViewerReadiness
-    private let reader: HistoryReader
+    private var reader: HistoryReader
+    private let historyLoader: (@Sendable (String) async throws -> HistorySnapshot)?
     private let preferences: UserDefaults
     private var loop: Task<Void,Never>?
     private var refreshTask: Task<Void,Never>?
@@ -83,9 +103,12 @@ struct ViewerConfiguration {
     private var lastHistoryRefresh: Date?
     var selectedEvent: StorageEvent? { snapshot?.events.first { $0.id == selection } }
     var hasActiveFilters: Bool { filters.activeCount > 0 || filters.sort != .newest }
-    init(configuration: ViewerConfiguration = .current) {
-        self.configuration = configuration
-        preferences = Self.preferences(for: configuration)
+    init(configuration: ViewerConfiguration = .current, preferencesOverride: UserDefaults? = nil,
+         historyLoader: (@Sendable (String) async throws -> HistorySnapshot)? = nil) {
+        baseConfiguration = configuration
+        self.historyLoader = historyLoader
+        target = .startup(database: configuration.database)
+        preferences = preferencesOverride ?? Self.preferences(for: configuration)
         var restored = preferences.data(forKey:"filters").flatMap { try? JSONDecoder().decode(EventFilters.self,from:$0) } ?? EventFilters()
         restored.start = minuteBoundary(restored.start); restored.end = minuteBoundary(restored.end)
         filters = restored
@@ -136,16 +159,28 @@ struct ViewerConfiguration {
         guard refreshTask == nil else { return }
         lastHistoryRefresh = Date()
         isLoading = true
+        let reader = self.reader, serial = selectionSerial, path = configuration.database, loader = historyLoader
         refreshTask = Task {
             do {
-                let value = try await PerformanceTrace.measure("history.load") { try await reader.load() }
-                guard !Task.isCancelled else { return }
+                let value = try await PerformanceTrace.measure("history.load") {
+                    if let loader { return try await loader(path) }
+                    return try await reader.load()
+                }
+                guard !Task.isCancelled, serial == selectionSerial else { return }
+                if let expected = target.registration?.capacityScope, value.measurements.contains(where: { $0.container != expected }) {
+                    throw HistoryError.invalid("Recorded capacity belongs to a different drive.")
+                }
                 snapshot = value; error = nil; historyMissing = false; applyFilters(); readiness.mark("history_ready")
                 // QA-only: preselect an event so captures show the inspector.
                 if configuration.isQA, selection == nil, let i = CommandLine.arguments.firstIndex(of: "--select-event"), CommandLine.arguments.count > i+1 {
                     selection = CommandLine.arguments[i+1]; showInspector = true
                 }
-            } catch { self.error = error.localizedDescription; historyMissing = (error as? HistoryError)?.isMissingHistory == true }
+            } catch {
+                guard !Task.isCancelled, serial == selectionSerial else { return }
+                self.error = error.localizedDescription; historyMissing = (error as? HistoryError)?.isMissingHistory == true
+                if historyMissing, target.uuid != nil { self.error = "No recorded capacity history for this drive yet. Enable monitoring and connect the drive to begin recording." }
+            }
+            guard serial == selectionSerial else { return }
             isLoading = false; refreshTask = nil
         }
     }
@@ -155,10 +190,14 @@ struct ViewerConfiguration {
         PerformanceTrace.startStallMonitor()
         applyAppearance()
         refreshAll()
+        refreshTargets()
+        refreshExternalRuntimeStatus()
         loop = Task {
             while !Task.isCancelled {
                 do { try await Task.sleep(for:.seconds(2)) } catch { break }
                 guard NSApp.isActive && NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) }) else { continue }
+                refreshTargets()
+                refreshExternalRuntimeStatus()
                 if inventoryVisible && (inventoryBusy || Date().timeIntervalSince(lastInventoryRefresh) >= 30) {
                     inventoryRefreshTick &+= 1; lastInventoryRefresh = Date()
                 }
@@ -167,7 +206,109 @@ struct ViewerConfiguration {
             }
         }
     }
-    func stop() { loop?.cancel(); loop = nil; if NativeQARuntime.active != nil { NativeQAWorker.shared.stopAndWait() } }
+    func stop() { loop?.cancel(); loop = nil; targetsTask?.cancel(); targetsTask = nil; runtimeTask?.cancel(); runtimeTask = nil; refreshTask?.cancel(); refreshTask = nil; if NativeQARuntime.active != nil { NativeQAWorker.shared.stopAndWait() } }
+
+    func selectTarget(_ uuid: String?) {
+        guard !baseConfiguration.isQA, uuid != target.uuid else { return }
+        let next: StorageTargetContext
+        if let uuid {
+            guard let saved = externalSettings.volumes[uuid], let waiting = try? StorageTargetContext.waiting(baseDirectory: externalBaseDirectory, registration: saved) else { return }
+            next = waiting
+        } else { next = .startup(database: baseConfiguration.database) }
+        selectionSerial &+= 1
+        targetLoadSerial &+= 1; targetsTask?.cancel(); targetsTask = nil
+        refreshTask?.cancel(); refreshTask = nil
+        snapshot = nil; visibleEvents = []; selection = nil; error = nil; historyMissing = false; isLoading = false
+        reader = HistoryReader(path: next.historyDatabase)
+        applyTarget(next, clearLive: true)
+        refreshAll(); refreshTargets()
+    }
+
+    private func applyTarget(_ next: StorageTargetContext, clearLive: Bool = false) {
+        let changed = target.key != next.key || target.descriptor != next.descriptor || target.registration != next.registration || target.issue != next.issue
+        guard changed || clearLive else { return }
+        let historyChanged = target.historyDatabase != next.historyDatabase
+        if historyChanged {
+            selectionSerial &+= 1
+            refreshTask?.cancel(); refreshTask = nil
+            snapshot = nil; visibleEvents = []; selection = nil; error = nil; historyMissing = false; isLoading = false
+            reader = HistoryReader(path: next.historyDatabase)
+        }
+        target = next; targetRevision &+= 1
+        if next.uuid == nil { live.selectSource { try LiveCapacityProbe.read() } }
+        else if let descriptor = next.descriptor {
+            live.selectSource(preserveReading: !clearLive && !historyChanged) { try LiveCapacityProbe.read(descriptor: descriptor) }
+        } else { live.selectSource(preserveReading: !clearLive && !historyChanged) { throw LiveCapacityError.unavailable("the selected drive is disconnected or awaiting verification") } }
+        refreshLive()
+        if historyChanged { refresh() }
+    }
+
+    func refreshTargets() {
+        guard !baseConfiguration.isQA, NativeQARuntime.active == nil, targetsTask == nil else { return }
+        let base = externalBaseDirectory, uuid = target.uuid, serial = selectionSerial
+        targetLoadSerial &+= 1; let load = targetLoadSerial
+        targetsTask = Task {
+            let result = await Task.detached(priority: .utility) { Result { () -> (ExternalVolumeRegistryDocument, ExternalVolumeObservations?, StorageTargetContext?) in
+                let settings = try ExternalVolumeRegistry(baseDirectory: base).read()
+                let observations = try ExternalVolumeObservationStore(baseDirectory: base).read()
+                return (settings, observations, try uuid.map { try StorageTargetContext.external(baseDirectory: base, uuid: $0) })
+            } }.value
+            guard !Task.isCancelled, serial == selectionSerial, load == targetLoadSerial else { return }
+            switch result {
+            case .success(let value):
+                externalSettings = value.0; externalObservations = value.1
+                if let context = value.2 { applyTarget(context) }
+            case .failure(let error):
+                externalError = error.localizedDescription
+                if target.uuid != nil { applyTarget(target.unavailable("External monitoring stopped: " + error.localizedDescription)) }
+            }
+            targetsTask = nil
+        }
+    }
+
+    var externalSupportReady: Bool {
+        guard !baseConfiguration.isQA, let externalRuntime else { return false }
+        return MonitoringSetupStatus.externalVolumesReady(home: FileManager.default.homeDirectoryForCurrentUser, launchd: externalRuntime)
+    }
+
+    var externalSupportMessage: String {
+        if !MonitoringSetupStatus.externalVolumesReady(home: FileManager.default.homeDirectoryForCurrentUser) {
+            return "Update and enable the background monitor in Settings to use external drives."
+        }
+        return externalRuntime == nil ? "Checking background tasks…" : "Background monitoring is stopped or disabled by macOS. Repair it in Settings."
+    }
+    func refreshExternalRuntimeStatus(force: Bool = false) {
+        guard !baseConfiguration.isQA, NativeQARuntime.active == nil, runtimeTask == nil,
+              force || lastRuntimeCheck.map({ Date().timeIntervalSince($0) >= 60 }) ?? true else { return }
+        lastRuntimeCheck = Date()
+        runtimeTask = Task {
+            let value = await Task.detached(priority: .utility) { LaunchdState.current() }.value
+            guard !Task.isCancelled else { return }
+            externalRuntime = value; runtimeTask = nil
+        }
+    }
+
+    func externalControl(_ action: String, uuid: String? = nil) {
+        guard externalSupportReady, !baseConfiguration.isQA else { externalError = "Update and enable the background monitor in Settings to use external drives."; return }
+        let base = externalBaseDirectory
+        Task {
+            do {
+                try await Task.detached(priority: .utility) {
+                    let control = ExternalVolumeControl(baseDirectory: base)
+                    switch action {
+                    case "enable": guard let uuid else { return }; _ = try control.enroll(uuid: uuid)
+                    case "reenroll": guard let uuid else { return }; _ = try control.enroll(uuid: uuid, replaceBacking: true)
+                    case "disable": guard let uuid else { return }; try control.disable(uuid: uuid)
+                    case "pause", "resume": guard let uuid else { return }; _ = try control.request(uuid: uuid, action: action)
+                    default: try control.signal()
+                    }
+                }.value
+                externalError = nil
+                targetsTask?.cancel(); targetsTask = nil; targetLoadSerial &+= 1
+                refreshTargets()
+            } catch { externalError = error.localizedDescription }
+        }
+    }
 }
 
 final class ViewerAppDelegate: NSObject, NSApplicationDelegate {
@@ -214,6 +355,7 @@ struct StorageMonitorApplication: App {
             // Top-aligned and bounded by the window: content taller than the window must never be centred
             // under the title bar and toolbar (D6). The minimum content height holds the whole layout.
             MonitorRootView(store:store)
+                .id(store.targetRevision)
                 .frame(minWidth:1000,maxWidth:.infinity,minHeight:640,maxHeight:.infinity,alignment:.top)
                 .background(WindowSetup())
                 .onAppear { delegate.reopen = { openWindow(id:"main") }; store.start() }

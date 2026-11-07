@@ -37,6 +37,7 @@ actor HistoryReader {
         // preserve its contract; close the connection before parsing JSON/projecting UI.
         try execute("PRAGMA query_only=ON; BEGIN DEFERRED;")
         let rawReadings: [[String:String]], rawAlerts: [[String:String]], rawDiagnostics: [[String:String]], rawIntervals: [[String:String]], rawLifecycle: String?, rawCoverage: String?
+        let segmentStarts: Set<Int64>
         do {
             rawReadings = try query("SELECT * FROM readings ORDER BY timestamp DESC,id DESC LIMIT 10000")
             rawAlerts = try query("SELECT * FROM alerts ORDER BY timestamp DESC,id DESC LIMIT 5000")
@@ -47,6 +48,8 @@ actor HistoryReader {
             let hasState = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='state'").isEmpty
             rawLifecycle = hasState ? try query("SELECT value FROM state WHERE key='attribution_lifecycle'").first?["value"] : nil
             rawCoverage = hasState ? try query("SELECT value FROM state WHERE key='coverage_lifecycle'").first?["value"] : nil
+            let hasSessions = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='external_capacity_sessions'").isEmpty
+            segmentStarts = hasSessions ? Set(try query("SELECT reading_id FROM external_capacity_sessions").compactMap { $0["reading_id"].flatMap(Int64.init) }) : []
             try execute("COMMIT")
         } catch { try? execute("ROLLBACK"); throw error }
         // Finalize and close now, not while UI projection is doing JSON work.
@@ -55,7 +58,7 @@ actor HistoryReader {
         func timestamp(_ row: [String:String]) throws -> Date { guard let value = Double(row["timestamp"] ?? ""), value.isFinite else { throw HistoryError.invalid("Invalid timestamp") }; return Date(timeIntervalSince1970: value) }
         let readings = try rawReadings.map { row -> Measurement in
             let free = try integer(row,"free"), used = try integer(row,"used")
-            guard free >= 0, used >= 0, free <= Int64.max - used, free + used > 0, let container = row["container"] else { throw HistoryError.invalid("Invalid APFS capacity") }
+            guard free >= 0, used >= 0, free <= Int64.max - used, free + used > 0, let container = row["container"] else { throw HistoryError.invalid("Invalid capacity") }
             let volumes = try JSONSerialization.jsonObject(with: Data((row["volumes"] ?? "[]").utf8))
             return Measurement(id: try integer(row,"id"), timestamp: try timestamp(row), container: container, free: free, used: used, volumes: EvidenceParser.volumes(volumes))
         }
@@ -63,7 +66,7 @@ actor HistoryReader {
         let diagnostics = try rawDiagnostics.map { row in try EvidenceParser.diagnostic(id: integer(row,"id"), timestamp: timestamp(row), json: row["snapshot"] ?? "{}") }
         var intervals = [Int64: IntervalEvidence]()
         for row in rawIntervals { if let id = Int64(row["reading_id"] ?? ""), let value = IntervalEvidence.parse(readingId: id, json: row["evidence"] ?? "") { intervals[id] = value } }
-        var snapshot = EventProjector.project(measurements: readings, alerts: alerts, diagnostics: diagnostics, intervals: intervals)
+        var snapshot = EventProjector.project(measurements: readings, alerts: alerts, diagnostics: diagnostics, intervals: intervals, segmentStarts: segmentStarts)
         snapshot.folderMonitoring = rawLifecycle.flatMap(FolderMonitoringStatus.parse)
         snapshot.filesystemCoverage = rawCoverage.flatMap(FilesystemCoverageStatus.parse)
         return snapshot

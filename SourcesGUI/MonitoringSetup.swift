@@ -1,5 +1,6 @@
 import Foundation
 import SQLite3
+import Darwin
 
 /// Background monitoring as seen from the desktop app. Read-only evaluation of the user's
 /// LaunchAgents; changes happen only when the person explicitly asks, by running the bundled
@@ -83,6 +84,9 @@ struct MonitoringSetupStatus: Equatable {
             state = .incomplete; summary = "macOS has turned off \(disabled.count) of this monitor's background tasks (System Settings → General → Login Items). Repair turns them back on."
         } else if !notLoaded.isEmpty {
             state = .incomplete; summary = "\(notLoaded.count) of \(agents.count) background tasks are configured but not loaded by macOS, so they will not run. Repair registers them again."
+        } else if (bundledHelper.map(supportsExternalVolumes) == true || supportsExternalVolumes(installedApp)) && !externalVolumesReady(home: home) {
+            state = .needsUpdate
+            summary = "Update the background monitor to enable external-drive discovery and automatic resume. Its capability or wake configuration is out of date."
         } else if let bundledVersion, bundledVersion != installedVersion {
             state = .needsUpdate
             summary = "The installed background monitor (\(installedVersion ?? "unknown version")) differs from this app (\(bundledVersion)). Update it to match."
@@ -96,6 +100,34 @@ struct MonitoringSetupStatus: Equatable {
     }
 
     /// LaunchAgent files carrying one of this monitor's labels under another file name.
+    static func supportsExternalVolumes(_ app: URL) -> Bool {
+        (NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))?["StorageMonitorExternalVolumeSupport"] as? NSNumber)?.intValue == 1
+    }
+    static func externalVolumesReady(home: URL, launchd: LaunchdState? = nil) -> Bool {
+        let app = home.appendingPathComponent("Applications/MacBook Storage Monitor.app")
+        let executable = app.appendingPathComponent("Contents/MacOS/StorageMonitor")
+        guard supportsExternalVolumes(app), FileManager.default.isExecutableFile(atPath: executable.path) else { return false }
+        let agents = labels.compactMap { NSDictionary(contentsOf: home.appendingPathComponent("Library/LaunchAgents/\($0).plist")) as? [String: Any] }
+        guard agents.count == labels.count else { return false }
+        if let launchd, !Set(labels).isSubset(of: launchd.loaded) || !Set(labels).isDisjoint(with: launchd.disabled) { return false }
+        let data = home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor").path
+        for (index, agent) in agents.enumerated() {
+            guard agent["Label"] as? String == labels[index], agent["RunAtLoad"] as? Bool == true,
+                  let arguments = agent["ProgramArguments"] as? [String], arguments.count >= 2,
+                  arguments[0] == executable.path, arguments[1] == ["check", "initialize-baseline", "inventory-work"][index],
+                  let i = arguments.firstIndex(of: "--data-dir"), i + 1 < arguments.count, arguments[i + 1] == data else { return false }
+            if index == 2 {
+                guard (agent["WatchPaths"] as? [String])?.contains(data + "/inventory-requests") == true,
+                      (agent["KeepAlive"] as? [String: Any])?["SuccessfulExit"] as? Bool == false,
+                      let i = arguments.firstIndex(of: "--budget"), i + 1 < arguments.count,
+                      let budget = Double(arguments[i + 1]), budget >= 1200, budget <= 3600 else { return false }
+            }
+        }
+        guard let capacity = agents.first, capacity["StartOnMount"] as? Bool == true else { return false }
+        let registry = home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor/external-volumes/registry.json").path
+        return (capacity["WatchPaths"] as? [String])?.contains(registry) == true
+    }
+
     static func duplicateAgents(home: URL) -> [URL] {
         let folder = home.appendingPathComponent("Library/LaunchAgents"), canonical = Set(labels.map { "\($0).plist" })
         return ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).sorted().filter { $0.hasSuffix(".plist") && !canonical.contains($0) }.map { folder.appendingPathComponent($0) }
@@ -145,11 +177,33 @@ struct LaunchdState: Equatable {
     private static func read(_ arguments: [String]) -> String? {
         let process = Process(), pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/bin/launchctl"); process.arguments = arguments
-        process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
+        process.standardInput = FileHandle.nullDevice; process.standardOutput = pipe; process.standardError = FileHandle.nullDevice
         guard (try? process.run()) != nil else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return process.terminationStatus == 0 ? String(data: data, encoding: .utf8) : nil
+        let descriptor = pipe.fileHandleForReading.fileDescriptor
+        _ = fcntl(descriptor, F_SETFL, O_NONBLOCK)
+        let deadline = Date().addingTimeInterval(2)
+        var data = Data(), invalid = false
+        func drain() {
+            var buffer = [UInt8](repeating: 0, count: 8192)
+            for _ in 0..<32 {
+                let count = Darwin.read(descriptor, &buffer, buffer.count)
+                if count <= 0 { break }
+                if data.count + count > 262_144 { invalid = true; break }
+                data.append(contentsOf: buffer.prefix(count))
+            }
+        }
+        while process.isRunning {
+            drain()
+            if invalid || Date() >= deadline { invalid = true; process.terminate(); break }
+            Thread.sleep(forTimeInterval: 0.02)
+        }
+        if invalid {
+            let grace = Date().addingTimeInterval(0.5)
+            while process.isRunning && Date() < grace { Thread.sleep(forTimeInterval: 0.01) }
+            if process.isRunning { _ = kill(process.processIdentifier, SIGKILL) }
+        }
+        process.waitUntilExit(); drain(); try? pipe.fileHandleForReading.close()
+        return !invalid && process.terminationStatus == 0 ? String(data: data, encoding: .utf8) : nil
     }
 }
 

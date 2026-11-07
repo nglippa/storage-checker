@@ -23,6 +23,8 @@ struct OverviewView: View {
     var historyMissing = false
     var historyLoading = false
     var compact = false
+    var target: StorageTargetContext? = nil
+    private var driveTitle: String { target?.uuid == nil ? "Internal storage" : target?.title ?? "External storage" }
     @ViewState private var showStorageStatus = false
     var body: some View {
         if let recorded = snapshot?.latest {
@@ -42,14 +44,15 @@ struct OverviewView: View {
             let severity = EventSeverity.capacity(reading.free)
             VStack(alignment: .leading, spacing: compact ? 7 : 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Label("Internal storage", systemImage: "internaldrive").font(.headline)
+                    Label(driveTitle, systemImage: target?.uuid == nil ? "internaldrive" : "externaldrive").font(.headline)
                     Spacer(minLength: 8)
                     if severity != .normal { SeverityLabel(severity: severity) }
                 }
                 availableSummary(free: reading.free, reading: reading, freshness: state.freshness(at: now), now: now)
                 compactUsage(free: reading.free, total: reading.total, severity: severity)
                 InspectorDisclosure("Storage status", isExpanded: $showStorageStatus) {
-                    Text(historyMissing ? "No history is recorded yet. Turn on background monitoring in Settings to record capacity at login and every 30 minutes. This live reading is not recorded."
+                    Text(target?.uuid != nil ? "No capacity history is recorded for this drive yet. The background monitor records chosen, connected drives at login, on mount and every 30 minutes."
+                         : historyMissing ? "No history is recorded yet. Turn on background monitoring in Settings to record capacity at login and every 30 minutes. This live reading is not recorded."
                          : historyLoading ? "Recorded history is still loading. Live capacity is read-only and does not create an event or alert."
                          : "No capacity readings are recorded yet. Live capacity is read-only and does not create an event or alert.")
                         .font(.subheadline).foregroundStyle(.secondary)
@@ -57,10 +60,10 @@ struct OverviewView: View {
             }.padding(.horizontal, 22).padding(.vertical, compact ? 7 : 13)
         } else {
             HStack(spacing: 10) {
-                ProgressView().controlSize(.small)
+                if live.isRefreshing { ProgressView().controlSize(.small) }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Reading live capacity…").font(.headline)
-                    Text("Recorded history loads independently.").font(.subheadline).foregroundStyle(.secondary)
+                    Text(live.state.lastError == nil ? "Reading live capacity…" : driveTitle).font(.headline)
+                    Text(target?.uuid != nil ? target?.status ?? "Drive unavailable" : "Recorded history loads independently.").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
             }.padding(.horizontal, 22).padding(.vertical, 16).accessibilityIdentifier("overview.liveLoading")
@@ -74,7 +77,7 @@ struct OverviewView: View {
         let severity = EventSeverity.capacity(free)
         VStack(alignment:.leading,spacing:compact ? 7 : 10) {
             HStack(alignment:.firstTextBaseline) {
-                Label("Internal storage",systemImage:"internaldrive").font(.headline)
+                Label(driveTitle,systemImage:target?.uuid == nil ? "internaldrive" : "externaldrive").font(.headline)
                 Spacer()
                 if severity != .normal { SeverityLabel(severity:severity) }
             }
@@ -116,7 +119,7 @@ struct OverviewView: View {
         VStack(alignment:.leading,spacing:3) {
             Text(reading == nil ? "Available (last recorded)" : "Available now").font(.subheadline).foregroundStyle(.secondary)
             Text(capacity(free)).font(.system(size:34,weight:.semibold,design:.rounded)).monospacedDigit()
-                .accessibilityLabel("\(reading == nil ? "Last recorded" : "Live") available APFS capacity: \(capacity(free))")
+                .accessibilityLabel("\(reading == nil ? "Last recorded" : "Live") available capacity: \(capacity(free))")
                 .accessibilityIdentifier("overview.available")
             liveStatus(reading:reading,freshness:freshness,now:now)
         }

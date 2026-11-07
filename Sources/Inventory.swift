@@ -45,6 +45,32 @@ struct InventoryRunOptions {
     }
 }
 
+enum InventoryRootValidationBoundary: Equatable, Sendable {
+    case runStart
+    case beforeRequestService
+    case beforeListing(relative: String)
+    case afterListing(relative: String)
+    case beforeCommit(relative: String)
+    case beforeFinalize
+    case beforeStatusCommit
+}
+
+enum InventoryRootValidationError: Error, CustomStringConvertible, Equatable, Sendable {
+    case disconnected
+    case identityChanged
+    case disabled
+
+    var description: String {
+        switch self {
+        case .disconnected: return "Inventory root disconnected; committed results were retained."
+        case .identityChanged: return "Inventory root identity changed; committed results were retained."
+        case .disabled: return "Inventory indexing was disabled; committed results were retained."
+        }
+    }
+}
+
+typealias InventoryRootValidator = @Sendable (CoverageRegion, InventoryRootValidationBoundary) throws -> Void
+
 /// Milliseconds the inventory worker waits for another process's lock before reporting it busy.
 let inventoryWorkerBusyTimeout: Int32 = 30_000
 /// Changed-during-listing restarts of one directory before a run stops retrying it.
@@ -121,7 +147,7 @@ private final class InventoryConnection {
     private var lastWriterYield = DispatchTime.now().uptimeNanoseconds
 
     init(_ path: String, create: Bool = true) throws {
-        let flags = SQLITE_OPEN_READWRITE | (create ? SQLITE_OPEN_CREATE : 0) | SQLITE_OPEN_NOMUTEX
+        let flags = SQLITE_OPEN_READWRITE | (create ? SQLITE_OPEN_CREATE : 0) | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_NOFOLLOW
         guard sqlite3_open_v2(path, &db, flags, nil) == SQLITE_OK else {
             let detail = db.map { String(cString: sqlite3_errmsg($0)) } ?? "unknown error"
             if let db { sqlite3_close(db) }
@@ -596,6 +622,16 @@ private final class InventoryOpenDirectory {
 }
 
 func runInventory(databasePath: String, directory: URL, region: CoverageRegion, options: InventoryRunOptions = InventoryRunOptions(), fdaOverride: String? = nil, gatedOverride: ConsentGate? = nil, cancelled: @escaping () -> Bool = { false }) -> InventoryRunResult {
+    runInventory(databasePath: databasePath, directory: directory, region: region, options: options, fdaOverride: fdaOverride,
+                 gatedOverride: gatedOverride, rootValidator: nil, cancelled: cancelled)
+}
+
+func runInventory(databasePath: String, directory: URL, region: CoverageRegion, options: InventoryRunOptions = InventoryRunOptions(), fdaOverride: String? = nil, gatedOverride: ConsentGate? = nil, rootValidator: InventoryRootValidator?, cancelled: @escaping () -> Bool = { false }) -> InventoryRunResult {
+    var runGeneration: Int64?
+    var entries = 0, directories = 0
+    func validateRoot(_ boundary: InventoryRootValidationBoundary) throws {
+        try rootValidator?(region, boundary)
+    }
     do {
         if let runtime = NativeQARuntime.active {
             guard databasePath == runtime.database, directory.path == runtime.support, region.root == runtime.fixtures else { try NativeQARuntime.reject("worker database/root does not match profile") }
@@ -606,6 +642,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
             return InventoryRunResult(outcome: "busy", generation: nil, entries: 0, directories: 0, pending: 0, reason: "Another inventory worker is active")
         }
         defer { withExtendedLifetime(lock) {} }
+        try validateRoot(.runStart)
         let streams = InventoryStreamStore()
         defer { streams.removeAll() }
         applyObservationalIOPolicy()
@@ -614,8 +651,9 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
         if let device = initialMarker.device, try loadInventoryEventCursor(connection: connection, deviceIdentifier: device) == nil {
             try acknowledgeInventoryEventCursor(connection, device: device, eventID: initialMarker.eventId, at: Date().timeIntervalSince1970)
         }
-        let operationalPath = dataRelative(directory.path, mount: region.mount).flatMap { region.relative(fromDevice: $0) }.map { region.absolute($0) } ?? directory.path
+        let operationalPath = dataRelative(directory.path, mount: region.mount, links: region.usesFirmlinks ? systemFirmlinks : []).flatMap { region.relative(fromDevice: $0) }.map { region.absolute($0) } ?? directory.path
         let root = try prepareInventoryRoot(connection, region: region, operationalPath: operationalPath)
+        runGeneration = root.generation
         try applyInventoryInvalidations(connection, generation: root.generation, rootNode: root.node, rootPath: region.root)
         try expandInventoryReconcile(connection, generation: root.generation, limit: 256)
         // Also the bounded legacy step: an 'unknown' generation is confirmed from durable
@@ -631,7 +669,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
         if let operational = inventoryRelativePath(operationalPath, root: region.root) { gate.exact.insert(operational) }
         var deadline = Date().addingTimeInterval(options.maxDuration)
         var lastSpaceCheck: UInt64 = 0, lastProgressSample: UInt64 = 0
-        var entries = 0, directories = 0, reason: String?
+        var reason: String?
         var completed = [InventoryCompletedListing](), bufferedEntries = 0
         var interactiveStreak = 0
         // A directory written continuously (a browser cache) changes during every listing.
@@ -650,7 +688,8 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
         var lastRequestService = DispatchTime.now().uptimeNanoseconds
         func serviceRequests() throws {
             if options.serviceRequests, DispatchTime.now().uptimeNanoseconds - lastRequestService >= 250_000_000 {
-                try consumeInventoryRequests(database: databasePath, directory: directory, region: region)
+                try validateRoot(.beforeRequestService)
+                try consumeInventoryRequests(database: databasePath, directory: directory, region: region, rootValidator: rootValidator)
                 lastRequestService = DispatchTime.now().uptimeNanoseconds
             }
         }
@@ -667,6 +706,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
         }
         func flushCompletedListings() throws {
             guard !completed.isEmpty else { return }
+            try validateRoot(.beforeCommit(relative: completed[0].job.relative))
             let ready = completed
             completed.removeAll(keepingCapacity: true); bufferedEntries = 0
             var valid = [InventoryCompletedListing]()
@@ -677,6 +717,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
                 try NativeQARuntime.active?.validateRequest(path, action: "refresh")
                 var value = stat()
                 let unchanged = withThrottledIO { lstat(path, &value) == 0 && InventoryDirectorySnapshot(value) == item.snapshot }
+                try validateRoot(.afterListing(relative: item.job.relative))
                 if unchanged { valid.append(item) }
                 else {
                     try restartInventoryJob(connection, job: item.job, reason: "directory changed before listing commit")
@@ -684,6 +725,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
                 }
             }
             guard !valid.isEmpty else { return }
+            try validateRoot(.beforeCommit(relative: valid[0].job.relative))
             try connection.transaction {
                 try coalescingAggregates(connection, generation: root.generation) {
                     for item in valid {
@@ -747,6 +789,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
             if useFocus { interactiveStreak += 1; InventoryProfile.current?.add("interactive_quanta") }
             else { interactiveStreak = 0; InventoryProfile.current?.add("background_quanta") }
             let absolute = job.relative.isEmpty ? job.root : job.root + "/" + job.relative
+            try validateRoot(.beforeListing(relative: job.relative))
             try NativeQARuntime.active?.validateRequest(absolute, action: "refresh")
             InventoryProfile.current?.add("job_quanta")
             var activeJob = try beginInventoryListing(connection, job: job)
@@ -760,18 +803,23 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
                 // Reuse coverage's process watchdog; never hold a writer transaction
                 // during this I/O. Persist the gap before launchd retries other jobs.
                 let watchedNode = activeJob.node, watchedGeneration = activeJob.generation
+                let watchedRelative = activeJob.relative
                 WalkWatchdog.shared.begin(path: absolute, allowed: 60) {
+                    do { try rootValidator?(region, .beforeCommit(relative: watchedRelative)) }
+                    catch { return }
                     do { try markInventoryIOBlocked(databasePath: databasePath, node: watchedNode, generation: watchedGeneration) }
                     catch { fputs("Storage Monitor: could not persist blocked inventory directory: \(error)\n", stderr) }
                 }
                 // Drained per batch for the same reason as the request mailbox: the run never returns to
                 // a run loop, so Foundation temporaries would otherwise live until the worker exits.
+                try validateRoot(.beforeListing(relative: activeJob.relative))
                 let result = autoreleasepool { withThrottledIO { readInventoryBatch(path: absolute, operationalPath: operationalPath, region: region, relative: activeJob.relative, identity: activeJob.identity, gate: gate, fdaGranted: fdaOverride == "granted", expected: activeJob.snapshot, deadline: &deadline, streams: streams, limit: min(options.batchSize, max(1, (options.stopAfterEntries ?? Int.max) - entries - bufferedEntries)), cancelled: {
                     cancelled() || options.cancelFile.map { FileManager.default.fileExists(atPath: $0) } == true
                 }, seen: { name in
                     activeJob.snapshot != nil && ((try? connection.scalar("SELECT COUNT(*) FROM inventory_nodes WHERE generation_id=? AND parent_id=? AND name=? AND seen_token=?", [activeJob.generation, activeJob.node, name, plannedToken])) ?? 0) > 0
                 }) } }
                 WalkWatchdog.shared.end()
+                try validateRoot(.afterListing(relative: activeJob.relative))
                 switch result {
                 case .changed:
                     streams.values[absolute] = nil
@@ -797,6 +845,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
                         if completed.count >= inventoryGroupedListingLimit || bufferedEntries >= inventoryGroupedEntryLimit { try flushCompletedListings() }
                     } else {
                         try flushCompletedListings()
+                        try validateRoot(.beforeCommit(relative: activeJob.relative))
                         try persistInventoryBatch(connection, job: activeJob, entries: batch, ended: ended, snapshot: snapshot, now: Date().timeIntervalSince1970)
                         entries += batch.count
                         if ended { directories += 1 }
@@ -820,7 +869,9 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
                 }
             }
         }
+        try validateRoot(.beforeFinalize)
         try flushCompletedListings()
+        try validateRoot(.beforeFinalize)
         if drained, reason == nil, !deferred.isEmpty { reason = inventoryDeferredReason }
         if lastProgressSample > 0 { try recordInventoryProgress(connection, generation: root.generation, rootNode: root.node) }
         try pruneInventoryChangeJournal(connection)
@@ -837,11 +888,13 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
         let eventReason = event["event_reason"] ?? "File-event history identity unavailable"
         let durableWorkDrained = pending == 0 && reconciling == 0 && tombstones == 0 && invalidations == 0
         if eventAvailability == "unavailable_stale" && durableWorkDrained {
+            try validateRoot(.beforeStatusCommit)
             try connection.write("UPDATE inventory_nodes SET status='stale',reason=? WHERE id=?", [eventReason,root.node])
             try connection.write("UPDATE inventory_generations SET state='stale',reason=?,updated_at=? WHERE id=?", [eventReason,Date().timeIntervalSince1970,root.generation])
             return InventoryRunResult(outcome: "stale", generation: root.generation, entries: entries, directories: directories, pending: 0, reason: eventReason)
         }
         if eventAvailability == "unavailable_reconciling" && durableWorkDrained && stale == 0 {
+            try validateRoot(.beforeStatusCommit)
             try connection.transaction {
                 try connection.write("UPDATE inventory_nodes SET status='stale',reason=? WHERE id=?", [eventReason,root.node])
                 try connection.write("UPDATE inventory_generations SET event_availability='unavailable_stale',state='stale',reason=?,updated_at=? WHERE id=?", [eventReason,Date().timeIntervalSince1970,root.generation])
@@ -851,6 +904,7 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
         let actionableComplete = pending == 0 && stale == 0 && reconciling == 0 && tombstones == 0 && invalidations == 0
         let unknown = try connection.scalar("SELECT unknown_directories FROM inventory_stats WHERE generation_id=?", [root.generation])
         let terminalState = unknown > 0 ? "partial" : "complete"
+        try validateRoot(.beforeStatusCommit)
         try connection.write("UPDATE inventory_generations SET state=?,reason=?,updated_at=? WHERE id=?", [actionableComplete ? terminalState : (reason == "cancelled" || reason == inventoryLowSpaceReason ? "paused" : "building"), actionableComplete && unknown == 0 ? nil : (reason ?? (unknown > 0 ? "Some directories are unavailable; totals are observed allocation and may be lower bounds." : nil)), Date().timeIntervalSince1970, root.generation])
         // Another slice is requested only when this one stopped at its limit with listings it could
         // still run. Drained runs (deferred folders, unreadable folders, event work queued at the
@@ -858,6 +912,14 @@ func runInventory(databasePath: String, directory: URL, region: CoverageRegion, 
         var result = InventoryRunResult(outcome: actionableComplete ? terminalState : "interrupted", generation: root.generation, entries: entries, directories: directories, pending: pending, reason: reason)
         result.runnableWorkRemains = !drained && (reason == nil || reason == "entry limit") && !actionableComplete && !durableWorkDrained
         return result
+    } catch let error as InventoryRootValidationError {
+        let pending: Int64
+        if let runGeneration,
+           let connection = try? InventoryConnection(databasePath, create: false),
+           let value = try? connection.scalar("SELECT COUNT(*) FROM inventory_jobs WHERE generation_id=? AND state IN ('pending','enumerating')", [runGeneration]) {
+            pending = value
+        } else { pending = 0 }
+        return InventoryRunResult(outcome: "interrupted", generation: runGeneration, entries: entries, directories: directories, pending: pending, reason: error.description)
     } catch {
         return InventoryRunResult(outcome: String(describing: error).contains("busy") ? "busy" : "failed", generation: nil, entries: 0, directories: 0, pending: 0, reason: String(describing: error))
     }
@@ -870,7 +932,8 @@ private func prepareInventoryRoot(_ connection: InventoryConnection, region: Cov
     }
     let metadata = InventoryFilesystemMetadata(rootStat), now = Date().timeIntervalSince1970
     let volumeUUID = try? URL(fileURLWithPath: region.root).resourceValues(forKeys: [.volumeUUIDStringKey]).volumeUUIDString
-    if let existing = try connection.rows("SELECT g.id,g.volume_uuid,n.id AS node,o.device,o.inode,o.birth_ns FROM inventory_generations g JOIN inventory_nodes n ON n.generation_id=g.id AND n.parent_id IS NULL JOIN inventory_objects o ON o.id=n.object_id WHERE g.active=1 LIMIT 1").first,
+    if let existing = try connection.rows("SELECT g.id,g.volume_uuid,g.root_path,n.id AS node,o.device,o.inode,o.birth_ns FROM inventory_generations g JOIN inventory_nodes n ON n.generation_id=g.id AND n.parent_id IS NULL JOIN inventory_objects o ON o.id=n.object_id WHERE g.active=1 LIMIT 1").first,
+       existing["root_path"] == region.root,
        Int64(existing["device"] ?? "") == metadata.device, UInt64(existing["inode"] ?? "") == metadata.inode, Int64(existing["birth_ns"] ?? "") == metadata.birthNanoseconds,
        existing["volume_uuid"] == nil || volumeUUID == nil || existing["volume_uuid"] == volumeUUID {
         let generation = Int64(existing["id"]!)!
@@ -1179,7 +1242,7 @@ var inventoryAvailableSpaceOverride: (available: Int64, capacity: Int64)?
 func inventoryLowSpaceThreshold(capacity: Int64) -> Int64 { min(5_000_000_000, max(2_000_000_000, capacity / 100)) }
 
 /// Uses the space available for important work (it counts purgeable space macOS can reclaim).
-func inventoryLowOnSpace(_ directory: URL) -> Bool {
+func inventoryAvailableSpace(_ directory: URL) -> (available: Int64, capacity: Int64)? {
     var space: (available: Int64, capacity: Int64)?
     #if INVENTORY_TESTS
     space = inventoryAvailableSpaceOverride
@@ -1188,7 +1251,10 @@ func inventoryLowOnSpace(_ directory: URL) -> Bool {
        let available = values.volumeAvailableCapacityForImportantUsage, let capacity = values.volumeTotalCapacity {
         space = (available, Int64(capacity))
     }
-    guard let space else { return false }   // unknown: never block indexing on a failed query
+    return space
+}
+func inventoryLowOnSpace(_ directory: URL) -> Bool {
+    guard let space = inventoryAvailableSpace(directory) else { return false }   // unknown: never block indexing on a failed query
     return space.available < inventoryLowSpaceThreshold(capacity: space.capacity)
 }
 

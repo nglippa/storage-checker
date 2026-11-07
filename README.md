@@ -1,6 +1,6 @@
 # MacBook Storage Monitor
 
-A local, native Apple Silicon macOS utility that checks the internal APFS container at login and every half hour (`:00` and `:30`). No Terminal window needs to stay open. launchd coalesces calendar checks missed during sleep into a check after waking. Monitoring starts after the user logs in; a logged-out user does not have an active LaunchAgent.
+A local, native Apple Silicon macOS utility that checks the internal APFS container and chosen external drives at login and every half hour (`:00` and `:30`). No Terminal window needs to stay open. launchd coalesces calendar checks missed during sleep into a check after waking. Monitoring starts after the user logs in; a logged-out user does not have an active LaunchAgent.
 
 ## Desktop app
 
@@ -25,7 +25,7 @@ APFS volume differences are matched by UUID between the displayed readings, so e
 
 The secondary chart uses actual stored capacity points, snaps hover details to a real reading, and draws the 25 GB / 15 GB reference lines. It breaks lines at container changes and gaps over 75 minutes. Its time range is independent of history filters.
 
-The GUI opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`, takes short consistent read transactions, closes them before projecting events, and refreshes about every 30 seconds while the app is active with a visible window. Apart from the read-only live capacity reading described above, it performs no directory scans and launches no monitoring commands except when you explicitly choose Enable, Update, Repair or Disable background monitoring, or Allow Low-Space Notifications, in Settings. Those actions run the bundled background monitor's own `install`, `uninstall` or `authorize` command after a confirmation that explains what changes. It does not change the existing writer's journal mode, schema, data, or retention. Its only persisted changes are its own window/filter preferences.
+The GUI opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`, takes short consistent read transactions, closes them before projecting events, and refreshes about every 30 seconds while the app is active with a visible window. Apart from the read-only live capacity reading described above, it performs no directory scans and launches no monitoring commands except when you explicitly choose Enable, Update, Repair or Disable background monitoring, or Allow Low-Space Notifications, in Settings. Those actions run the bundled background monitor's own `install`, `uninstall` or `authorize` command after a confirmation that explains what changes. It does not change the existing writer's journal mode, schema, data, or retention. Viewer preferences, external-drive choices, operational requests and catalog reader leases are stored locally. Only the background monitor writes capacity history and inventory SQL.
 
 **Live capacity.** The overview leads with *Available now*, a live reading of the APFS container's free and total space. It comes from one in-process `statfs()` on the Data volume, the same numbers as the monitor's `CapacityFree` and `CapacityCeiling`. The viewer reads it when it opens, when it becomes active, every 60 seconds while its window is visible and the app is active, and on ⌘R; overlapping requests are dropped. The status line shows when it last updated, and a reading older than 3 minutes, or one whose refresh failed, is marked *Stale*. Live readings are never stored, never evaluated for alerts, never notify, and never start the collector; the viewer does not link the notifications framework. The last background reading appears on its own line. Any difference from it is shown only when the live Data volume UUID belongs to the recorded container, and it is labelled an observation comparison, not a recorded event. Events, the inspector and the chart ("Recorded available capacity") use recorded readings only.
 
@@ -80,6 +80,20 @@ The installed executable works without this checkout:
 ```sh
 "$HOME/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor" status
 ```
+
+## External drives
+
+The window's **Drive** selector scopes both Storage and Monitoring. Open **Manage external drives** to enable monitoring and indexing for chosen connected drives. Discovery alone never enrolls a drive. Supported filesystems are APFS, HFS+ and exFAT on verified local, physical external storage, including external PCIe SSDs. Network mounts, disk images, system helpers, Time Machine destinations and unverifiable identities are excluded.
+
+Chosen drives resume when they reconnect. Identity follows the volume UUID, rather than the drive name or mount path. Duplicate mounted UUIDs stop work; a changed known physical backing or APFS capacity scope requires explicit re-enrollment. **Pause indexing** keeps capacity monitoring active. **Disable** stops both and retains recorded history and the last published catalog.
+
+Each external volume has its own index. APFS siblings share one container capacity history and alert evaluation, labelled with all enrolled sibling names. A gap longer than 75 minutes starts a fresh change baseline; current low-space thresholds still apply. exFAT folders refresh on schedule or request, without claiming continuous file-event history. External views do not attach startup swap, cache or application attribution, or offer cleanup plans.
+
+Working databases, capacity history and immutable published catalogs stay on internal storage under `external-volumes/` inside the monitor's data directory. The app writes no metadata to an indexed external drive. Offline catalogs remain browsable with their measured time; live Finder actions require the selected mount to be revalidated. One dispatcher serializes startup and external indexing and resumes fairly between targets.
+
+External support requires a matching background monitor and its updated mount/registry wake configuration. Settings detects this capability independently of the release version. Building a development app does not update the installed monitor.
+
+The corresponding helper commands are `external-discover`, `external-list`, `external-enable UUID`, `external-disable UUID`, `external-pause UUID`, `external-resume UUID`, `external-refresh UUID`, and `external-check`. Discovery reads bounded disk metadata; enabling is a separate action. As with other commands, `--data-dir` selects an isolated internal support directory. See [external-volume verification](docs/EXTERNAL-VOLUMES-VERIFICATION.md) for tested behavior and remaining native/physical checks.
 
 ## Alerts and notifications
 
