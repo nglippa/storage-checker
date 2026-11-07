@@ -1,3 +1,5 @@
+> **License:** Storage Monitor's original code is proprietary; all rights reserved. Public repository access does not grant a general reuse or commercial distribution license. See [LICENSE](LICENSE), [commercial licensing](COMMERCIAL-LICENSING.md), and [third-party notices](THIRD-PARTY-NOTICES.md). The [EULA draft](EULA-DRAFT.md) is not operative customer terms.
+
 # MacBook Storage Monitor
 
 A local, native Apple Silicon macOS utility that checks the internal APFS container at login and every half hour (`:00` and `:30`). No Terminal window needs to stay open. launchd coalesces calendar checks missed during sleep into a check after waking. Monitoring starts after the user logs in; a logged-out user does not have an active LaunchAgent.
