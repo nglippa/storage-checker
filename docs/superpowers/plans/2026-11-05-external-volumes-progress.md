@@ -8,7 +8,7 @@ Final results: inventory 350; viewer models 960; monitor self-test 235; browser 
 
 November 7 continuation: full dispatcher-wave suite added, 21 checks passed. It verifies filtering, actual alternation, persisted cursor resume, automatic selection after reconnect without a registry revision change, budget reserve, runnable/wake continuation, peer failure isolation, malformed-registry startup fallback and concurrent dispatcher exclusion. Fixtures inject all scan/discovery operations and use a fake clock. Live dispatch now uses monotonic system uptime for the wave budget. Controls (13) and external-slice integration (11) passed again. Read-only middle review found no production regression or fixture-safety defect and prompted the reconnect assertion.
 
-Deliverable: `build/Storage Monitor.app`, development identifier with matching bundled helper, retaining repository version metadata 2.2.0 (10). No commit/push/install/release performed. See `docs/EXTERNAL-VOLUMES-VERIFICATION.md` for exact scope and limits. Historical entries below document intermediate RED/GREEN stages and are superseded by this status.
+Deliverable: `build/Storage Monitor.app`, development identifier with matching bundled helper, retaining repository version metadata 2.2.0 (10). The user subsequently requested integrating remote master on a new development branch: checkpoint `22aa959`, branch `dev/external-volumes-master`, remote `6cf2fac`. See `docs/EXTERNAL-VOLUMES-MASTER-MERGE.md` for the merge resolutions and fresh checks. No push/install/release performed. See `docs/EXTERNAL-VOLUMES-VERIFICATION.md` for original acceptance scope and limits. Historical entries below document intermediate RED/GREEN stages and are superseded by these records.
 
 ## Execution history
 

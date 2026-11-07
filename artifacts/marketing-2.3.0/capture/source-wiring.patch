@@ -1,0 +1,20 @@
+--- candidate/StorageMonitorApp.swift
++++ capture/StorageMonitorApp.swift
+@@ -70,7 +70,7 @@
+     // Viewer-only appearance; the system-wide setting is never changed.
+     @Published var appearance: AppAppearance = .system { didSet { if configuration.appearance == nil { appearance.save(preferences) }; applyAppearance() } }
+     @Published private(set) var inventoryRefreshTick = 0
+-    let live = LiveCapacityMonitor()
++    let live = LiveCapacityMonitor(source: { LiveCapacityReading(timestamp: Date(), free: 154_800_000_000, total: 1_000_000_000_000, dataVolumeUUID: "DEMO-DATA") })
+     let configuration: ViewerConfiguration
+     let readiness: ViewerReadiness
+     private let reader: HistoryReader
+@@ -189,7 +189,7 @@
+     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { if !flag { reopen?() }; return true }
+ }
+ 
+-@main struct StorageMonitorViewerApp: App {
++struct StorageMonitorViewerApp: App {
+     var body: some Scene { StorageMonitorApplication().body }
+     static func main() {
+         do {

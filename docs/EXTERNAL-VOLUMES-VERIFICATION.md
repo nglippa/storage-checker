@@ -1,10 +1,10 @@
 # External-volume update verification
 
-Source: `feature/external-volumes`, based on `c843fe0`, in `/Users/nicholaslippa/storage-checker-external-volumes`.
+Original acceptance: external-volume checkpoint `22aa959`, based on `c843fe0`, in `/Users/nicholaslippa/storage-checker-external-volumes`. Current development branch: `dev/external-volumes-master`, integrating `origin/master` at `6cf2fac`. See [the merge record](EXTERNAL-VOLUMES-MASTER-MERGE.md) for fresh post-merge verification.
 
-This is an unreleased development candidate. No commit, push, installation, release-version assignment, production agent change or personal-volume indexing was performed. The original checkout's cleanup-inspector/scroll changes remain intact.
+This is an unreleased development candidate. The user subsequently authorized a local checkpoint and merge on a new development branch. No push, installation, release-version assignment, production agent change or personal-volume indexing was performed. The original checkout's cleanup-inspector/scroll changes remain intact.
 
-## Recorded results
+## Recorded pre-merge results
 
 | Check | Result |
 |---|---|

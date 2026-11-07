@@ -1,0 +1,268 @@
+{
+  "success": true,
+  "labels_absent": {
+    "local.macbook.storage-monitor.lifecycle-qa.4b6c7e8e-9573-4bd5-983b-336dacfc1664": true,
+    "local.macbook.storage-monitor.lifecycle-qa.4b6c7e8e-9573-4bd5-983b-336dacfc1664.baseline": true,
+    "local.macbook.storage-monitor.lifecycle-qa.4b6c7e8e-9573-4bd5-983b-336dacfc1664.inventory": true
+  },
+  "owned_processes": [],
+  "protected_unchanged": true,
+  "protected_before": {
+    "/Users/nicholaslippa/Library/LaunchAgents/local.macbook.storage-monitor.baseline.plist": {
+      "sha256": "2fa9395df1b07c25faa71d65883639ff2550e560ea8ce68eb4faaa741cb261da",
+      "inode": 95393792,
+      "mode": 33152,
+      "size": 1145,
+      "mtime_ns": 1793510813725849909
+    },
+    "/Users/nicholaslippa/Library/LaunchAgents/local.macbook.storage-monitor.plist": {
+      "sha256": "822d3ae85703c9d490cd1788473178d368f3d67c7b61275a27f93ac2e2181647",
+      "inode": 95393791,
+      "mode": 33152,
+      "size": 1173,
+      "mtime_ns": 1793510813725420660
+    },
+    "/Users/nicholaslippa/Library/LaunchAgents/local.macbook.storage-monitor.inventory.plist": {
+      "sha256": "3006c50706bebc6035036f6a8759c0da0637c259d6bb0bd8898a384234daec3f",
+      "inode": 95393793,
+      "mode": 33152,
+      "size": 1345,
+      "mtime_ns": 1793510813726263157
+    },
+    "/Applications/Storage Monitor.app/Contents/Info.plist": {
+      "sha256": "65f4baca08f66bd37a5e01dc88458896739d5d9c9f4cbb37dca206e92c87dffa",
+      "inode": 95392650,
+      "mode": 33188,
+      "size": 964,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/_CodeSignature/CodeResources": {
+      "sha256": "8c00198503392a22105341c9f1c4866409221508a17811b26aa201875393ba9c",
+      "inode": 95392636,
+      "mode": 33188,
+      "size": 2989,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer": {
+      "sha256": "263ae102463727eec8226305f87963d631984dc10c651354c91e180f1bbd9d1a",
+      "inode": 95392652,
+      "mode": 33261,
+      "size": 23913712,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Resources/THIRD-PARTY-NOTICES.md": {
+      "sha256": "19e0c5d23abf55269dd124fd72046643e8845affacf0ee7cebd463d8dcea064c",
+      "inode": 95392654,
+      "mode": 33188,
+      "size": 1118,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Resources/AppIcon.icns": {
+      "sha256": "53b0d674a0566a5dd554ae82ad7eab93250d1e3651f155f36b1a677411321166",
+      "inode": 95392653,
+      "mode": 33188,
+      "size": 2526941,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/Info.plist": {
+      "sha256": "be340463c8e84719e59238693bf13fbb7ed87e7752e1aae30600100b2b9f670a",
+      "inode": 95392642,
+      "mode": 33188,
+      "size": 856,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/_CodeSignature/CodeResources": {
+      "sha256": "caab24db5ef24b4d928108ab1b25e538c2281e4136637e6a4babe7913f7ea772",
+      "inode": 95392640,
+      "mode": 33188,
+      "size": 2696,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor": {
+      "sha256": "87ca09961da5014a8371289e109f73435963cb6e64b4584784bcc0ee5c5c511d",
+      "inode": 95392644,
+      "mode": 33261,
+      "size": 8451152,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/Resources/THIRD-PARTY-NOTICES.md": {
+      "sha256": "19e0c5d23abf55269dd124fd72046643e8845affacf0ee7cebd463d8dcea064c",
+      "inode": 95392645,
+      "mode": 33188,
+      "size": 1118,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/Resources/AppIcon.icns": {
+      "sha256": "53b0d674a0566a5dd554ae82ad7eab93250d1e3651f155f36b1a677411321166",
+      "inode": 95392643,
+      "mode": 33188,
+      "size": 2526941,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/Info.plist": {
+      "sha256": "be340463c8e84719e59238693bf13fbb7ed87e7752e1aae30600100b2b9f670a",
+      "inode": 95393726,
+      "mode": 33188,
+      "size": 856,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/_CodeSignature/CodeResources": {
+      "sha256": "caab24db5ef24b4d928108ab1b25e538c2281e4136637e6a4babe7913f7ea772",
+      "inode": 95393720,
+      "mode": 33188,
+      "size": 2696,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor": {
+      "sha256": "87ca09961da5014a8371289e109f73435963cb6e64b4584784bcc0ee5c5c511d",
+      "inode": 95393722,
+      "mode": 33261,
+      "size": 8451152,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/Resources/THIRD-PARTY-NOTICES.md": {
+      "sha256": "19e0c5d23abf55269dd124fd72046643e8845affacf0ee7cebd463d8dcea064c",
+      "inode": 95393724,
+      "mode": 33188,
+      "size": 1118,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/Resources/AppIcon.icns": {
+      "sha256": "53b0d674a0566a5dd554ae82ad7eab93250d1e3651f155f36b1a677411321166",
+      "inode": 95393725,
+      "mode": 33188,
+      "size": 2526941,
+      "mtime_ns": 1793459522000000000
+    }
+  },
+  "protected_after": {
+    "/Users/nicholaslippa/Library/LaunchAgents/local.macbook.storage-monitor.baseline.plist": {
+      "sha256": "2fa9395df1b07c25faa71d65883639ff2550e560ea8ce68eb4faaa741cb261da",
+      "inode": 95393792,
+      "mode": 33152,
+      "size": 1145,
+      "mtime_ns": 1793510813725849909
+    },
+    "/Users/nicholaslippa/Library/LaunchAgents/local.macbook.storage-monitor.plist": {
+      "sha256": "822d3ae85703c9d490cd1788473178d368f3d67c7b61275a27f93ac2e2181647",
+      "inode": 95393791,
+      "mode": 33152,
+      "size": 1173,
+      "mtime_ns": 1793510813725420660
+    },
+    "/Users/nicholaslippa/Library/LaunchAgents/local.macbook.storage-monitor.inventory.plist": {
+      "sha256": "3006c50706bebc6035036f6a8759c0da0637c259d6bb0bd8898a384234daec3f",
+      "inode": 95393793,
+      "mode": 33152,
+      "size": 1345,
+      "mtime_ns": 1793510813726263157
+    },
+    "/Applications/Storage Monitor.app/Contents/Info.plist": {
+      "sha256": "65f4baca08f66bd37a5e01dc88458896739d5d9c9f4cbb37dca206e92c87dffa",
+      "inode": 95392650,
+      "mode": 33188,
+      "size": 964,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/_CodeSignature/CodeResources": {
+      "sha256": "8c00198503392a22105341c9f1c4866409221508a17811b26aa201875393ba9c",
+      "inode": 95392636,
+      "mode": 33188,
+      "size": 2989,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer": {
+      "sha256": "263ae102463727eec8226305f87963d631984dc10c651354c91e180f1bbd9d1a",
+      "inode": 95392652,
+      "mode": 33261,
+      "size": 23913712,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Resources/THIRD-PARTY-NOTICES.md": {
+      "sha256": "19e0c5d23abf55269dd124fd72046643e8845affacf0ee7cebd463d8dcea064c",
+      "inode": 95392654,
+      "mode": 33188,
+      "size": 1118,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Resources/AppIcon.icns": {
+      "sha256": "53b0d674a0566a5dd554ae82ad7eab93250d1e3651f155f36b1a677411321166",
+      "inode": 95392653,
+      "mode": 33188,
+      "size": 2526941,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/Info.plist": {
+      "sha256": "be340463c8e84719e59238693bf13fbb7ed87e7752e1aae30600100b2b9f670a",
+      "inode": 95392642,
+      "mode": 33188,
+      "size": 856,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/_CodeSignature/CodeResources": {
+      "sha256": "caab24db5ef24b4d928108ab1b25e538c2281e4136637e6a4babe7913f7ea772",
+      "inode": 95392640,
+      "mode": 33188,
+      "size": 2696,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor": {
+      "sha256": "87ca09961da5014a8371289e109f73435963cb6e64b4584784bcc0ee5c5c511d",
+      "inode": 95392644,
+      "mode": 33261,
+      "size": 8451152,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/Resources/THIRD-PARTY-NOTICES.md": {
+      "sha256": "19e0c5d23abf55269dd124fd72046643e8845affacf0ee7cebd463d8dcea064c",
+      "inode": 95392645,
+      "mode": 33188,
+      "size": 1118,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Applications/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app/Contents/Resources/AppIcon.icns": {
+      "sha256": "53b0d674a0566a5dd554ae82ad7eab93250d1e3651f155f36b1a677411321166",
+      "inode": 95392643,
+      "mode": 33188,
+      "size": 2526941,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/Info.plist": {
+      "sha256": "be340463c8e84719e59238693bf13fbb7ed87e7752e1aae30600100b2b9f670a",
+      "inode": 95393726,
+      "mode": 33188,
+      "size": 856,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/_CodeSignature/CodeResources": {
+      "sha256": "caab24db5ef24b4d928108ab1b25e538c2281e4136637e6a4babe7913f7ea772",
+      "inode": 95393720,
+      "mode": 33188,
+      "size": 2696,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor": {
+      "sha256": "87ca09961da5014a8371289e109f73435963cb6e64b4584784bcc0ee5c5c511d",
+      "inode": 95393722,
+      "mode": 33261,
+      "size": 8451152,
+      "mtime_ns": 1793459841000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/Resources/THIRD-PARTY-NOTICES.md": {
+      "sha256": "19e0c5d23abf55269dd124fd72046643e8845affacf0ee7cebd463d8dcea064c",
+      "inode": 95393724,
+      "mode": 33188,
+      "size": 1118,
+      "mtime_ns": 1793459522000000000
+    },
+    "/Users/nicholaslippa/Applications/MacBook Storage Monitor.app/Contents/Resources/AppIcon.icns": {
+      "sha256": "53b0d674a0566a5dd554ae82ad7eab93250d1e3651f155f36b1a677411321166",
+      "inode": 95393725,
+      "mode": 33188,
+      "size": 2526941,
+      "mtime_ns": 1793459522000000000
+    }
+  },
+  "global_settings_changed": false,
+  "scope": "app-only teardown; no keyboard/focus/global settings actions"
+}

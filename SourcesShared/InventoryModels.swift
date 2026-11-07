@@ -935,3 +935,111 @@ extension InventoryReader {
         return model
     }
 }
+
+// MARK: Sparse storage (Migration Readiness)
+
+/// One bounded slice of the sparse-storage scan: catalog ids in (`after`, `scannedThrough`] that match the candidate
+/// predicate. `maximumID` is the catalog's highest node id when the slice was read.
+public struct SparseCandidateChunk: Sendable {
+    public let generation: Int64?
+    public let ids: [Int64]
+    public let scannedThrough: Int64
+    public let maximumID: Int64
+}
+
+/// A hydrated candidate: the node (with its path and qualified sizes), its catalog sizes even when qualified stale,
+/// and its ancestors from the root down (the node excluded).
+public struct SparseCandidateRecord: Sendable {
+    public let node: InventoryNode
+    public let indexed: SparseAllocation
+    public let ancestors: [Int64]
+}
+
+extension InventoryReader {
+    /// How long one scan slice may hold its read. The catalog uses a rollback journal, so a reader blocks the worker's
+    /// commits: slices stay short and separate, never one long transaction.
+    public static let sparseScanDeadline: TimeInterval = 0.25
+
+    /// Files whose catalog sizes meet the reporting floor, and every folder named *.sparsebundle. Hard-link aliases
+    /// carry zero totals in the catalog, so each object is counted once. The `+` keeps SQLite on the rowid range.
+    static func sparsePredicate(_ t: SparseStorageThresholds) -> (sql: String, values: [Any?]) {
+        ("((+n.kind='file' AND n.total_logical>=? AND n.total_logical-COALESCE(n.total_allocated,0)>=? AND CAST(n.total_logical AS REAL)>=?*COALESCE(n.total_allocated,0)) OR (+n.kind='directory' AND n.name LIKE '%.sparsebundle'))",
+         [t.reportMinimumGap, t.reportMinimumGap, t.reportMinimumRatio])
+    }
+
+    /// One slice of the full scan: a primary-key range read (no sort, no OFFSET), cancelled with the calling task.
+    public func sparseCandidateChunk(after: Int64, span: Int64, thresholds: SparseStorageThresholds) throws -> SparseCandidateChunk {
+        let connection = try InventoryReadConnection(databasePath, deadline: Self.sparseScanDeadline)
+        guard let generation = try activeGeneration(connection) else { return SparseCandidateChunk(generation: nil, ids: [], scannedThrough: after, maximumID: after) }
+        let maximum = try connection.scalarInt("SELECT COALESCE(MAX(id),0) FROM inventory_nodes")
+        let upper = min(maximum, after + max(1, span))
+        let predicate = Self.sparsePredicate(thresholds)
+        let statement = try connection.statement("SELECT n.id FROM inventory_nodes n WHERE n.id>? AND n.id<=? AND +n.generation_id=? AND " + predicate.sql + " ORDER BY n.id", [after, upper, generation] + predicate.values)
+        defer { sqlite3_finalize(statement) }
+        var ids = [Int64]()
+        while true {
+            let code = sqlite3_step(statement)
+            if code == SQLITE_DONE { break }
+            guard code == SQLITE_ROW else { throw InventoryReaderError.query(String(cString: sqlite3_errmsg(connection.db))) }
+            ids.append(sqlite3_column_int64(statement, 0))
+        }
+        return SparseCandidateChunk(generation: generation, ids: ids, scannedThrough: upper, maximumID: maximum)
+    }
+
+    /// Candidates among the children of changed folders (and those folders themselves), for an incremental pass.
+    /// Uses the parent index; never reads unrelated branches.
+    public func sparseCandidates(inDirectories directories: [Int64], thresholds: SparseStorageThresholds) throws -> [Int64] {
+        guard !directories.isEmpty else { return [] }
+        let predicate = Self.sparsePredicate(thresholds)
+        var ids = [Int64]()
+        // One connection (and so one 0.25 s deadline) per 32 folders.
+        for start in stride(from: 0, to: directories.count, by: 32) {
+            try Task.checkCancellation()
+            let connection = try InventoryReadConnection(databasePath, deadline: Self.sparseScanDeadline)
+            guard let generation = try activeGeneration(connection) else { return [] }
+            let chunk = Array(directories[start..<min(directories.count, start + 32)])
+            let marks = Array(repeating: "?", count: chunk.count).joined(separator: ",")
+            let statement = try connection.statement("SELECT n.id FROM inventory_nodes n WHERE (n.parent_id IN (\(marks)) OR n.id IN (\(marks))) AND +n.generation_id=? AND " + predicate.sql, chunk + chunk + [generation] + predicate.values)
+            defer { sqlite3_finalize(statement) }
+            while true {
+                let code = sqlite3_step(statement)
+                if code == SQLITE_DONE { break }
+                guard code == SQLITE_ROW else { throw InventoryReaderError.query(String(cString: sqlite3_errmsg(connection.db))) }
+                ids.append(sqlite3_column_int64(statement, 0))
+            }
+        }
+        return ids
+    }
+
+    /// Hydrates candidates (path, qualified sizes, ancestry). Ids no longer in the generation are omitted. Any failed or
+    /// interrupted read throws (the pass is abandoned and the previous report kept), and so does a generation that
+    /// changes between slices: a partial record set is never returned as complete.
+    public func sparseCandidateRecords(ids: [Int64]) throws -> [SparseCandidateRecord] {
+        var result = [SparseCandidateRecord](), expected: Int64?
+        // One connection (and so one 0.25 s deadline) per 16 candidates: each costs a path walk, slow on a cold catalog.
+        for start in stride(from: 0, to: ids.count, by: 16) {
+            try Task.checkCancellation()
+            let connection = try InventoryReadConnection(databasePath, deadline: Self.sparseScanDeadline)
+            guard let generation = try activeGeneration(connection), expected == nil || expected == generation else {
+                throw InventoryReaderError.query("The inventory generation changed during the sparse-storage pass")
+            }
+            expected = generation
+            for id in ids[start..<min(ids.count, start + 16)] {
+                guard let node = try fetchOne(connection, sql: Self.baseSelect + " WHERE n.id=? AND n.generation_id=?", values: [id, generation]) else { continue }
+                // The catalog's totals, qualified or not: a stale measurement keeps its earlier values.
+                let indexed = SparseAllocation(logical: node.logicalBytes ?? node.previousLogicalBytes ?? 0, allocated: node.allocatedBytes ?? node.previousAllocatedBytes ?? 0)
+                let chain = try connection.statement("WITH RECURSIVE ancestors(id,parent_id,depth) AS (SELECT id,parent_id,0 FROM inventory_nodes WHERE id=? UNION ALL SELECT n.id,n.parent_id,a.depth+1 FROM inventory_nodes n JOIN ancestors a ON a.parent_id=n.id WHERE a.depth<1023) SELECT id FROM ancestors WHERE depth>0 ORDER BY depth DESC", [id])
+                defer { sqlite3_finalize(chain) }
+                var ancestors = [Int64]()
+                while true {
+                    let code = sqlite3_step(chain)
+                    if code == SQLITE_DONE { break }
+                    guard code == SQLITE_ROW else { throw InventoryReaderError.query(String(cString: sqlite3_errmsg(connection.db))) }
+                    ancestors.append(sqlite3_column_int64(chain, 0))
+                }
+                result.append(SparseCandidateRecord(node: node, indexed: indexed, ancestors: ancestors))
+            }
+        }
+        return result
+    }
+}

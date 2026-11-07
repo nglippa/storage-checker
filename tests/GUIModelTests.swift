@@ -1172,6 +1172,7 @@ import SQLite3
         try livingTreeColorTests { ok, message in try test(ok, message) }
         try structuredExplorerTests { ok, message in try test(ok, message) }
         try structuredExplorerFilteringTests { ok, message in try test(ok, message) }
+        try sparseStorageModelTests(folder.deletingLastPathComponent()) { ok, message in try test(ok, message) }
         try cleanupInspectorTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-fixtures")) { ok, message in try test(ok, message) }
         try cleanupTrashTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-trash-fixtures")) { ok, message in try test(ok, message) }
         // Trash safety includes the macOS /tmp ↔ /private/tmp alias cases, so its disposable fixtures always live under
@@ -1181,6 +1182,8 @@ import SQLite3
         try cleanupTrashSafetyTests(trashSafetyRoot) { ok, message in try test(ok, message) }
         let repository = URL(fileURLWithPath: CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "tests/fixtures").standardizedFileURL
             .deletingLastPathComponent().deletingLastPathComponent()
+        try correctnessPresentationTests { ok, message in try test(ok, message) }
+        try await correctnessCapacityMonitorTests { ok, message in try test(ok, message) }
         try viewerIdentityTests(root: repository) { ok, message in try test(ok, message) }
         try await cleanupReviewQueueTests(folder.deletingLastPathComponent().appendingPathComponent("cleanup-queue-fixtures")) { ok, message in try test(ok, message) }
         print("\(tests) GUI model/read-only tests passed; isolated fixtures: \(folder.path)")

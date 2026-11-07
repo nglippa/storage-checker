@@ -212,7 +212,7 @@ struct CleanupReviewQueueView: View {
                     Text("Understand an item before deciding what to keep.").font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Refresh review") { queue.restart() }.disabled(queue.loading)
+                Button("Restart Indexed Review") { queue.restart() }.disabled(queue.loading)
                     .help("Restart the bounded read-only review of the existing index. This does not scan or change files.")
             }
             ViewThatFits(in: .horizontal) {
@@ -271,7 +271,7 @@ struct CleanupReviewQueueView: View {
             }.width(min: 180, ideal: 290, max: .infinity)
             TableColumn("Review status") { entry in
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(entry.stage == .potentialMatch ? "Potential match" : (entry.status(at: queue.freshnessNow)?.title ?? "Insufficient evidence"))
+                    Text(entry.needsRecheck(at: queue.freshnessNow) ? "Needs recheck" : (entry.stage == .potentialMatch ? "Potential match" : entry.status(at: queue.freshnessNow)?.title ?? "Insufficient evidence"))
                         .font(.callout.weight(.medium))
                     Text(entry.freshness.reasons(now: queue.freshnessNow).first ?? entry.inspection?.assessment?.reasons.first ?? "Select to read the evidence.")
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)
@@ -291,7 +291,7 @@ struct CleanupReviewQueueView: View {
         .accessibilityIdentifier("inventory.reviewQueue.table")
         .contextMenu(forSelectionType: Int64.self) { ids in
             if let id = ids.sorted().first, let entry = queue.snapshot?.entries.first(where: { $0.id == id }) {
-                Button("Review evidence") { queue.selection = [id]; queue.reviewSelection(cleanup: browser.cleanup); showingInspector = true }
+                Button("Recheck Candidate") { queue.selection = [id]; queue.reviewSelection(cleanup: browser.cleanup); showingInspector = true }
                 revealMenu(entry.node)
             }
         } primaryAction: { ids in
@@ -307,14 +307,14 @@ struct CleanupReviewQueueView: View {
             Text(queue.loading ? "Reviewing your indexed items…" : expiredEvidence ? "These items need a fresh review" : "No suggestions on this page")
                 .font(.title3.weight(.semibold))
             Text(expiredEvidence
-                 ? "The saved evidence is out of date. See all assessments to understand what was found, or refresh the review."
+                 ? "The saved evidence is out of date. See all assessments to understand what was found, or restart the indexed review."
                  : "Some items may be protected or need more evidence. You can inspect all assessments or continue through the index.")
                 .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 390)
             if !queue.loading {
                 HStack(spacing: 12) {
                     Button("See all assessments") { queue.status = nil; queue.kind = nil; queue.tool = nil; queue.includesPotentialMatches = true }
                         .buttonStyle(.bordered)
-                    if expiredEvidence { Button("Refresh review") { queue.restart() } }
+                    if expiredEvidence { Button("Restart Indexed Review") { queue.restart() } }
                 }
             }
         }.padding(24)
@@ -342,9 +342,10 @@ struct CleanupReviewQueueView: View {
             }
             HStack(spacing: 10) {
                 Text("\(queue.selection.count) selected · Review only; nothing is moved here").font(.caption).foregroundStyle(.secondary)
-                if queue.reviewing { ProgressView().controlSize(.mini); Text("Refreshing selected evidence…").font(.caption).foregroundStyle(.secondary) }
+                if queue.reviewing { ProgressView().controlSize(.mini); Text("Rechecking selected evidence…").font(.caption).foregroundStyle(.secondary) }
                 if let node = queue.inspectorNode {
                     if compact { Button("Review evidence") { showingInspector = true } }
+                    Button("Recheck Candidate") { queue.reviewSelection(cleanup: browser.cleanup) }.disabled(queue.reviewing)
                     Menu("Reveal in…") { revealMenu(node) }
                 }
                 Spacer()

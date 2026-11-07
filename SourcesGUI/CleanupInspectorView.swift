@@ -47,7 +47,7 @@ import AppKit
     private var preparationRevision = 0
     private var token = 0
     private var fingerprint: String?
-    private var subject: (id: Int64, name: String)?
+    private var subject: (id: Int64, name: String, identity: InventoryIdentity, path: String)?
     private(set) var statistics = Statistics()
 
     struct Statistics: Equatable { var inspections = 0, quickSkips = 0, discarded = 0; var lastSeconds = 0.0 }
@@ -71,7 +71,7 @@ import AppKit
         guard print != fingerprint else { return }
         fingerprint = print
         if let previous = subject, previous.id != node?.id { vanished = exists(previous.id) ? nil : previous.name }
-        subject = node.map { ($0.id, $0.parentID == nil ? "Startup Data" : $0.name) }
+        subject = node.map { ($0.id, $0.parentID == nil ? "Startup Data" : $0.name, $0.identity, $0.path) }
         start(node)
     }
 
@@ -80,20 +80,30 @@ import AppKit
 
     /// Queue discovery already owns the bounded evidence collection. Feed its result into this same Inspector.
     func beginQueueReview(_ node: InventoryNode) {
+        let sameSubject = subject?.id == node.id && subject?.identity == node.identity && subject?.path == node.path
         task?.cancel(); token += 1; cancelTrashConfirmation()
         fingerprint = Self.fingerprint(node)
-        subject = (node.id, node.name)
-        inspection = nil; ordinary = nil; inspecting = node.id; vanished = nil
-        closePreview()
+        subject = (node.id, node.name, node.identity, node.path)
+        // As with an ordinary refresh, keep this item's content in place while rechecking it.
+        // Removing the evidence and preview collapses the scroll document and clamps its offset.
+        if !sameSubject || inspection?.nodeID != node.id { inspection = nil; closePreview() }
+        else if previewNode != nil { previewNode = node }
+        ordinary = nil; inspecting = node.id; vanished = nil
     }
 
     func acceptQueueReview(_ result: ArtifactInspection, node: InventoryNode) {
         guard subject?.id == node.id else { return }
+        if subject?.identity != node.identity || subject?.path != node.path { closePreview() }
+        else if previewNode != nil { previewNode = node }
+        subject = (node.id, node.name, node.identity, node.path)
         fingerprint = Self.fingerprint(node)
         finish(result, token: token, seconds: result.elapsed)
     }
 
-    func finishQueueReviewFailure() { inspecting = nil; fingerprint = nil }
+    func finishQueueReviewFailure() {
+        inspecting = nil; fingerprint = nil; inspection = nil; ordinary = nil
+        closePreview()
+    }
 
     /// The inventory reported changes: evidence older than `refreshInterval` is collected again. While indexing runs
     /// these reports are frequent; refreshing on each would keep re-running inspections.
@@ -170,7 +180,7 @@ import AppKit
         cancelTrashConfirmation()
         trashResult = nil; reconciliationError = nil; preparingTrash = true; preparationChecked = 0
         let revision = preparationRevision, selected = Self.fingerprint(node), environment = environment
-        let report: @Sendable (Int) -> Void = { checked in
+        let report: @Sendable (Int) -> Void = { [weak self] checked in
             Task { @MainActor [weak self] in if let self, self.preparingTrash, self.preparationRevision == revision { self.preparationChecked = checked } }
         }
         let work = Task.detached(priority: .userInitiated) { CleanupTrashPolicy.prepare(node: node, environment: environment, progress: report) }
@@ -321,10 +331,10 @@ struct CleanupInspectorSection: View {
             if shown.offersPreview { previewArea }
             if showsTrash { trashArea }
             HStack(spacing: 6) {
-                Text(shown.collected).font(.caption2).foregroundStyle(.tertiary)
+                Text(shown.collected).font(.caption).foregroundStyle(.tertiary)
                 Spacer()
-                Button { cleanup.refresh(node) } label: { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(.borderless).font(.caption).help("Collect the evidence again").accessibilityLabel("Refresh evidence")
+                Button("Recheck Candidate", systemImage: "arrow.clockwise") { cleanup.refresh(node) }
+                    .buttonStyle(.borderless).font(.caption).help("Collect the evidence again").accessibilityLabel("Recheck Candidate")
             }
         }
         .accessibilityElement(children: .contain).accessibilityIdentifier("inventory.cleanup")
@@ -370,8 +380,8 @@ struct CleanupInspectorSection: View {
                 }
                 GridRow { Text("Recoverable").font(.caption).foregroundStyle(.secondary); Text(shown.recovery).font(.caption.monospacedDigit()) }
             }
-            if let basis = shown.recoveryBasis { Text(basis).font(.caption2).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true) }
-            Button(showLimitations ? "Hide accounting notes" : "About these sizes") { showLimitations.toggle() }.buttonStyle(.link).font(.caption2)
+            if let basis = shown.recoveryBasis { Text(basis).font(.caption).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true) }
+            Button(showLimitations ? "Hide accounting notes" : "About these sizes") { showLimitations.toggle() }.buttonStyle(.link).font(.caption)
             if showLimitations { ForEach(ArtifactStorage.limitations, id: \.self) { bullet($0) } }
         }
     }

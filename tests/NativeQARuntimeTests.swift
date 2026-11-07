@@ -14,8 +14,7 @@ import SQLite3
         return .init(path: path, device: Int64(s.st_dev), inode: UInt64(s.st_ino), kind: s.st_mode & S_IFMT == S_IFDIR ? "directory" : "file", authorized: authorized)
     }
     static func fixture() throws -> NativeQARuntime {
-        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-        let root = repo.appendingPathComponent("build/native-acceptance/runtime-unit-" + UUID().uuidString).path
+        let root = "/private/tmp/native-qa-runtime-unit-" + UUID().uuidString + "/build/native-acceptance/runtime"
         let fm = FileManager.default
         for path in [root, root + "/ApplicationSupport", root + "/ApplicationSupport/inventory-requests", root + "/fixtures", root + "/fixtures/folder", root + "/Caches", root + "/Logs", root + "/Temporary", root + "/bin"] { try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]) }
         for path in [root + "/ApplicationSupport/history.sqlite3", root + "/fixtures/ordinary.txt", root + "/fixtures/folder/child.txt"] { try Data().write(to: URL(fileURLWithPath: path)); chmod(path, 0o600) }
@@ -29,7 +28,23 @@ import SQLite3
         try check(denied { _ = try NativeQARuntime.bootstrap(arguments: ["tool"], bundle: NativeQARuntime.bundleIdentifier, environment: [:]) }, "QA identity without explicit opt-in refuses before lifecycle")
         try check(denied { _ = try NativeQARuntime.bootstrap(arguments: ["tool", "--qa-runtime-root", NativeQARuntime.expectedRoot], bundle: "production", environment: [:]) }, "production identity cannot activate profile")
         try check(NativeQARuntime.expectedRoot.hasPrefix("/") && NativeQARuntime.expectedRoot.hasSuffix("/build/native-acceptance/runtime"), "baked anchor is absolute and independent of working directory")
+        try check(try NativeQARuntime.canonical("/private/tmp") == "/private/tmp", "canonical private temporary root survives Foundation's alias spelling")
+        try check(denied { _ = try NativeQARuntime.canonical("/tmp") }, "temporary directory symlink alias remains refused")
         let good = try fixture()
+        try check(denied { try good.validateCurrentWorkerImage() }, "current test image cannot impersonate the pinned worker")
+        let canonicalGood = try NativeQARuntime.canonical(good.root)
+        try check(good.root.hasPrefix("/private/tmp/") && canonicalGood == good.root, "complete strict fixture loads only its exact private temporary root")
+        for path in [good.root + "/.", good.root + "/../runtime", good.root + "//fixtures", good.root + "/", good.root + "\0suffix"] {
+            try check(denied { _ = try NativeQARuntime.canonical(path) }, "noncanonical lexical path remains refused: " + path.debugDescription)
+        }
+        let ancestorAlias = good.root + "/fixture-alias"
+        try FileManager.default.createSymbolicLink(atPath: ancestorAlias, withDestinationPath: good.fixtures)
+        try check(denied { _ = try NativeQARuntime.canonical(ancestorAlias + "/ordinary.txt") }, "symbolic-link ancestor remains refused")
+        try FileManager.default.moveItem(atPath: ancestorAlias, toPath: URL(fileURLWithPath: good.root).deletingLastPathComponent().appendingPathComponent("retained-fixture-alias").path)
+        try check(denied { _ = try NativeQARuntime.load(root: good.root, expected: good.root + "-other") }, "temporary location never bypasses exact baked root agreement")
+        try good.validateRequest(good.fixtures, action: "refresh")
+        try check(true, "exact canonical private fixture refresh remains accepted")
+        try check(denied { try good.validateRequest(good.fixtures + "/./ordinary.txt", action: "refresh") }, "lexical traversal cannot enter the fixture request mailbox")
         try good.validateStorage(); try good.validateTrash(good.fixtures + "/ordinary.txt"); try good.validateTrash(good.fixtures + "/folder")
         try check(true, "registered file and complete registered directory pass additional boundary")
         for path in [good.root, good.fixtures, good.database, good.helper, "/private/tmp/outside-fixture", good.fixtures + "/../bin/StorageMonitor"] {

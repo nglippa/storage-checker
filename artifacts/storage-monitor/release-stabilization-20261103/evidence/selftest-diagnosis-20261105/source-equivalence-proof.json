@@ -1,0 +1,13 @@
+{
+  "base_commit": "b2deb98e34cb4600ea4348afde072efef432bf79",
+  "capture_loop_byte_identical": true,
+  "capture_loop_sha256": "7de1fd4f62d9bea4c733425b739df79eb1e17f8a791b25be6971ae83a7304250",
+  "other_StorageMonitor_production_functions_byte_identical": true,
+  "other_production_functions_sha256": "106394fa3e754edc07401109b633b637cfa3096f6044daef7a0cdee79f828835",
+  "Attribution_production_prefix_byte_identical": true,
+  "Attribution_production_sha256": "e44ed7eed54c9be412fcca2a55b0477219cab3bfea394af306f69306466dfe43",
+  "original_run_signature_defaults_unchanged": true,
+  "deadline_position": "after task.run() and fcntl, before private capture delegation; existing absolute Date deadline unchanged",
+  "new_test_assertions": 3,
+  "expected_selftest_total": 238
+}

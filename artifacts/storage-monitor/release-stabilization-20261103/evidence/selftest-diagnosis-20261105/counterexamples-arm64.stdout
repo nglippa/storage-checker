@@ -1,0 +1,2 @@
+PASS delayed producer proves timeout does not imply readiness/truncation: timedOut=true, truncated=false, bytes=0, reaped=true
+PASS explicit preparation delay proves broad timer false negative: unrelatedPreparation=3.1s, wholeElapsed=3.651461958885193, actualWait=0.545489917 seconds, busy=true

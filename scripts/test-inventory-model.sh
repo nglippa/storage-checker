@@ -13,5 +13,5 @@ for source in "$ROOT"/SourcesGUI/*.swift; do
   case "$source" in */StorageMonitorApp.swift) ;; *) set -- "$@" "$source" ;; esac
 done
 /usr/bin/xcrun swiftc -sdk "$SDK_PATH" -target arm64-apple-macos14.0 -swift-version 5 -O -parse-as-library -module-cache-path "$ROOT/build/module-cache" -framework SwiftUI -framework Charts -framework AppKit \
-  "$@" "$WORK/StorageMonitorApp.swift" "$ROOT"/SourcesShared/*.swift "$ROOT/tests/InventoryModelTests.swift" -o "$ROOT/build/InventoryModelTests"
+  "$@" "$WORK/StorageMonitorApp.swift" "$ROOT"/SourcesShared/*.swift "$ROOT/tests/InventoryModelTests.swift" "$ROOT/tests/SparseStorageTests.swift" -o "$ROOT/build/InventoryModelTests"
 "$ROOT/build/InventoryModelTests" "$MONITOR" "$WORK/scratch"

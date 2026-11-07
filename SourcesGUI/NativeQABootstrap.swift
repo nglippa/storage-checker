@@ -7,6 +7,16 @@ import Darwin
 
 /// Called by the executable entry point, before constructing the SwiftUI App or any StateObject.
 enum NativeQABootstrap {
+    static var lifecycleLease: LifecycleQALease?
+    static func prepareLifecycle() throws {
+        guard let scope = try LifecycleQAScope.bootstrapViewer(arguments: CommandLine.arguments, bundle: Bundle.main.bundleIdentifier) else { return }
+        lifecycleLease = try LifecycleQALease(scope)
+        UserDefaults.standard.register(defaults: ["ApplePersistenceIgnoreState": true, "NSQuitAlwaysKeepsWindows": false, "NSRecentDocumentsLimit": 0])
+        URLCache.shared = URLCache(memoryCapacity: 0, diskCapacity: 0, diskPath: nil)
+        let fd = open(scope.logs + "/viewer.log", O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW, 0o600)
+        guard fd >= 0 else { try LifecycleQAScope.refuse("cannot open private viewer log") }
+        dup2(fd, STDOUT_FILENO); dup2(fd, STDERR_FILENO); close(fd)
+    }
     static var session: NativeQASessionLock?
     static func prepare() throws -> NativeQARuntime? {
         let runtime = try NativeQARuntime.bootstrap(arguments: CommandLine.arguments, bundle: Bundle.main.bundleIdentifier)
@@ -46,7 +56,31 @@ enum NativeQABootstrap {
         guard sqlite3_exec(connection, "CREATE TABLE IF NOT EXISTS native_qa_probe(value TEXT); BEGIN IMMEDIATE; INSERT INTO native_qa_probe VALUES('isolated');", nil, nil, nil) == SQLITE_OK else { try NativeQARuntime.reject("QA transaction probe failed") }
         try runtime.validateStorage() // Includes any DELETE journal created by the real SQLite transaction.
         guard sqlite3_exec(connection, "ROLLBACK;", nil, nil, nil) == SQLITE_OK else { try NativeQARuntime.reject("QA transaction rollback failed") }
-        var result: [String: Any] = ["status": "VERIFIED HEADLESS BOOTSTRAP ONLY", "destinations": runtime.destinations(), "bundle_identifier": Bundle.main.bundleIdentifier!, "foundation_temporary_directory": FileManager.default.temporaryDirectory.path, "qa_preference_readback": true, "sqlite_transaction_sidecar_containment": true, "sqlite_vfs_temporary_filename": vfsTemporaryPath, "nsapplication_initialized": false, "native_window_launched": false]
+        // Exercise the same Foundation Process launch used by the real viewer, before NSApplication.
+        let worker = Process()
+        worker.executableURL = URL(fileURLWithPath: runtime.helper)
+        worker.arguments = ["inventory-work", "--qa-runtime-root", runtime.root, "--qa-owner-pid", String(getpid())]
+        worker.environment = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TMPDIR": runtime.temporary + "/", "SQLITE_TMPDIR": runtime.temporary]
+        let workerOutput = Pipe()
+        worker.standardOutput = workerOutput; worker.standardError = workerOutput; worker.standardInput = FileHandle.nullDevice
+        try worker.run()
+        let workerData = workerOutput.fileHandleForReading.readDataToEndOfFile()
+        worker.waitUntilExit()
+        guard [0, 75].contains(worker.terminationStatus), NSApp == nil else {
+            try NativeQARuntime.reject("Foundation Process worker failed before lifecycle: " + String(decoding: workerData, as: UTF8.self))
+        }
+        guard let summary = try JSONSerialization.jsonObject(with: workerData) as? [String: Any],
+              let outcome = summary["outcome"] as? String, outcome != "failed",
+              let workerStatus = summary["status"] as? String, ["completed", "continuing", "deferred"].contains(workerStatus),
+              summary["generation"] is NSNumber else { try NativeQARuntime.reject("Foundation worker did not produce an inventory generation") }
+        var generationRow: OpaquePointer?
+        defer { sqlite3_finalize(generationRow) }
+        guard sqlite3_prepare_v2(connection, "SELECT g.root_path, COUNT(n.id) FROM inventory_generations g JOIN inventory_nodes n ON n.generation_id=g.id WHERE g.id=? GROUP BY g.id", -1, &generationRow, nil) == SQLITE_OK,
+              sqlite3_bind_int64(generationRow, 1, (summary["generation"] as! NSNumber).int64Value) == SQLITE_OK,
+              sqlite3_step(generationRow) == SQLITE_ROW,
+              let persistedRoot = sqlite3_column_text(generationRow, 0), String(cString: persistedRoot) == runtime.fixtures,
+              sqlite3_column_int64(generationRow, 1) > 1 else { try NativeQARuntime.reject("Foundation worker generation/fixture nodes are not persisted") }
+        var result: [String: Any] = ["status": "VERIFIED HEADLESS BOOTSTRAP ONLY", "destinations": runtime.destinations(), "bundle_identifier": Bundle.main.bundleIdentifier!, "foundation_temporary_directory": FileManager.default.temporaryDirectory.path, "qa_preference_readback": true, "sqlite_transaction_sidecar_containment": true, "sqlite_vfs_temporary_filename": vfsTemporaryPath, "foundation_process_persisted_fixture_nodes": sqlite3_column_int64(generationRow, 1), "foundation_process_worker_outcome": outcome, "foundation_process_worker_generation": summary["generation"]!, "foundation_process_worker_exit": worker.terminationStatus, "nsapplication_initialized": false, "native_window_launched": false]
         result["os_managed_exceptions"] = ["~/Library/Preferences/" + NativeQARuntime.bundleIdentifier + ".plist (CFPreferences daemon)", "~/Library/Caches/" + NativeQARuntime.bundleIdentifier + " (framework-managed only; application URL cache disabled)", "OS framework per-user temporary directory: " + FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path + " (TMPDIR does not redirect Foundation here; app-controlled state never uses this API)", "FileManager-managed Trash for explicitly confirmed registered fixtures only"]
         print(String(decoding: try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))
     }

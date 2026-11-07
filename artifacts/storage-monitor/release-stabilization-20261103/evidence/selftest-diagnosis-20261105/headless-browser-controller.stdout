@@ -1,0 +1,98 @@
+PASS the isolated fixture is indexed by the monitor worker (exit 0)
+PASS the model only opens the scratch database
+PASS the browser loads the indexed fixture (25 nodes)
+PASS default Explorer on a missing database reaches usable monitoring setup instead of indefinite loading
+PASS first-launch presentation offers Settings and creates no database or scan
+PASS a deliberate first-index request is shown as waiting for results
+PASS first-launch browser recovers when its fixture catalog is created
+PASS a disappeared fixture catalog clears stale browser selection and accounting and returns to setup
+PASS unshown Settings host remains reusable without restoration or focus changes (immediate configuration)
+PASS unshown Settings host remains reusable without restoration or focus changes (one second configuration)
+PASS unshown Settings host remains reusable without restoration or focus changes (three seconds configuration)
+PASS unshown Settings host remains reusable without restoration or focus changes (later configuration)
+PASS unshown Settings host remains reusable without restoration or focus changes (repeated configuration)
+PASS unshown Settings host remains reusable without restoration or focus changes (restored configuration)
+PASS unshown Settings host remains reusable without restoration or focus changes (activation configuration)
+PASS a load is in flight when the refresh arrives
+PASS refreshes during one load replay as a single reload (revision +1)
+PASS loading clears when the load ends
+PASS a cancelled load does not leave loading set (the refresh control would spin)
+PASS a refresh requested before cancellation is not lost (revision +1)
+PASS the status counts two deferred folders (2)
+PASS the list starts in the loading state
+PASS populated: lists exactly the deferred folders (["d3", "d7"])
+PASS each deferred row carries its own folder path
+PASS empty: a loaded list with no folders is reported as empty
+PASS failure: an unreadable database reports a failure, not an empty list
+PASS choosing a deferred folder navigates to it
+PASS exploring a folder confirms it by name and says it is queued (“d5” moved ahead in the indexing queue.)
+PASS the index-first action names the folder and says it is queued, not indexed (“d7” will be indexed before other folders. Existing sizes stay visible.)
+PASS a change within five seconds of the last re-read still shows in an expanded branch (first true, second true, rows ["d11", "d10", "d9", "d8", "d7", "d6", "d5", "d4", "d3", "f2", "d2", "d1", "d0"])
+PASS the Living Tree grows from the scratch catalog without a window (25 elements, 13 folder reads, 6.6 ms)
+PASS its first change read only positions it: nothing is rebuilt and nothing lights up
+PASS the Living Tree camera jumps under Reduce Motion, and otherwise glides to an animated zoom and stops (45 frames)
+PASS a selection outside the view is brought on screen
+PASS a search reveal frames its result once; showing the tree again does not reframe it
+PASS 3D: the dome is built with the tree; dragging turns it at once; Reduce Motion makes key turns jump; otherwise they glide and stop (56 frames)
+PASS 3D: turning while zoomed in keeps the element at the centre of the view in place (moved 0.000 pt)
+PASS 3D: a fast drag keeps turning briefly after release and stops (70 frames); with Reduce Motion it stops at once
+PASS 2D and 3D each keep their own view of the folder when switching
+PASS 3D: focusing an element turns the tree so the element is seen side-on, and frames it
+PASS a committed size change rebuilds the tree (the branch takes its new size) and lights the folder amber (lit true, rebuilt true)
+PASS through a rebuild that refits the tree the zoom is kept
+PASS a small change elsewhere while zoomed in moves nothing on screen (7 tips, max 0.000 pt)
+PASS a folder opened while a same-folder rebuild is throttled shows at once, and so does its parent (into 24 ms, up 29 ms; throttle 1500 ms, throttled true)
+PASS a folder opened as the trunk starts fitted; returning to the enclosing folder restores its camera
+PASS a tree selection opens its folders in the Navigator and closes the ones opened for the previous selection
+PASS cleanup inspector: evidence for the selection is collected off the main thread and published
+PASS review queue: rechecking the same row retains displayed evidence without launching a duplicate inspection
+PASS review queue: retained evidence cannot make Trash available while revalidation is pending
+PASS review queue: the refreshed queue evidence is adopted by the existing Cleanup Inspector
+PASS cleanup inspector: process expiry cancels a suspended first preview and discards its stale recovery result
+PASS cleanup inspector: journal invalidation cancels a suspended first preview and discards its stale recovery result
+PASS review queue: controller publishes fresh candidates consistently in table count and selected plan
+PASS review queue: idle expiry retains Needs recheck row and selection while removing eligibility and plan accounting
+PASS review queue: late evidence for a previous selection cannot replace the current Inspector subject
+PASS Trash confirmation: control and bidirectional formatting characters are visibly escaped in the exact target
+PASS review queue: Reveal reuses the browser's exact-identity pending selection and enclosing-folder navigation
+PASS review queue: the destination remains contextual within Disk Inventory browse modes
+PASS cleanup inspector: an ordinary file is shown as not a recognized artifact and starts no inspection
+PASS cleanup inspector: a slower result for an earlier selection is discarded, never shown for a newer one
+PASS cleanup inspector: an unchanged inventory row reuses its evidence; a remeasured row collects it again
+PASS cleanup inspector: the read-only preview names the target and estimates recovery from a complete bounded walk
+PASS cleanup inspector: refreshing the evidence keeps an open preview on screen (no collapse, no jump to the top)
+PASS cleanup inspector: frequent inventory updates do not re-run a fresh inspection
+PASS cleanup inspector: disabled legacy Trash preserves the preview and enqueues no reconciliation request
+PASS cleanup inspector: a subject that disappears is reported and keeps no preview or recommendation
+PASS Trash confirmation: checked unrecognized detector false positives retain the ordinary-item action
+PASS Trash confirmation: async preparation presents the exact current selected identity and path
+PASS Trash confirmation: Cancel consumes displayed authorization and leaves target untouched
+PASS Trash confirmation: an independently valid token cannot replace the currently displayed sheet token
+PASS Trash confirmation: changing selection invalidates the old sheet without touching either item
+PASS Trash confirmation: selection changes cancel detached preparation and suppress its stale sheet
+PASS Trash execution: one displayed confirmation moves exactly one retained fixture despite duplicate requests
+PASS Trash execution: completing an earlier move preserves a newer Inspector selection
+PASS Trash reconciliation: successful execution queues the existing parent refresh request
+PASS Trash reconciliation: real isolated worker consumes the refresh and removes only the moved target from inventory
+PASS Trash reconciliation: candidate queue and shared Inspector start with the same indexed target
+PASS Trash confirmation: a pre-refresh inventory row cannot authorize the newly reviewed candidate
+PASS Trash reconciliation: successful candidate move clears stale Inspector evidence and preview immediately
+PASS Trash reconciliation: journal refresh removes the vanished Queue candidate, plan selection and shared Inspector
+PASS Trash failure: uncertain API outcome requests reconciliation, reports error and never retries automatically
+PASS migration readiness: a fixture with 35 GiB of logical sparse files is indexed (it allocates almost nothing)
+PASS migration readiness: two items to review and one informational at the default thresholds; the Overview leads with the largest gap
+PASS migration readiness: each item was confirmed with lstat (fixture outside protected folders)
+PASS migration readiness: storage totals stay allocated sizes (868 KB of 37.58 GB logical); the gap is never counted as used
+PASS migration readiness: the report feeds the Structured Explorer's Migration Review targets (review items only)
+PASS migration readiness: Reveal in Inspector opens the item's enclosing folder in the explorer
+PASS migration readiness: the revealed item becomes the shared selection, and the Inspector finds its migration details
+PASS migration readiness: repeated Inspector selection within 15 s reuses the last check (no filesystem access)
+PASS migration readiness: refresh requests within 30 s of a pass are coalesced into one deferred pass
+PASS migration review: on a real catalog tree, the deepest shown folder on each path is highlighted (["Data", "b"]), its ancestors are context and unrelated folders fade
+PASS migration readiness: folder loads stay responsive during a scan (p50 3.1 ms, max 3.5 ms; idle max 4.8 ms)
+PASS agreement (APFS): mkfile -n + dd made a 64 GiB image with 50.3 MB allocated, per /usr/bin/stat
+PASS agreement: the Overview leads with this image as a Docker Desktop disk image, with exactly stat's logical and allocated sizes
+PASS agreement: the Inspector's selection is the same node and path; its Migration readiness sizes and its Indexed size (allocated) match
+PASS agreement: the Living Tree draws the same node at its allocated size (50.3 MB label), on the same ancestry, with the Migration Review ring
+PASS agreement: all three show the same text (68.72 GB logical, 50.3 MB allocated)
+97 inventory model tests passed, 0 failed

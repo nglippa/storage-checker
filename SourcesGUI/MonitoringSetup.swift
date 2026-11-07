@@ -49,10 +49,26 @@ struct MonitoringSetupStatus: Equatable {
     let helperExecutable: URL?
     let installedApp: URL
     var notifications: NotificationPermission = .unknown
+    var launchd: LaunchdState?
+    var jobLabels: [String] = MonitoringSetupStatus.labels
+
+    /// A retained catalog queue is not proof of running work. Unknown service output stays unknown.
+    var inventoryUpdatesEnabled: Bool? {
+        guard let launchd, launchd.reliable, jobLabels.count > 2 else { return nil }
+        let indexer = jobLabels[2]
+        if launchd.loaded.contains(indexer), launchd.jobs[indexer]?.pid != nil { return true }
+        if launchd.disabled.contains(indexer) { return false }
+        switch state {
+        case .off: return false
+        case .on, .needsUpdate:
+            return launchd.loaded.contains(indexer) && !launchd.disabled.contains(indexer) ? true : nil
+        case .incomplete: return nil
+        }
+    }
 
     static func bundledHelper(in bundle: URL) -> URL { bundle.appendingPathComponent("Contents/Helpers/MacBook Storage Monitor.app") }
 
-    static func evaluate(home: URL, bundledHelper: URL?, launchd: LaunchdState? = nil) -> MonitoringSetupStatus {
+    static func evaluate(home: URL, bundledHelper: URL?, launchd: LaunchdState? = nil, labels: [String] = MonitoringSetupStatus.labels) -> MonitoringSetupStatus {
         let agents = labels.map { home.appendingPathComponent("Library/LaunchAgents/\($0).plist") }
         let present = agents.filter { FileManager.default.fileExists(atPath: $0.path) }
         let installedApp = home.appendingPathComponent("Applications/MacBook Storage Monitor.app")
@@ -62,10 +78,11 @@ struct MonitoringSetupStatus: Equatable {
         let helper = bundledExecutable ?? (FileManager.default.isExecutableFile(atPath: installedExecutable.path) ? installedExecutable : nil)
         let targets = present.compactMap { (NSDictionary(contentsOf: $0) as? [String: Any])?["ProgramArguments"] as? [String] }.compactMap(\.first)
         let interrupted = FileManager.default.fileExists(atPath: home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor/install-transaction/journal.json").path)
-        let duplicates = duplicateAgents(home: home)
-        let loaded = launchd.map { Set(labels).intersection($0.loaded) } ?? []
-        let notLoaded = launchd == nil ? [] : labels.filter { label in present.contains { $0.lastPathComponent == "\(label).plist" } && !loaded.contains(label) }
-        let disabled = launchd.map { labels.filter($0.disabled.contains) } ?? []
+        let duplicates = duplicateAgents(home: home, labels: labels)
+        let reported = launchd.flatMap { $0.reliable ? $0 : nil }
+        let loaded = reported.map { Set(labels).intersection($0.loaded) } ?? []
+        let notLoaded = reported == nil ? [] : labels.filter { label in present.contains { $0.lastPathComponent == "\(label).plist" } && !loaded.contains(label) }
+        let disabled = reported.map { labels.filter($0.disabled.contains) } ?? []
         let state: State, summary: String
         if interrupted {
             state = .incomplete; summary = "An update of the background monitor was interrupted. Repair finishes or reverts it; your history is kept."
@@ -84,7 +101,7 @@ struct MonitoringSetupStatus: Equatable {
             state = .incomplete; summary = "macOS has turned off \(disabled.count) of this monitor's background tasks (System Settings → General → Login Items). Repair turns them back on."
         } else if !notLoaded.isEmpty {
             state = .incomplete; summary = "\(notLoaded.count) of \(agents.count) background tasks are configured but not loaded by macOS, so they will not run. Repair registers them again."
-        } else if (bundledHelper.map(supportsExternalVolumes) == true || supportsExternalVolumes(installedApp)) && !externalVolumesReady(home: home) {
+        } else if labels == MonitoringSetupStatus.labels && (bundledHelper.map(supportsExternalVolumes) == true || supportsExternalVolumes(installedApp)) && !externalVolumesReady(home: home) {
             state = .needsUpdate
             summary = "Update the background monitor to enable external-drive discovery and automatic resume. Its capability or wake configuration is out of date."
         } else if let bundledVersion, bundledVersion != installedVersion {
@@ -92,9 +109,11 @@ struct MonitoringSetupStatus: Equatable {
             summary = "The installed background monitor (\(installedVersion ?? "unknown version")) differs from this app (\(bundledVersion)). Update it to match."
         } else {
             state = .on
-            summary = "Background monitoring is on. It checks free space at login and every 30 minutes." + (launchd == nil ? " (macOS did not report whether its tasks are loaded.)" : "")
+            summary = "Background monitoring is configured for your account. It checks free space at login and every 30 minutes while you are logged in; sleep can delay checks." + (reported == nil ? " (macOS did not report whether its tasks are loaded.)" : "")
         }
         var status = MonitoringSetupStatus(state: state, summary: summary, installedVersion: installedVersion, bundledVersion: bundledVersion, helperExecutable: helper, installedApp: installedApp)
+        status.launchd = launchd
+        status.jobLabels = labels
         status.notifications = .recorded(home: home)
         return status
     }
@@ -128,7 +147,7 @@ struct MonitoringSetupStatus: Equatable {
         return (capacity["WatchPaths"] as? [String])?.contains(registry) == true
     }
 
-    static func duplicateAgents(home: URL) -> [URL] {
+    static func duplicateAgents(home: URL, labels: [String] = MonitoringSetupStatus.labels) -> [URL] {
         let folder = home.appendingPathComponent("Library/LaunchAgents"), canonical = Set(labels.map { "\($0).plist" })
         return ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).sorted().filter { $0.hasSuffix(".plist") && !canonical.contains($0) }.map { folder.appendingPathComponent($0) }
             .filter { ((NSDictionary(contentsOf: $0) as? [String: Any])?["Label"] as? String).map(labels.contains) ?? false }
@@ -141,11 +160,15 @@ struct MonitoringSetupStatus: Equatable {
     }
 
     static let consent = """
+        Storage Monitor is the viewer. MacBook Storage Monitor is its background helper, which records readings, indexes folders, and sends notifications. macOS permission prompts name that helper.
+
         Storage Monitor will copy its background monitor to ~/Applications and add three background tasks for your user account only (no administrator password):
 
         • A free-space check at login and every 30 minutes. It notifies you about low space only if macOS allows notifications for MacBook Storage Monitor: permission given to an earlier version carries over, and otherwise Allow Low-Space Notifications… shows the macOS prompt.
         • A one-time folder baseline used to explain changes.
         • Disk inventory indexing at low priority. The first pass over a large disk can take hours.
+
+        Monitoring covers the internal startup volume only, for your logged-in account. Checks run approximately every 30 minutes, stop while logged out, and may be delayed by sleep. Low-space thresholds are fixed at 25 GB and 15 GB. Growth alerts use a drop of 3 GB since the previous reading or 5 GB within two hours. All thresholds use decimal GB.
 
         History is stored in ~/Library/Application Support/MacBook Storage Monitor. You can turn this off at any time; your history is kept.
         """
@@ -159,20 +182,36 @@ struct MonitoringSetupStatus: Equatable {
 
 /// What launchd itself reports for this user, not what the LaunchAgent files say. Read-only.
 struct LaunchdState: Equatable {
+    struct Job: Equatable {
+        let pid: Int?
+        let lastExitStatus: Int?
+    }
     var loaded: Set<String>, disabled: Set<String>
+    var jobs: [String: Job] = [:]
+    var reliable = true
     static func current() -> LaunchdState? {
         guard let list = read(["list"]), let overrides = read(["print-disabled", "gui/\(getuid())"]) else { return nil }
         return parse(list: list, disabled: overrides)
     }
-    /// `launchctl list`: "PID\tStatus\tLabel" rows. `print-disabled`: "\"label\" => disabled" (older systems: "=> true").
+    /// Registration, current PID and last exit are different facts. This output contains no attempt time.
     static func parse(list: String, disabled: String) -> LaunchdState {
-        let loaded = list.split(separator: "\n").dropFirst().compactMap { $0.split(separator: "\t").last.map(String.init) }
+        let lines = list.split(whereSeparator: \.isNewline)
+        guard let header = lines.first, header.split(whereSeparator: \.isWhitespace).map(String.init) == ["PID", "Status", "Label"] else {
+            return LaunchdState(loaded: [], disabled: [], reliable: false)
+        }
+        var jobs: [String: Job] = [:], reliable = true
+        for line in lines.dropFirst() {
+            let fields = line.split(whereSeparator: \.isWhitespace).map(String.init)
+            guard fields.count == 3, fields[0] == "-" || (Int(fields[0]).map { $0 > 0 } ?? false),
+                  fields[1] == "-" || Int(fields[1]) != nil else { reliable = false; continue }
+            jobs[fields[2]] = Job(pid: Int(fields[0]), lastExitStatus: Int(fields[1]))
+        }
         let off = disabled.split(separator: "\n").compactMap { line -> String? in
             let parts = line.components(separatedBy: "=>")
             guard parts.count == 2, ["disabled", "true"].contains(parts[1].trimmingCharacters(in: .whitespaces)) else { return nil }
             return parts[0].trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "\""))
         }
-        return LaunchdState(loaded: Set(loaded), disabled: Set(off))
+        return LaunchdState(loaded: Set(jobs.keys), disabled: Set(off), jobs: jobs, reliable: reliable)
     }
     private static func read(_ arguments: [String]) -> String? {
         let process = Process(), pipe = Pipe()
@@ -207,6 +246,169 @@ struct LaunchdState: Equatable {
     }
 }
 
+/// Tracks when a failure was first *observed*, never claims that is when the job attempted to run.
+/// A subsequent successful reading can supersede an old free-space exit status even if macOS retains it.
+struct MonitoringHealthEvidence {
+    private(set) var failures: [String: Date] = [:]
+    private var exits: [String: Int] = [:]
+    mutating func observe(_ launchd: LaunchdState?, at now: Date, labels: [String] = MonitoringSetupStatus.labels) {
+        guard let launchd, launchd.reliable else { return }
+        for label in labels {
+            guard let job = launchd.jobs[label], let exit = job.lastExitStatus else { continue }
+            if job.pid != nil || exit == 0 { failures[label] = nil; exits[label] = nil }
+            else if exits[label] != exit { failures[label] = now; exits[label] = exit }
+        }
+    }
+}
+
+/// Existing worker summaries are timestamped even when its scheduled-process exit is deliberately zero.
+/// Read at most two 64KiB tails; never enumerate directories or parse an unbounded log.
+struct InventoryWorkerEvidence: Equatable, Sendable {
+    struct Stream: Equatable, Sendable {
+        let device: Int64
+        let inode: UInt64
+        let birthNanoseconds: Int64
+    }
+    struct Position: Equatable, Sendable {
+        let stream: Stream
+        let offset: UInt64
+    }
+    let timestamp: Date
+    let outcome: String
+    let position: Position?
+    init(timestamp: Date, outcome: String, position: Position? = nil) {
+        self.timestamp = timestamp; self.outcome = outcome; self.position = position
+    }
+    static func parse(_ text: String, now: Date) -> Self? { parse(Data(text.utf8), now: now) }
+    private static func parse(_ data: Data, now: Date, stream: Stream? = nil, start: UInt64 = 0) -> Self? {
+        let formatter = ISO8601DateFormatter()
+        var offset = start
+        return newest(data.split(separator: 10, omittingEmptySubsequences: false).compactMap { bytes -> Self? in
+            let position = stream.map { Position(stream: $0, offset: offset) }
+            offset += UInt64(bytes.count) + 1
+            let line = String(decoding: bytes, as: UTF8.self)
+            guard let marker = line.range(of: " inventory "),
+                  let date = formatter.date(from: String(line[..<marker.lowerBound])), date <= now else { return nil }
+            let data = Data(line[marker.upperBound...].utf8)
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let outcome = json["outcome"] as? String else { return Self(timestamp: date, outcome: "unknown", position: position) }
+            if outcome == "failed" { return Self(timestamp: date, outcome: "failed", position: position) }
+            if let status = json["status"] as? String {
+                if ["skipped", "paused"].contains(status) { return nil }
+                if ["completed", "continuing", "deferred"].contains(status), ["complete", "partial", "interrupted", "stale"].contains(outcome) {
+                    return Self(timestamp: date, outcome: status == "completed" ? "complete" : "partial", position: position)
+                }
+            }
+            if outcome == "busy" { return nil }
+            return Self(timestamp: date, outcome: ["complete", "partial", "failed"].contains(outcome) ? outcome : "unknown", position: position)
+        })
+    }
+    static func retainingFailure(_ previous: Self?, observed: Self?) -> Self? {
+        guard let observed else { return previous }
+        guard let previous else { return observed }
+        guard observed.timestamp >= previous.timestamp else { return previous }
+        if previous.outcome == "failed" {
+            guard ["complete", "partial"].contains(observed.outcome) else { return previous }
+            if observed.timestamp == previous.timestamp {
+                // Log timestamps have second resolution. Only physical order in the same
+                // opened log stream proves recovery; a rotated/temporarily missing tail cannot.
+                guard let old = previous.position, let new = observed.position,
+                      old.stream == new.stream, new.offset > old.offset else { return previous }
+            }
+        }
+        return observed
+    }
+    private static func newest(_ entries: [Self]) -> Self? {
+        entries.reduce(nil) { current, next in
+            guard let current else { return next }
+            return next.timestamp >= current.timestamp ? next : current
+        }
+    }
+    static func read(directory: URL, now: Date) -> Self? {
+        newest(["monitor.log.1", "monitor.log"].compactMap { name -> Self? in
+            let fd = open(directory.appendingPathComponent(name).path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+            guard fd >= 0 else { return nil }
+            let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+            defer { try? handle.close() }
+            var info = stat()
+            guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG, info.st_uid == getuid(), info.st_size >= 0 else { return nil }
+            let offset = max(0, info.st_size - 65_536)
+            guard (try? handle.seek(toOffset: UInt64(offset))) != nil, let data = try? handle.read(upToCount: 65_536) else { return nil }
+            var payload = data, start = UInt64(offset)
+            if offset > 0 {
+                guard let newline = data.firstIndex(of: 10) else { return nil }
+                let skip = data.distance(from: data.startIndex, to: newline) + 1
+                payload = Data(data.dropFirst(skip)); start += UInt64(skip)
+            }
+            let stream = Stream(device: Int64(info.st_dev), inode: UInt64(info.st_ino), birthNanoseconds: Int64(info.st_birthtimespec.tv_sec) * 1_000_000_000 + Int64(info.st_birthtimespec.tv_nsec))
+            return parse(payload, now: now, stream: stream, start: start)
+        })
+    }
+}
+
+struct MonitoringHealthPresentation: Equatable {
+    enum State: Equatable { case off, configurationNeedsAttention, unknown, waiting, running, healthy, failed, stale, resuming, waking }
+    let state: State
+    let title: String
+    let detail: String
+    let lastSuccess: Date?
+    /// Only supplied by timestamped evidence; launchctl list alone never sets this.
+    let lastAttempt: Date?
+    let jobDetails: [String]
+    static let staleAfter: TimeInterval = 75 * 60
+    static let wakeGrace: TimeInterval = 10 * 60
+    init(setup: MonitoringSetupStatus?, lastSuccess: Date?, evidence: MonitoringHealthEvidence = .init(), lastAttempt: Date? = nil, lastWake: Date? = nil, inventory: InventoryWorkerEvidence? = nil, now: Date) {
+        self.lastSuccess = lastSuccess; self.lastAttempt = lastAttempt
+        let jobs = setup?.launchd?.jobs ?? [:]
+        let labels = setup?.jobLabels ?? MonitoringSetupStatus.labels
+        let main = labels[0], baseline = labels[1], worker = labels[2]
+        jobDetails = labels.map { label in
+            let name = label == main ? "Capacity checks" : (label == worker ? "Inventory indexer" : "Folder baseline")
+            guard let job = jobs[label] else { return name + ": execution details unknown" }
+            return name + ": " + (job.pid.map { "running (PID \($0))" } ?? "not running now") + "; last exit " + (job.lastExitStatus.map(String.init) ?? "unknown")
+        }
+        let failed = labels.filter { label in
+            guard let job = jobs[label], job.pid == nil, let exit = job.lastExitStatus, exit != 0 else { return false }
+            if (label == worker || label == baseline) && exit == 75 { return false } // Saved work resumes in the next worker slice.
+            if label == main, let observed = evidence.failures[label], let lastSuccess, lastSuccess > observed { return false }
+            return true
+        }
+        if setup == nil { state = .unknown; title = "Checking background monitoring" }
+        else if setup?.state == .off { state = .off; title = "Background monitoring is off" }
+        else if setup?.state == .incomplete { state = .configurationNeedsAttention; title = "Background setup needs attention" }
+        else if setup?.launchd?.reliable != true { state = .unknown; title = "Background execution is unknown" }
+        else if !failed.isEmpty {
+            state = .failed
+            title = "Monitoring enabled · attention needed"
+        } else if inventory?.outcome == "failed" {
+            state = .failed; title = "Monitoring enabled · inventory needs attention"
+        } else if inventory?.outcome == "unknown" {
+            state = .unknown; title = "Inventory execution needs rechecking"
+        } else if jobs[main]?.pid != nil { state = .running; title = "A capacity check is running" }
+        else if let lastSuccess, lastSuccess > now { state = .unknown; title = "Background reading time needs rechecking" }
+        else if let lastSuccess, now.timeIntervalSince(lastSuccess) <= Self.staleAfter {
+            state = .healthy; title = "Recent background reading received"
+        } else if let lastWake, now.timeIntervalSince(lastWake) >= 0, now.timeIntervalSince(lastWake) < Self.wakeGrace {
+            state = .waking; title = "Waiting for a check after wake"
+        } else if lastSuccess != nil { state = .stale; title = "Background readings are older than expected" }
+        else if jobs[worker]?.lastExitStatus == 75 || jobs[baseline]?.lastExitStatus == 75 { state = .resuming; title = "Folder indexing will resume" }
+        else { state = .waiting; title = "Waiting for the first background reading" }
+        let successText = lastSuccess.map { "Last successful capacity reading: " + $0.formatted(date: .abbreviated, time: .standard) + "." } ?? "No successful capacity reading is recorded."
+        let attemptText = lastAttempt.map { "Last attempt: " + $0.formatted(date: .abbreviated, time: .standard) + "." } ?? "Last attempt time is unknown; macOS does not report it here."
+        let recovery: String
+        switch state {
+        case .failed: recovery = "Check Background Monitoring in Settings and repair the helper if needed. A later running task or successful check can show recovery; a registered task alone does not prove it is working."
+        case .stale, .waking, .waiting: recovery = "Checks are scheduled at login and every 30 minutes for your account. They do not run while logged out; sleep can delay them. After wake, allow the next scheduled check, then reload status or check setup if readings remain old."
+        case .resuming: recovery = "Folder indexing saved its progress; the next background run can resume it. This is not a fatal failure."
+        case .configurationNeedsAttention: recovery = setup?.summary ?? "Check setup in Settings."
+        case .unknown: recovery = "Configuration and registration do not establish successful execution. Reload status to try again."
+        default: recovery = "Capacity checks are scheduled at login and every 30 minutes while your account is logged in. Sleep can delay checks."
+        }
+        let inventoryText = inventory.map { " Last recorded inventory outcome: " + $0.outcome + " at " + $0.timestamp.formatted(date: .abbreviated, time: .standard) + ". Capacity readings do not clear an inventory failure." } ?? ""
+        detail = successText + " " + attemptText + " " + recovery + inventoryText
+    }
+}
+
 enum MonitoringSetupAction: String {
     case enable, disable, notifications
     var arguments: [String] {
@@ -216,8 +418,14 @@ enum MonitoringSetupAction: String {
     /// an update half done. Authorization waits for the person's answer to a system prompt.
     var timeLimit: TimeInterval? { self == .notifications ? 130 : nil }
     /// Runs the background monitor's own command off the main thread.
-    func run(helper: URL) async -> (ok: Bool, output: String) {
-        let arguments = arguments, limit = timeLimit
+    func run(helper: URL, scope: LifecycleQAScope? = nil) async -> (ok: Bool, output: String) {
+        if let scope {
+            do {
+                guard self != .notifications, helper.path == scope.installer.path else { try LifecycleQAScope.refuse("setup must use the stable installer; notification prompts require separate acceptance") }
+                try scope.admit(command: arguments[0]); try scope.validateBundle(scope.bundle("Installer"), roles: ["Installer"])
+            } catch { return (false, String(describing: error)) }
+        }
+        let arguments = arguments + (scope?.arguments ?? []), limit = timeLimit
         return await Task.detached(priority: .userInitiated) {
             let process = Process(), pipe = Pipe()
             process.executableURL = helper; process.arguments = arguments

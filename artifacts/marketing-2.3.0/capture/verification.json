@@ -1,0 +1,24 @@
+{
+  "scope": "Marketing asset capture, not native release acceptance",
+  "candidateVersion": "2.3.0",
+  "candidateBuild": "11",
+  "sourceCommit": "a98fa0f487df0bcbf4501ea4b9fbfc2e2069c479",
+  "candidateDMGHashMatchesPackageReceipt": true,
+  "candidateViewerHashMatchesPackageReceipt": true,
+  "renderBuild": "PASS",
+  "captureRun": "PASS: 15 of 15",
+  "compositionRun": "PASS: 15 of 15",
+  "visualReview": "PASS: contact sheet, overview, Atlas, selected developer folder, rankings, search, filters, focus/isolation, history and light event Inspector",
+  "fixture": "112 fictional inventory items; 49 fictional recorded readings; empty disposable placeholders; injected fictional live-capacity source",
+  "unchangedViewCode": true,
+  "captureOnlyWiring": "See prepare-source.py and source-wiring.patch: remove app entry point; inject existing LiveCapacityMonitor source initializer",
+  "desktopActivation": false,
+  "desktopInput": false,
+  "notVerified": [
+    "Launching the distribution viewer",
+    "Displayed native-window rendering and behavior",
+    "Native keyboard/mouse/trackpad delivery",
+    "VoiceOver",
+    "Installation and background monitoring registration"
+  ]
+}

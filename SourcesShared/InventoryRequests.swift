@@ -52,6 +52,7 @@ public enum InventoryRequests {
             guard database == runtime.database else { try NativeQARuntime.reject("request database is not the QA catalog") }
             try runtime.validateRequest(path, action: action)
         }
+        if let scope = LifecycleQAScope.active { try scope.validateRequest(database: database, path: path) }
         let folder = directory(database: database)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let boundary = action == "refresh" ? try InventoryRequestBoundary.capture(database: database) : nil

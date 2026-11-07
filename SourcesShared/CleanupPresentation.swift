@@ -84,7 +84,7 @@ public enum CleanupTrashGuidance {
             return (.notYours, "macOS doesn't allow moving it from here", "Only items you own and can change are moved from Storage Monitor. You can still reveal it in Finder.")
         }
         if has("uncommitted", "untracked", "unmerged", "stashed", "local commits", "worktree dependencies", "worktree is locked", "worktree lock") {
-            return (.unsavedWork, "Contains unsaved Git work", "Commit, push or stash the work first, or keep this folder.")
+            return (.unsavedWork, "Contains unsaved Git work", "Keep this folder until local work, including stashes, has been preserved elsewhere and Git preflight passes.")
         }
         if has("running process", "in active use", "is open by", "became active", "started using", "active executable") {
             return (.inUse, "In use right now", "Quit the app or command that is using it, then choose Move to Trash… again.")

@@ -4,6 +4,23 @@ import SQLite3
 actor HistoryReader {
     let path: String
     init(path: String) { self.path = path }
+    /// Global helper health needs only the latest valid startup reading, regardless of the selected drive.
+    func latestTimestamp() throws -> Date? {
+        guard FileManager.default.fileExists(atPath: path) else { throw HistoryError.missing(path) }
+        var db: OpaquePointer?, statement: OpaquePointer?
+        defer { sqlite3_finalize(statement); sqlite3_close(db) }
+        guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX, nil) == SQLITE_OK else { throw HistoryError.sqlite("Cannot read latest capacity timestamp") }
+        sqlite3_busy_timeout(db, 2000)
+        guard sqlite3_prepare_v2(db, "SELECT timestamp,free,used FROM readings ORDER BY timestamp DESC,id DESC LIMIT 1", -1, &statement, nil) == SQLITE_OK else { throw HistoryError.sqlite("Cannot query latest capacity timestamp") }
+        let result = sqlite3_step(statement)
+        if result == SQLITE_DONE { return nil }
+        guard result == SQLITE_ROW, let timeText = sqlite3_column_text(statement, 0),
+              let freeText = sqlite3_column_text(statement, 1), let usedText = sqlite3_column_text(statement, 2),
+              let timestamp = Double(String(cString: timeText)), timestamp.isFinite,
+              let free = Int64(String(cString: freeText)), let used = Int64(String(cString: usedText)),
+              free >= 0, used >= 0, free <= Int64.max - used, free + used > 0 else { throw HistoryError.invalid("Invalid latest capacity reading") }
+        return Date(timeIntervalSince1970: timestamp)
+    }
     func load() throws -> HistorySnapshot {
         guard FileManager.default.fileExists(atPath: path) else { throw HistoryError.missing(path) }
         var handle: OpaquePointer?

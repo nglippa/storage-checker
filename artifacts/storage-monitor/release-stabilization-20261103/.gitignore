@@ -1,0 +1,3 @@
+# Full local verification evidence is retained on the development machine.
+# Commit only the explicitly reviewed receipts listed in README.md.
+evidence/

@@ -224,7 +224,13 @@ public struct InventoryStatusPresentation: Sendable {
     /// Neutral note when the first-pass milestone is not recorded for this inventory.
     public let completionNote: String?
 
-    public init(status: InventoryStatus) {
+    /// False only when current service evidence proves monitoring is off. Nil retains catalog-only semantics.
+    public let updatesAreWaiting: Bool
+
+    public init(status: InventoryStatus, monitoringEnabled: Bool? = nil) {
+        updatesAreWaiting = monitoringEnabled == false && status.generation != nil &&
+            (status.hasReconciliationWork || status.hasInitialDiscoveryWork || status.initialCompletion == .inProgress ||
+             status.queuedDirectoryJobs > 0 || status.pendingDirectories > 0 || status.staleDirectories > 0)
         foundFolders = status.completedDirectories + status.pendingDirectories + status.staleDirectories + status.unknownDirectories
         rankingsArePartial = status.completeness != .complete
         activeListings = max(0, status.queuedDirectoryJobs - status.deferredDirectories)
@@ -241,6 +247,18 @@ public struct InventoryStatusPresentation: Sendable {
             phase = .unavailable; condition = .notStarted; affectedDirectories = 0
             headline = "Inventory has not started"
             detail = "Measured files and folders will appear after indexing begins."
+        } else if updatesAreWaiting {
+            // Preserve durable coverage/queue facts; stopping the service does not finish or discard work.
+            let recorded = InventoryStatusPresentation(status: status)
+            condition = recorded.condition; affectedDirectories = recorded.affectedDirectories
+            if recorded.condition == .paused || recorded.condition == .unavailable {
+                phase = recorded.phase; headline = recorded.headline
+                detail = recorded.detail + " Background indexing is also off. Enable or repair monitoring in Settings before indexing can resume."
+            } else {
+                phase = .idle
+                headline = status.initialCompletion == .inProgress ? "Indexing is waiting" : "Folder updates are waiting"
+                detail = "Background indexing is off. Enable or repair monitoring in Settings to continue. Previous measurements and queued work are kept."
+            }
         } else if status.lowSpacePaused {
             phase = .unavailable; condition = .paused; affectedDirectories = 0
             headline = "Indexing paused: disk space is low"
@@ -338,8 +356,8 @@ public enum InventoryNodePresentation {
     /// The sentence that states a shared earlier-size note once, for the explorer and the map.
     public static func sharedFreshnessText(_ note: String?) -> String? {
         switch note {
-        case "Previously measured"?: return "Most sizes here are from the last completed measurement; changes are being rechecked"
-        case "Includes earlier sizes"?: return "Most folders here include earlier sizes of some subfolders while changes are rechecked"
+        case "Previously measured"?: return "Most sizes here are from the last completed measurement and may have changed"
+        case "Includes earlier sizes"?: return "Most folders here include earlier sizes of some subfolders; those folders need rechecking"
         default: return nil
         }
     }
@@ -450,5 +468,54 @@ public enum InventoryPlaceholder: Equatable, Sendable {
         else if status == nil { self = failed ? .notStarted : .checking }
         else if status?.generation == nil { self = .notStarted }
         else { self = .loadingResults }
+    }
+}
+
+/// Lifecycle is resolved before choosing Explorer, rankings or Review, so every renderer has a usable first run.
+public struct InventoryLifecyclePresentation: Equatable, Sendable {
+    public enum State: Equatable, Sendable { case checking, monitoringOff, notCreated, indexing, waiting, available, temporarilyUnavailable, failed, stale }
+    public enum Action: Equatable, Sendable { case openSettings, startIndexing, retry }
+    public let state: State
+    public let showsBrowser: Bool
+    public let title: String
+    public let detail: String
+    public let action: Action?
+    public var showsProgress: Bool { state == .checking || state == .indexing }
+    public init(hasRoot: Bool, status: InventoryStatus?, requested: Bool, loading: Bool, error: String?, monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil) {
+        showsBrowser = hasRoot
+        if let error = error ?? (!hasRoot ? indexingFailure : nil) {
+            state = hasRoot ? .temporarilyUnavailable : .failed
+            title = hasRoot ? "Inventory could not be updated" : "Inventory unavailable"
+            detail = error + (hasRoot ? " Previous catalog results remain visible. Reload to try again." : " Reload to try again, or check Background Monitoring in Settings.")
+            action = .retry
+        } else if monitoringEnabled == false && ((!hasRoot && (requested || status?.initialCompletion == .inProgress)) || status.map { InventoryStatusPresentation(status: $0, monitoringEnabled: false).updatesAreWaiting } == true) {
+            state = .waiting; title = "Indexing is waiting"
+            detail = "Background indexing is off. Enable or repair monitoring in Settings to continue indexing. Previous measurements and queued work are kept."
+            action = .openSettings
+        } else if hasRoot {
+            if status?.initialCompletion == .inProgress { state = .indexing; title = "Building your storage inventory" }
+            else if status?.completeness == .stale || status?.eventHistoryUnavailable == true { state = .stale; title = "Previous inventory measurements" }
+            else { state = .available; title = "Inventory available" }
+            detail = status.map { InventoryStatusPresentation(status: $0).detail } ?? "Catalog results remain qualified by coverage."
+            action = nil
+        } else if requested || status?.initialCompletion == .inProgress {
+            state = .indexing; title = "Building your storage inventory"
+            detail = "Waiting for the background indexer's first results. Large inventories can take hours; you can browse results as they are discovered. Full Disk Access is optional."
+            action = .openSettings
+        } else if status?.generation != nil {
+            state = .temporarilyUnavailable; title = "Inventory folder unavailable"
+            detail = "The catalog exists, but its folder results could not be loaded. Reload the inventory, or check Background Monitoring and folder access in Settings."
+            action = .retry
+        } else if status == nil && loading {
+            state = .checking; title = "Checking inventory status…"; detail = "Reading the local catalog."; action = nil
+        } else if monitoringConfigured == false {
+            state = .monitoringOff; title = "Background monitoring is not configured"
+            detail = "Enable Background Monitoring in Settings to record capacity and build your disk inventory. Storage Monitor asks before setting up the MacBook Storage Monitor helper for your account. The first inventory can take hours. Full Disk Access is optional."
+            action = .openSettings
+        } else {
+            state = .notCreated; title = "No disk inventory yet"
+            detail = monitoringConfigured == true ? "Background monitoring is configured, but the inventory has not started. Start indexing to discover files and folders. The first pass can take hours; Full Disk Access is optional." : "The local inventory has not been created. Check Background Monitoring in Settings to enable or repair the helper. The first pass can take hours; Full Disk Access is optional."
+            action = monitoringConfigured == true ? .startIndexing : .openSettings
+        }
     }
 }

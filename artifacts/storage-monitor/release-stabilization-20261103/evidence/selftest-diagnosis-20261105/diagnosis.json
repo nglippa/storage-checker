@@ -1,0 +1,15 @@
+{
+  "historical_retry_sleep_overlap": true,
+  "historical_retry_recorded_monotonic_seconds": 37.697,
+  "historical_retry_exact_failed_conjunct": "not logged; cannot reconstruct",
+  "power_evidence": "Read-only local Sleep/Dark Wake transitions overlap original retry; raw activity/power records remain local only. No OS power settings altered.",
+  "initial_continuous_failure_exact_fields": "not logged; no claim that historical failed conjunct or cold-start cause is proven",
+  "corrected_test_guards": {
+    "continuous_capture_timeout_seconds": 0.1,
+    "stdout_cap_bytes": 16,
+    "producer_readiness": "non-consuming buffered bytes >16, within10active seconds after spawn",
+    "busy_collector_lock_wait_seconds": 0.5,
+    "busy_active_limit_seconds": 3
+  },
+  "synthetic_controls": "Counterexamples are labelled synthetic and are not substituted for historical measurements."
+}

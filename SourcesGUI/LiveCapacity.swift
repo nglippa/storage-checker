@@ -52,12 +52,60 @@ struct LiveCapacityState: Sendable, Equatable {
     var reading: LiveCapacityReading?
     var lastAttempt: Date?
     var lastError: String?
+    var isRefreshing = false
     // Three missed refresh intervals.
     static let staleAfter: TimeInterval = 180
     func freshness(at now: Date) -> LiveFreshness {
         guard let reading else { return .unavailable }
-        if let lastAttempt, lastError != nil, lastAttempt > reading.timestamp { return .stale }
-        return now.timeIntervalSince(reading.timestamp) > Self.staleAfter ? .stale : .live
+        if lastError != nil { return .stale }
+        let age = now.timeIntervalSince(reading.timestamp)
+        return age < 0 || age > Self.staleAfter ? .stale : .live
+    }
+}
+
+/// One value and freshness contract for Storage and Monitoring. Missing values stay absent.
+struct CapacityPresentation: Equatable {
+    enum Status: Equatable { case current, refreshing, failed, stale, previous, unavailable }
+    enum Source: Equatable { case live, recorded, none }
+    let status: Status
+    let source: Source
+    let free: Int64?
+    let total: Int64?
+    let timestamp: Date?
+    let title: String
+    let statusText: String
+    let detail: String
+    var used: Int64? { guard let free, let total else { return nil }; return total - free }
+    var isCurrent: Bool { status == .current }
+
+    init(state: LiveCapacityState, recorded: Measurement?, now: Date) {
+        source = state.reading != nil ? .live : (recorded != nil ? .recorded : .none)
+        free = state.reading?.free ?? recorded?.free
+        total = state.reading?.total ?? recorded?.capacity
+        timestamp = state.reading?.timestamp ?? recorded?.timestamp
+        if state.isRefreshing { status = .refreshing }
+        else if state.lastError != nil { status = .failed }
+        else if state.reading != nil { status = state.freshness(at: now) == .live ? .current : .stale }
+        else { status = recorded != nil ? .previous : .unavailable }
+        title = status == .current ? "Available now" : (source == .recorded ? "Available · last recorded" : (free != nil ? "Available · previous reading" : "Available capacity"))
+        let age = timestamp.map { Self.age(of: $0, at: now) }
+        switch status {
+        case .current: statusText = "Live · updated \(age!)"
+        case .refreshing: statusText = free == nil ? "Reading capacity…" : "Refreshing · previous reading \(age!)"
+        case .failed: statusText = free == nil ? "Capacity refresh failed · no reading" : "Refresh failed · previous reading \(age!)"
+        case .stale: statusText = "Stale · last live reading \(age!)"
+        case .previous: statusText = "Last recorded \(age!) · live reading unavailable"
+        case .unavailable: statusText = "No capacity reading available"
+        }
+        detail = [timestamp.map { "Reading from " + $0.formatted(date: .complete, time: .complete) + "." }, state.lastError,
+                  "Live capacity refreshes on opening, activation, every minute while visible, and Refresh. It is not recorded and never triggers alerts."].compactMap { $0 }.joined(separator: " ")
+    }
+    private static func age(of date: Date, at now: Date) -> String {
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        if seconds < 60 { return "\(seconds)s ago" }
+        if seconds < 3600 { return "\(seconds / 60)m ago" }
+        if seconds < 86400 { return "\(seconds / 3600)h ago" }
+        return "\(seconds / 86400)d ago"
     }
 }
 
@@ -83,35 +131,34 @@ extension Measurement: Equatable {
 @MainActor final class LiveCapacityMonitor: ObservableObject {
     @Published private(set) var state = LiveCapacityState()
     private var source: @Sendable () throws -> LiveCapacityReading
-    private var inFlight = false
     private var sourceRevision: UInt64 = 0
+    private let clock: @Sendable () -> Date
     private(set) var started = 0, skipped = 0
     // Conservative cadence while the window is visible and the app is active.
     static let visibleInterval: TimeInterval = 60
 
-    init(source: @escaping @Sendable () throws -> LiveCapacityReading = { try LiveCapacityProbe.read() }) { self.source = source }
+    init(source: @escaping @Sendable () throws -> LiveCapacityReading = { try LiveCapacityProbe.read() }, clock: @escaping @Sendable () -> Date = { Date() }) { self.source = source; self.clock = clock }
 
     func selectSource(preserveReading: Bool = false, _ source: @escaping @Sendable () throws -> LiveCapacityReading) {
         sourceRevision &+= 1
         self.source = source
-        inFlight = false
+        state.isRefreshing = false
         if !preserveReading { state = LiveCapacityState() }
     }
 
-    var isRefreshing: Bool { inFlight }
+    var isRefreshing: Bool { state.isRefreshing }
     func isDue(at now: Date) -> Bool { state.lastAttempt.map { now.timeIntervalSince($0) >= Self.visibleInterval } ?? true }
 
     // Returns false when a refresh is already running.
     @discardableResult func refresh() async -> Bool {
-        guard !inFlight else { skipped += 1; return false }
-        inFlight = true; started += 1
+        guard !state.isRefreshing else { skipped += 1; return false }
+        state.isRefreshing = true; state.lastAttempt = clock(); started += 1
         let revision = sourceRevision
-        defer { if revision == sourceRevision { inFlight = false } }
+        defer { if revision == sourceRevision { state.isRefreshing = false } }
         let source = self.source
         let result = await Task.detached(priority: .utility) { Result { try source() } }.value
         guard revision == sourceRevision, !Task.isCancelled else { return false }
         var next = state
-        next.lastAttempt = Date()
         switch result {
         case .success(let reading): next.reading = reading; next.lastError = nil
         case .failure(let error): next.lastError = error.localizedDescription  // keep the last good reading, now stale

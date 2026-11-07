@@ -26,6 +26,7 @@ fileprivate struct CleanupTrashSnapshot: Equatable {
     var canonical: String
     var entries: [String: String]
     var ancestors: [String: String]
+    var interpreterLinks: [String: String]
     var assessment: String
     var activeUseLimited: Bool
     /// The target contains programs or databases and active use could only be partly observed (other users'
@@ -215,6 +216,7 @@ public extension CleanupTrashPolicy {
         let withinTarget = processes.scoped(within: canonical)
         var entries = [String: String](), pending = [canonical], checked = 0
         var visitedObjects = Set<String>(), databasePaths = Set<String>()
+        var interpreterLinks = [String: String](), checkedInterpreterDependencies = false
         var requiresCompleteProcesses = inspection.classification?.facts.isDatabase == true
         var gitRoots = [String]()
         while let path = pending.popLast() {
@@ -230,7 +232,10 @@ public extension CleanupTrashPolicy {
             visitedObjects.insert("\(info.device):\(info.inode)")
             let kind: InventoryNodeKind = info.kind == .directory ? .directory : (info.kind == .symlink ? .symlink : .file)
             let context = ArtifactContext(subject: .init(nodeID: node.id, path: path, kind: kind, identity: nil), probe: probe, environment: refreshedEnvironment)
-            if let why = ArtifactProtection.reason(context) ?? normalizedProtection(path, environment: refreshedEnvironment, probe: probe) { try reject("Protected: \(why) (\(path))") }
+            let interpreter = info.kind == .symlink && path != canonical
+                ? try interpreterLink(path, root: canonical, environment: refreshedEnvironment, probe: probe) : nil
+            if let interpreter { interpreterLinks[path] = interpreter; requiresCompleteProcesses = true }
+            if let why = ArtifactProtection.reason(context, baseInterpreterLink: interpreter != nil) ?? normalizedProtection(path, environment: refreshedEnvironment, probe: probe, baseInterpreterLink: interpreter != nil) { try reject("Protected: \(why) (\(path))") }
             // A plain parent can contain a recognized current installation that is neither running nor on
             // PATH. Reuse the same bounded probe and fixed process observation for descendant facts.
             // Inspect every applicable safety fact, including overlapping layouts at the selected root.
@@ -286,6 +291,13 @@ public extension CleanupTrashPolicy {
             }
             if info.kind == .other { try reject("Special filesystem objects cannot be assessed for Trash.") }
             if info.kind == .symlink {
+                if interpreter != nil {
+                    if !checkedInterpreterDependencies {
+                        try checkInterpreterDependencies(root: canonical, processes: processes, environment: environment, probe: probe)
+                        checkedInterpreterDependencies = true
+                    }
+                    continue // Move only the link; never enumerate or move its shared interpreter.
+                }
                 guard let resolved = probe.canonical(path) else { try reject("The symbolic link target cannot be reliably assessed.") }
                 if ArtifactPaths.components(resolved).contains(where: { $0.precomposedStringWithCanonicalMapping.lowercased() == ".git" }) { try reject("The symbolic link refers into protected Git metadata.") }
                 var metadataAncestor = resolved
@@ -371,22 +383,102 @@ public extension CleanupTrashPolicy {
         }
         // Re-read every visited object after process/Git/protection checks. This includes directory ctime/mtime,
         // so inserting a new child during inspection invalidates the result.
+        if !interpreterLinks.isEmpty { try checkInterpreterDependencies(root: canonical, processes: latestProcesses, environment: environment, probe: probe) }
+        for (path, before) in interpreterLinks {
+            guard try interpreterLink(path, root: canonical, environment: refreshedEnvironment, probe: probe) == before else {
+                try reject("A virtual environment interpreter link or its target changed during validation.")
+            }
+        }
         for (path, before) in entries { guard try stamp(path) == before else { try reject("The target changed during validation. Review it again.") } }
         for (path, before) in ancestors { guard try stamp(path, identityOnly: true) == before else { try reject("An enclosing folder changed identity during validation.") } }
         let f = inspection.classification?.facts
         let signature = "\(inspection.classification?.kind.rawValue ?? "ordinary")|\(inspection.assessment?.status.rawValue ?? "unknown")|\(String(describing: f))"
-        return (inspection, CleanupTrashSnapshot(canonical: canonical, entries: entries, ancestors: ancestors, assessment: signature,
+        return (inspection, CleanupTrashSnapshot(canonical: canonical, entries: entries, ancestors: ancestors, interpreterLinks: interpreterLinks, assessment: signature,
                                                    activeUseLimited: !processes.complete || !latestProcesses.complete,
                                                    // Even a complete observation covers only the current user's processes.
                                                    programUseLimited: requiresCompleteProcesses))
     }
 
-    private static func stamp(_ path: String, identityOnly: Bool = false) throws -> String {
+
+    /// A role exception only for a real venv's direct bin/python alias ending at Apple's
+    /// regular base interpreter. Selected links and all other targets keep the existing policy.
+    /// Link text and external stamps are evidence; that target is never part of the moved subtree.
+    private static func interpreterLink(_ path: String, root: String, environment: ArtifactEnvironment, probe: ArtifactProbe) throws -> String? {
+        let bin = (path as NSString).deletingLastPathComponent
+        let venv = (bin as NSString).deletingLastPathComponent
+        guard (bin as NSString).lastPathComponent == "bin", ArtifactPaths.isWithin(venv, root),
+              (path as NSString).lastPathComponent.range(of: "^python([0-9]+(\\.[0-9]+)*)?$", options: .regularExpression) != nil,
+              probe.info(bin)?.kind == .directory, probe.canonical(bin) == bin,
+              probe.info(venv + "/pyvenv.cfg")?.kind == .file,
+              let config = probe.text(venv + "/pyvenv.cfg", .pythonEnvironment),
+              config.split(separator: "\n").contains(where: { $0.trimmingCharacters(in: .whitespaces).hasPrefix("home =") }) else { return nil }
+        var current = path, seen = Set<String>(), evidence = [String]()
+        for _ in 0..<32 {
+            guard !probe.timedOut, seen.insert(current).inserted, let info = probe.info(current) else {
+                throw CleanupTrashSafetyFailure(reason: "The virtual environment interpreter chain is incomplete or cyclic.")
+            }
+            evidence.append(current + "|" + (try stamp(current, externalEvidence: current == "/usr/bin/python3")))
+            if info.kind == .symlink {
+                guard (current as NSString).deletingLastPathComponent == bin, let raw = probe.link(current),
+                      !raw.split(separator: "/").contains("..") else {
+                    throw CleanupTrashSafetyFailure(reason: "The interpreter alias crosses an ambiguous boundary.")
+                }
+                evidence.append(raw)
+                current = raw.hasPrefix("/") ? raw : (bin as NSString).appendingPathComponent(raw)
+                continue
+            }
+            guard current == "/usr/bin/python3", info.isExecutable, probe.canonical(path) == current else { return nil }
+            let target = ArtifactContext(subject: .init(nodeID: 0, path: current, kind: .file, identity: nil), probe: probe, environment: environment)
+            if let why = ArtifactProtection.reason(target, baseInterpreterLink: true) ?? normalizedProtection(current, environment: environment, probe: probe, baseInterpreterLink: true) {
+                throw CleanupTrashSafetyFailure(reason: "Protected interpreter target: " + why)
+            }
+            var parent = (current as NSString).deletingLastPathComponent
+            while true {
+                guard probe.info(parent)?.kind == .directory, probe.canonical(parent) == parent else { throw CleanupTrashSafetyFailure(reason: "Interpreter target ancestors cannot be verified.") }
+                evidence.append(parent + "|" + (try stamp(parent, identityOnly: true)))
+                if parent == "/" { break }; parent = (parent as NSString).deletingLastPathComponent
+            }
+            return evidence.joined(separator: "\n")
+        }
+        throw CleanupTrashSafetyFailure(reason: "The interpreter alias chain exceeds the safety limit.")
+    }
+
+    /// Preserve dependency names through intermediate links: final system-interpreter identity
+    /// alone cannot tell whether a process or PATH command depends on this environment.
+    private static func checkInterpreterDependencies(root: String, processes: ProcessObservation, environment: ArtifactEnvironment, probe: ArtifactProbe) throws {
+        func check(_ input: String) throws {
+            var pending = input.split(separator: "/").map(String.init), parts = [String](), links = 0
+            while !pending.isEmpty {
+                guard !probe.timedOut, links < 40 else { throw CleanupTrashSafetyFailure(reason: "Interpreter dependency resolution exceeded the safety limit.") }
+                let next = pending.removeFirst()
+                if next == "." { continue }; if next == ".." { if !parts.isEmpty { parts.removeLast() }; continue }
+                parts.append(next)
+                let path = "/" + parts.joined(separator: "/")
+                if ArtifactPaths.isWithin(path, root) { throw CleanupTrashSafetyFailure(reason: "A process or PATH command depends on this virtual environment.") }
+                if probe.info(path)?.kind == .symlink {
+                    guard let raw = probe.link(path) else { throw CleanupTrashSafetyFailure(reason: "An interpreter dependency link could not be read.") }
+                    parts.removeLast(); if raw.hasPrefix("/") { parts = [] }
+                    pending = raw.split(separator: "/").map(String.init) + pending; links += 1
+                }
+            }
+        }
+        for path in processes.executables + processes.openFiles + processes.workingDirectories { try check(path) }
+        for directory in environment.pathDirectories {
+            try check(directory)
+            guard probe.info(directory) != nil else { continue }
+            guard let listing = probe.list(directory, limit: max(1, probe.budget.entries)), listing.complete else {
+                throw CleanupTrashSafetyFailure(reason: "PATH dependencies cannot be fully assessed.")
+            }
+            for name in listing.names { try check((directory as NSString).appendingPathComponent(name)) }
+        }
+    }
+
+    private static func stamp(_ path: String, identityOnly: Bool = false, externalEvidence: Bool = false) throws -> String {
         var st = stat()
         guard lstat(path, &st) == 0 else { throw CleanupTrashSafetyFailure(reason: "The target or an enclosing folder disappeared or became unreadable.") }
         // UF_DATALESS (0x40000000) must never cause file-provider materialization during safety inspection.
-        guard identityOnly || st.st_flags & (UInt32(UF_IMMUTABLE) | UInt32(SF_IMMUTABLE) | 0x00080000 | 0x40000000) == 0 else { throw CleanupTrashSafetyFailure(reason: "The item is immutable, restricted, or not locally materialized.") }
-        let identity = "\(st.st_dev):\(st.st_ino):\(st.st_birthtimespec.tv_sec):\(st.st_birthtimespec.tv_nsec):\(st.st_mode):\(st.st_uid)"
+        guard identityOnly || externalEvidence || st.st_flags & (UInt32(UF_IMMUTABLE) | UInt32(SF_IMMUTABLE) | 0x00080000 | 0x40000000) == 0 else { throw CleanupTrashSafetyFailure(reason: "The item is immutable, restricted, or not locally materialized.") }
+        let identity = "\(st.st_dev):\(st.st_ino):\(st.st_birthtimespec.tv_sec):\(st.st_birthtimespec.tv_nsec):\(st.st_mode):\(st.st_uid):\(st.st_flags)"
         if identityOnly { return identity }
         return identity + ":\(st.st_size):\(st.st_nlink):\(st.st_mtimespec.tv_sec):\(st.st_mtimespec.tv_nsec):\(st.st_ctimespec.tv_sec):\(st.st_ctimespec.tv_nsec)"
     }
@@ -413,7 +505,7 @@ public extension CleanupTrashPolicy {
         return text.hasPrefix("ref: refs/") || text.range(of: "^[0-9a-fA-F]{40}([0-9a-fA-F]{24})?$", options: .regularExpression) != nil
     }
 
-    private static func normalizedProtection(_ path: String, environment: ArtifactEnvironment, probe: ArtifactProbe) -> String? {
+    private static func normalizedProtection(_ path: String, environment: ArtifactEnvironment, probe: ArtifactProbe, baseInterpreterLink: Bool = false) -> String? {
         var normalized = environment
         normalized.home = environment.home.precomposedStringWithCanonicalMapping.lowercased()
         normalized.ownData = environment.ownData?.precomposedStringWithCanonicalMapping.lowercased()
@@ -421,6 +513,6 @@ public extension CleanupTrashPolicy {
         let own = (normalized.home as NSString).appendingPathComponent("library/application support/macbook storage monitor")
         if ArtifactPaths.isWithin(p, own) { return "Storage Monitor's application data." }
         if ArtifactPaths.isWithin(p, (normalized.home as NSString).appendingPathComponent(".trash")) { return "The user's Trash." }
-        return ArtifactProtection.reason(ArtifactContext(subject: .init(nodeID: 0, path: p, kind: .file, identity: nil), probe: probe, environment: normalized))
+        return ArtifactProtection.reason(ArtifactContext(subject: .init(nodeID: 0, path: p, kind: .file, identity: nil), probe: probe, environment: normalized), baseInterpreterLink: baseInterpreterLink)
     }
 }

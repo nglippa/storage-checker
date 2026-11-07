@@ -1,0 +1,53 @@
+== build/dist/work/Storage Monitor.app
+  CFBundleIdentifier = local.macbook.storage-monitor.viewer
+  CFBundleName = Storage Monitor
+  CFBundleDisplayName = Storage Monitor
+  CFBundleShortVersionString = 2.1.0
+  CFBundleVersion = 9
+  LSMinimumSystemVersion = 14.0
+  Identifier=local.macbook.storage-monitor.viewer
+  Format=app bundle with Mach-O universal (x86_64 arm64)
+  Signature=adhoc
+== build/dist/work/Storage Monitor.app/Contents/Helpers/MacBook Storage Monitor.app
+  CFBundleIdentifier = local.macbook.storage-monitor
+  CFBundleName = MacBook Storage Monitor
+  CFBundleDisplayName = MacBook Storage Monitor
+  CFBundleShortVersionString = 2.1.0
+  CFBundleVersion = 9
+  LSMinimumSystemVersion = 14.0
+  Identifier=local.macbook.storage-monitor
+  Format=app bundle with Mach-O universal (x86_64 arm64)
+  Signature=adhoc
+== build/Storage Monitor.app
+  CFBundleIdentifier = local.macbook.storage-monitor.viewer.dev
+  CFBundleName = Storage Monitor Dev
+  CFBundleDisplayName = Storage Monitor Dev
+  CFBundleShortVersionString = 2.1.0
+  CFBundleVersion = 9
+  LSMinimumSystemVersion = 14.0
+  Identifier=local.macbook.storage-monitor.viewer.dev
+  Format=app bundle with Mach-O thin (arm64)
+  Signature=adhoc
+== release codesign deep strict
+  valid
+== architectures
+x86_64 arm64
+x86_64 arm64
+== release viewer: QA tooling symbols and literals
+  PerformanceScript.run symbols: 0
+  stall-monitor observer symbols: 0
+  literal "storage_to_monitoring"      0
+  literal "monitoring_to_storage_tree" 0
+  literal "atlas_to_living_tree"       0
+  literal "frame.committed %@ +%.0fms" 0
+  literal "main.stall %.0fms"          0
+  literal "script.launchReady"         0
+== dev viewer: QA tooling symbols and literals
+  PerformanceScript.run symbols: 0
+  stall-monitor observer symbols: 0
+  literal "storage_to_monitoring"      2
+  literal "monitoring_to_storage_tree" 1
+  literal "atlas_to_living_tree"       1
+  literal "frame.committed %@ +%.0fms" 1
+  literal "main.stall %.0fms"          1
+  literal "script.launchReady"         1

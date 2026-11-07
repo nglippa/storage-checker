@@ -1,0 +1,10 @@
+{
+  "prior_fingerprint": "02b14c83f377deb1610472eb7b93c8c4ec1ca51ba4efb7900def2c4a6c488349",
+  "receipt": "../distribution-final.json",
+  "compiler_source_inputs_identical": {
+    "SourcesShared/NativeQARuntime.swift": "79fe944c46a907867c4e2bb4fd384a47d3fcf78b846869507e59ddc1ffbb8022",
+    "SourcesShared/LifecycleQAScope.swift": "29825bac2b01b183de5515d4226219af5a7737fd544433a9c185246df81ebb22"
+  },
+  "probe_source_sha256": "b7f1a5b8bb7574d37eeb7a59777538fb734f71ce312e146efd705af4bd9b43c2",
+  "qualification": "Original receipt retained; no claim of a current whole-source distribution build or package."
+}

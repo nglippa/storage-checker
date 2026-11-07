@@ -12,6 +12,7 @@ struct ExternalVolumeControl: Sendable {
 
     @discardableResult func enroll(uuid: String, replaceBacking: Bool = false) throws -> ExternalVolumeRegistration {
         guard NativeQARuntime.active == nil else { try NativeQARuntime.reject("External enrollment is outside the native QA fixture") }
+        guard LifecycleQAScope.active == nil else { try LifecycleQAScope.refuse("External enrollment is outside the lifecycle QA fixture") }
         guard let observations = try ExternalVolumeObservationStore(baseDirectory: baseDirectory).read(),
               let descriptor = try ExternalVolumeCatalog.resolve(uuid: uuid, descriptors: observations.descriptors) else { throw ExternalVolumeError.invalidIdentity }
         let saved = try registry.enroll(descriptor, replaceBacking: replaceBacking)
@@ -24,6 +25,7 @@ struct ExternalVolumeControl: Sendable {
 
     func disable(uuid: String) throws {
         guard NativeQARuntime.active == nil else { try NativeQARuntime.reject("External controls are outside the native QA fixture") }
+        guard LifecycleQAScope.active == nil else { try LifecycleQAScope.refuse("External controls are outside the lifecycle QA fixture") }
         let saved = try registry.setEnabled(uuid: uuid, enabled: false)
         let paths = try ExternalVolumePaths(baseDirectory: baseDirectory, uuid: saved.volumeUUID, capacityScope: saved.capacityScope)
         try paths.prepare()
@@ -33,6 +35,7 @@ struct ExternalVolumeControl: Sendable {
 
     @discardableResult func request(uuid: String, action: String, path: String? = nil) throws -> UUID {
         guard NativeQARuntime.active == nil else { try NativeQARuntime.reject("External requests are outside the native QA fixture") }
+        guard LifecycleQAScope.active == nil else { try LifecycleQAScope.refuse("External requests are outside the lifecycle QA fixture") }
         let canonical = try ExternalVolumeIdentity(uuid).uuid
         guard var saved = try registry.read().volumes[canonical], saved.enabled else { throw ExternalVolumeError.unsupported("Monitoring for this drive is disabled.") }
         if action == "pause" || action == "resume" { saved = try registry.setIndexingPaused(uuid: canonical, paused: action == "pause") }
@@ -46,6 +49,7 @@ struct ExternalVolumeControl: Sendable {
 
     func signal(uuid: String? = nil) throws {
         guard NativeQARuntime.active == nil else { try NativeQARuntime.reject("External wake is outside the native QA fixture") }
+        guard LifecycleQAScope.active == nil else { try LifecycleQAScope.refuse("External wake is outside the lifecycle QA fixture") }
         let canonical = try uuid.map { try ExternalVolumeIdentity($0).uuid }
         let document = try registry.read()
         let revision = canonical.flatMap { document.volumes[$0]?.revision } ?? document.revision

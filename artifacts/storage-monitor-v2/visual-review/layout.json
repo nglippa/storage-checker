@@ -1,0 +1,247 @@
+[
+ {
+  "title": "01  Storage Inventory & Cleanup",
+  "subtitle": "Find the largest consumers \u2192 explore the hierarchy \u2192 understand a selection \u2192 review carefully",
+  "output": "storage-monitor-v2-collage-1-inventory-cleanup.png",
+  "rows": [
+   {
+    "heading": "01 / Before \u2192 after: Storage landing",
+    "tiles": [
+     {
+      "file": "before-i01-storage-default-atlas-light.png",
+      "title": "BEFORE  Storage landing (prior milestone)",
+      "note": "Light \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "i01-storage-default-atlas-light.png",
+      "title": "AFTER  Storage landing",
+      "note": "Light \u00b7 1440 \u00d7 840 pt \u00b7 capacity first, Review Cleanup as primary action, lighter Inspector"
+     }
+    ]
+   },
+   {
+    "heading": "02 / Before \u2192 after: Living Tree",
+    "tiles": [
+     {
+      "file": "before-i04-living-tree-overview-dark.png",
+      "title": "BEFORE  Living Tree overview",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "i04-living-tree-overview-dark.png",
+      "title": "AFTER  Living Tree 2D overview",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 labelled controls outside canvas, Navigator collapsed, tree fills viewport"
+     }
+    ]
+   },
+   {
+    "heading": "03 / Living Tree exploration",
+    "tiles": [
+     {
+      "file": "i05-living-tree-3d-dark.png",
+      "title": "Living Tree 3D",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 same encoding as 2D"
+     },
+     {
+      "file": "i06-living-tree-selected-folder-dark.png",
+      "title": "Selected branch and details",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 name, size, share of parent, Explore Folder, synchronized Navigator"
+     }
+    ]
+   },
+   {
+    "tiles": [
+     {
+      "file": "i07-living-tree-selection-light.png",
+      "title": "Selection in 2D, light",
+      "note": "Light \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "i08-living-tree-navigation-help-component.png",
+      "title": "Navigation help (component)",
+      "note": "Dark \u00b7 standalone component render, not a window"
+     }
+    ]
+   },
+   {
+    "heading": "04 / Hierarchy and Inspector",
+    "tiles": [
+     {
+      "file": "i03-expanded-hierarchy-folder-details-light.png",
+      "title": "Folder hierarchy, selected folder",
+      "note": "Light \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "i17-storage-inspector-expanded-light.png",
+      "title": "Inspector with Storage details and Cleanup & safety expanded",
+      "note": "Light \u00b7 1440 \u00d7 840 pt \u00b7 progressive disclosure"
+     }
+    ]
+   },
+   {
+    "heading": "05 / Largest items",
+    "tiles": [
+     {
+      "file": "i10-largest-files-dark.png",
+      "title": "Largest Files",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "i11-largest-folders-light.png",
+      "title": "Largest Folders",
+      "note": "Light \u00b7 1440 \u00d7 840 pt"
+     }
+    ]
+   },
+   {
+    "heading": "06 / Before \u2192 after: Cleanup Review",
+    "tiles": [
+     {
+      "file": "before-i12-cleanup-review-candidates-dark.png",
+      "title": "BEFORE  Cleanup assessments (prior milestone)",
+      "note": "Dark \u00b7 1440 \u00d7 900 pt"
+     },
+     {
+      "file": "i13-cleanup-candidate-selected-dark.png",
+      "title": "AFTER  All assessments, item selected",
+      "note": "Dark \u00b7 1440 \u00d7 900 pt \u00b7 Item / Review status / Storage; recovery stated as unknown"
+     }
+    ]
+   },
+   {
+    "tiles": [
+     {
+      "file": "i12-cleanup-review-candidates-dark.png",
+      "title": "Empty review-candidate queue",
+      "note": "Dark \u00b7 real QA data: saved evidence is stale, so no candidates; next steps offered"
+     },
+     {
+      "file": "i15-cleanup-all-assessments-dark.png",
+      "title": "Review plan (component)",
+      "note": "Dark \u00b7 informational plan; nothing is moved"
+     }
+    ]
+   },
+   {
+    "heading": "07 / Cleanup item explanation (tall component renders)",
+    "tiles": [
+     {
+      "file": "i14-cleanup-item-full-details-light.png",
+      "title": "Cleanup item, full Inspector",
+      "note": "Light \u00b7 480 pt wide component render"
+     },
+     {
+      "file": "i16-cleanup-other-item-details-dark.png",
+      "title": "Another real item, full Inspector",
+      "note": "Dark \u00b7 480 pt wide component render"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "title": "02  Monitoring & Application Experience",
+  "subtitle": "Available now \u2192 latest change \u2192 trend with events \u2192 explanation \u2192 evidence",
+  "output": "storage-monitor-v2-collage-2-monitoring-experience.png",
+  "rows": [
+   {
+    "heading": "01 / Before \u2192 after: Monitoring overview",
+    "tiles": [
+     {
+      "file": "before-m01-monitoring-default-large-dark.png",
+      "title": "BEFORE  Monitoring overview (prior milestone)",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt"
+     },
+     {
+      "file": "m01-monitoring-default-large-dark.png",
+      "title": "AFTER  Monitoring overview",
+      "note": "Dark \u00b7 1440 \u00d7 840 pt \u00b7 compact summary, 160 pt chart, loss/recovery points \u2265 1 GB, 4-column events"
+     }
+    ]
+   },
+   {
+    "heading": "02 / Connected chart, list and explanation",
+    "tiles": [
+     {
+      "file": "m04-monitoring-selected-event-large-light.png",
+      "title": "Event selected (exact measurement-ID link)",
+      "note": "Light \u00b7 1440 \u00d7 840 pt \u00b7 chart point, table row and Inspector show the same event"
+     },
+     {
+      "file": "m10-monitoring-minimum-summary-scrolled-light.png",
+      "title": "Minimum size, summary scrolled",
+      "note": "Light \u00b7 1000 \u00d7 640 pt content"
+     }
+    ]
+   },
+   {
+    "heading": "03 / Before \u2192 after: Minimum window (1000 \u00d7 700 equivalent)",
+    "tiles": [
+     {
+      "file": "before-m02-monitoring-minimum-dark.png",
+      "title": "BEFORE  Minimum size",
+      "note": "Dark \u00b7 1000 \u00d7 640 pt content \u00b7 chart pushed out of view"
+     },
+     {
+      "file": "m02-monitoring-minimum-dark.png",
+      "title": "AFTER  Minimum size",
+      "note": "Dark \u00b7 1000 \u00d7 640 pt content \u00b7 chart and events both visible"
+     }
+    ]
+   },
+   {
+    "tiles": [
+     {
+      "file": "m03-monitoring-minimum-light.png",
+      "title": "Minimum size, light",
+      "note": "Light \u00b7 1000 \u00d7 640 pt content"
+     },
+     {
+      "file": "m05-monitoring-selected-event-minimum-dark.png",
+      "title": "Minimum size with event selected",
+      "note": "Dark \u00b7 KNOWN CAPTURE ARTIFACT: offscreen split-view inspector text renders dim; see standalone panels"
+     }
+    ]
+   },
+   {
+    "heading": "04 / Before \u2192 after: Event explanation",
+    "tiles": [
+     {
+      "file": "before-m06-explanation-complete-dark.png",
+      "title": "BEFORE  Explanation panel",
+      "note": "Dark \u00b7 440 pt component render"
+     },
+     {
+      "file": "m06-explanation-complete-dark.png",
+      "title": "AFTER  Explanation panel",
+      "note": "Dark \u00b7 What happened / Possible explanation / How certain / What can I do / Details"
+     }
+    ]
+   },
+   {
+    "tiles": [
+     {
+      "file": "m08-latest-notable-explanation-light.png",
+      "title": "Latest notable change, light",
+      "note": "Light \u00b7 offsetting allocation shown"
+     },
+     {
+      "file": "m07-details-and-evidence-expanded-light.png",
+      "title": "Details and evidence expanded",
+      "note": "Light \u00b7 520 pt component render \u00b7 all technical evidence retained"
+     }
+    ]
+   },
+   {
+    "heading": "05 / Settings",
+    "tiles": [
+     {
+      "file": "m09-settings-dark.png",
+      "title": "Settings",
+      "note": "Dark \u00b7 640 pt component render \u00b7 privacy summary with Permission details disclosure"
+     }
+    ]
+   }
+  ]
+ }
+]

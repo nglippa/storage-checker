@@ -1,0 +1,13 @@
+== native-final-run.log
+launch ready: ['+291ms after script start'] | first inventory.load: 87.4ms mode=Explorer folder=root
+transition                       n  first-frame ms (med/min/max)   ready ms (med/min/max)   main blocked ms (med/max)  longest stall
+storage_to_monitoring            5     141/  132/  193              0/    0/    0         141/  193             193   active=5/5
+monitoring_to_storage            5     109/   63/  128              0/    0/    0         128/  203             128   active=5/5
+open_folder                      5      35/   24/   99            106/   91/  119          54/   99              99   active=5/5
+parent_folder                    5      37/   21/   91            107/   72/  142           0/  119              91   active=5/5
+select_nested_tile               3      56/   31/   61              0/    0/    0          64/  103             103   active=3/3
+select_folder_inspector_open     4      70/   67/  120              0/    0/    0          70/  120             120   active=4/4
+atlas_to_living_tree             3      41/   35/   45              0/    0/  380          67/   72              72   active=3/3
+living_tree_to_atlas             3      31/   27/   35              0/    0/    0           0/   97              97   active=3/3
+storage_to_monitoring_tree       3     138/  134/  139              0/    0/    0         138/  139             139   active=3/3
+monitoring_to_storage_tree       3     157/  156/  160              0/    0/    0         157/  228             160   active=3/3

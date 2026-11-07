@@ -31,6 +31,12 @@ func run(_ path: String, _ args: [String], timeout: Double = 10, cap: Int = 2621
     let fd = pipe.fileHandleForReading.fileDescriptor, errorFD = errorPipe.fileHandleForReading.fileDescriptor
     _ = fcntl(fd, F_SETFL, O_NONBLOCK); _ = fcntl(errorFD, F_SETFL, O_NONBLOCK)
     let deadline = Date().addingTimeInterval(timeout)
+    return captureCommandOutput(task, pipe, errorPipe, deadline: deadline, cap: cap)
+}
+
+// Shared capture engine: the caller owns launch/readiness; the absolute deadline never resets.
+private func captureCommandOutput(_ task: Process, _ pipe: Pipe, _ errorPipe: Pipe, deadline: Date, cap: Int) -> CommandResult {
+    let fd = pipe.fileHandleForReading.fileDescriptor, errorFD = errorPipe.fileHandleForReading.fileDescriptor
     var bytes = Data(), errors = Data(), expired = false, truncated = false
     func drainStream(_ descriptor: Int32, _ destination: inout Data) {
         var buffer = [UInt8](repeating: 0, count: 8192)
@@ -259,13 +265,28 @@ func backupDatabase(_ directory: URL, keep: Int = 3) throws -> URL? {
 // isolated home with a recording launch control, never the user's real LaunchAgents.
 struct MonitorInstallLayout {
     let home: URL
+    let qa: LifecycleQAScope?
+    init(home: URL, qa: LifecycleQAScope? = nil) { self.home = home; self.qa = qa }
     static let current = MonitorInstallLayout(home: fm.homeDirectoryForCurrentUser)
+    static var active: MonitorInstallLayout { LifecycleQAScope.active.map { MonitorInstallLayout(home: $0.home, qa: $0) } ?? .current }
+    var labels: [String] { qa?.labels ?? [label, baselineLabel, inventoryLabel] }
     var data: URL { home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor") }
     var app: URL { home.appendingPathComponent("Applications/MacBook Storage Monitor.app") }
     var executable: String { app.appendingPathComponent("Contents/MacOS/StorageMonitor").path }
     func agent(_ name: String) -> URL { home.appendingPathComponent("Library/LaunchAgents/\(name).plist") }
     var agents: [(label: String, url: URL, plist: [String: Any])] {
-        [(label, agent(label), agentPlist(executable, data.path)),
+        if let qa {
+            return zip(qa.labels, [agentPlist(executable, data.path), baselineAgentPlist(executable, data.path), inventoryAgentPlist(executable, data.path)]).enumerated().map { index, pair in
+                var plist = pair.1
+                plist["Label"] = pair.0
+                plist["ProgramArguments"] = qa.workerArguments(command: ["check", "initialize-baseline", "inventory-work"][index])
+                plist["StandardOutPath"] = qa.logs + "/agent-\(index).log"
+                plist["StandardErrorPath"] = qa.logs + "/agent-\(index)-errors.log"
+                plist["EnvironmentVariables"] = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TMPDIR": qa.temporary + "/", "SQLITE_TMPDIR": qa.temporary]
+                return (pair.0, agent(pair.0), plist)
+            }
+        }
+        return [(label, agent(label), agentPlist(executable, data.path)),
          (baselineLabel, agent(baselineLabel), baselineAgentPlist(executable, data.path)),
          (inventoryLabel, agent(inventoryLabel), inventoryAgentPlist(executable, data.path))]
     }
@@ -274,9 +295,9 @@ struct MonitorInstallLayout {
 /// missed calendar check once on wake). nil unless background monitoring is installed for this data
 /// directory, so disabling it stops maintenance. `kickstart` without `-k` never restarts a running
 /// worker, so wakes cannot overlap a run.
-func scheduledInventoryWake(directory: URL, layout: MonitorInstallLayout = .current) -> [String]? {
-    guard directory.standardizedFileURL == layout.data.standardizedFileURL, fm.fileExists(atPath: layout.agent(inventoryLabel).path) else { return nil }
-    return ["kickstart", "gui/\(getuid())/\(inventoryLabel)"]
+func scheduledInventoryWake(directory: URL, layout: MonitorInstallLayout = .active) -> [String]? {
+    guard directory.standardizedFileURL == layout.data.standardizedFileURL, fm.fileExists(atPath: layout.agent(layout.labels[2]).path) else { return nil }
+    return ["kickstart", "gui/\(getuid())/\(layout.labels[2])"]
 }
 typealias LaunchControl = (_ arguments: [String], _ acceptable: Bool) throws -> Void
 let systemLaunchControl: LaunchControl = { arguments, acceptable in _ = try launchctl(arguments, acceptable: acceptable) }
@@ -288,11 +309,17 @@ func isQuarantined(_ url: URL) -> Bool { getxattr(url.path, "com.apple.quarantin
 @discardableResult
 func install(layout: MonitorInstallLayout = .current, source: URL = Bundle.main.bundleURL, control: @escaping LaunchControl = systemLaunchControl,
              fault: (InstallJournal.Phase) throws -> Void = { _ in }, rollbackOnFailure: Bool = true) throws -> [String] {
+    try layout.validateQABoundary()
+    if let qa = layout.qa {
+        try qa.admit(command: "install")
+        try qa.validateBundle(source, roles: ["V1", "V2"])
+    }
+    let control = layout.guardedControl(control)
     guard source.pathExtension == "app" else { throw Failure("Build and run the bundled executable using bin/storage-monitor") }
     try privateDirectory(layout.data)
     var notes = try recoverInterruptedInstall(layout: layout, control: control)
     try fm.createDirectory(at: layout.app.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try fm.createDirectory(at: layout.agent(label).deletingLastPathComponent(), withIntermediateDirectories: true)
+    try fm.createDirectory(at: layout.agent(layout.labels[0]).deletingLastPathComponent(), withIntermediateDirectories: true)
     var transaction = try InstallTransaction.begin(layout, control: control)
     do {
         // Stop only this monitor's agents (by label, whatever program a stale agent points at).
@@ -347,13 +374,15 @@ func install(layout: MonitorInstallLayout = .current, source: URL = Bundle.main.
     if isQuarantined(layout.app) {
         notes.append("This copy was downloaded, so macOS may block the background monitor without showing a prompt. If no readings appear, open ~/Applications/MacBook Storage Monitor.app once in Finder and allow it in System Settings → Privacy & Security.")
     }
-    notes.append("Installed \(layout.agent(label).path)\nRuns at login and every :00/:30 (calendar catch-up after sleep).")
+    notes.append("Installed \(layout.agent(layout.labels[0]).path)\n" + (layout.qa == nil ? "Runs at login and every :00/:30 (calendar catch-up after sleep)." : "Disposable fixture services registered. Private plists do not establish login persistence."))
     return notes
 }
 
 @discardableResult
 func uninstall(layout: MonitorInstallLayout = .current, control: @escaping LaunchControl = systemLaunchControl) throws -> [String] {
-    var notes = try recoverInterruptedInstall(layout: layout, control: control)
+    try layout.validateQABoundary()
+    let control = layout.guardedControl(control)
+    var notes = try recoverInterruptedInstall(layout: layout, control: control, restart: layout.qa == nil)
     for agent in layout.agents { try control(["bootout", "gui/\(getuid())/\(agent.label)"], true) }
     for url in layout.agents.map(\.url) + layout.duplicateAgents where fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
     notes.append("Background monitoring disabled; LaunchAgents removed. App and history retained: \(layout.data.path)")
@@ -368,7 +397,8 @@ func log(_ directory: URL, _ message: String) {
     if !fm.fileExists(atPath: url.path) { fm.createFile(atPath: url.path, contents: nil, attributes: [.posixPermissions: 0o600]) }
     if let file = try? FileHandle(forWritingTo: url) { defer { try? file.close() }; _ = try? file.seekToEnd(); try? file.write(contentsOf: Data("\(iso(Date().timeIntervalSince1970)) \(message.prefix(4096))\n".utf8)) }
 }
-func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications: Bool = false) throws {
+func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications: Bool = false, qa: LifecycleQAScope? = nil) throws {
+    if let qa { try qa.admit(command: "check"); try qa.validateFixtures(); try required(directory.path == qa.data.path, "Lifecycle QA check data mismatch") }
     try privateDirectory(directory)
     let lockFD = open(directory.appendingPathComponent("check.lock").path, O_RDWR | O_CREAT, 0o600)
     try required(lockFD >= 0, "Cannot open execution lock")
@@ -376,7 +406,7 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
     guard flock(lockFD, LOCK_EX | LOCK_NB) == 0 else { print("A check is already running; skipped."); return }
     var internalFinished = false
     defer {
-        if NativeQARuntime.active == nil,
+        if NativeQARuntime.active == nil, LifecycleQAScope.active == nil, qa == nil,
            directory.standardizedFileURL == defaultData.standardizedFileURL || fm.fileExists(atPath: directory.appendingPathComponent("external-volumes").path) {
             do {
                 let observations = ExternalVolumeDiscovery.discover()
@@ -393,7 +423,7 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
     do {
         let db = try Database(directory.appendingPathComponent("history.sqlite3").path)
         let current = try measure()
-        let marker = currentEventMarker()   // FSEvents position at this reading
+        let marker = currentEventMarker(qa?.fixtures ?? home.path)   // FSEvents position at this reading
         let previousRow = try db.rows("SELECT id,timestamp FROM readings WHERE container=? AND timestamp < ? ORDER BY timestamp DESC,id DESC LIMIT 1", [current.container, current.timestamp]).first
         let previous = try db.rows("SELECT * FROM readings WHERE container=? AND timestamp < ? ORDER BY timestamp DESC,id DESC LIMIT 1", [current.container, current.timestamp]).first.flatMap(reading)
         let window = try db.rows("SELECT * FROM readings WHERE container=? AND timestamp >= ? AND timestamp < ?", [current.container, current.timestamp - 7200, current.timestamp]).compactMap(reading)
@@ -407,8 +437,8 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
             try plan.persist(db,current)
             try db.retain(current.timestamp); try db.exec("COMMIT")
         } catch { try? db.exec("ROLLBACK"); throw error }
-        var notification = "deduplicated"
-        if plan.needsNotification {
+        var notification = qa == nil ? "deduplicated" : "suppressed:lifecycle-qa"
+        if plan.needsNotification && qa == nil {
             let delta = evaluation.delta.map { size($0) } ?? "no previous reading"
             notification = notify("Storage \(evaluation.severity.uppercased())", "\(size(current.free)) free; change \(delta). \(evaluation.reasons.joined(separator: "; "))")
             try plan.notificationResult(db,current,notification)
@@ -422,14 +452,16 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         let prior = previousRow.flatMap { row in Int64(row["id"] ?? "").flatMap { id in Double(row["timestamp"] ?? "").map { (id: id, time: $0) } } }
         // Comprehensive coverage of the startup Data volume once established; until then (or with
         // {"mode":"folders"} in coverage.json) the predefined monitored folders.
-        let comprehensive = coverageMode(directory) == "comprehensive"
+        let comprehensive = qa == nil && coverageMode(directory) == "comprehensive"
         let region = comprehensive ? startupDataRegion(current) : (region: nil, reason: "Comprehensive coverage is turned off in coverage.json.")
         let lockPath = directory.appendingPathComponent("attribution.lock").path
         var evidence: [String: Any]
         if let coverageRegion = region.region, let wide = collectCoverageEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, region: coverageRegion, volumeAllocated: dataVolumeAllocated(current)?.allocated, lockPath: lockPath) {
             evidence = wide
         } else {
-            evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker, roots: defaultMonitoredRoots() + configuredRoots(directory), lockPath: lockPath)
+            evidence = collectIntervalEvidence(db: db, readingId: readingId, readingTime: current.timestamp, previous: prior, marker: marker,
+                roots: qa.map { [MonitoredRoot(path: $0.fixtures, label: "Disposable lifecycle fixtures")] } ?? (defaultMonitoredRoots() + configuredRoots(directory)),
+                within: qa?.root ?? home.path, includeProcesses: qa == nil, lockPath: lockPath)
             let lifecycle = decodeCoverageLifecycle(db)
             evidence["coverage"] = ["scope": "folders", "reason": region.reason ?? (lifecycle == nil ? "Comprehensive coverage has not started yet." : "Comprehensive coverage is still being established (\(lifecycle!.baselined) of \(lifecycle!.units) areas measured)."),
                                     "comprehensive_state": lifecycle?.state ?? "not_initialized"]
@@ -444,11 +476,12 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         catch { log(directory, "attribution not stored: \(error)") }
         let folders = evidence["folders"] as? [String: Any] ?? [:]
         log(directory, "attribution \((evidence["coverage"] as? [String: Any])?["scope"] ?? "folders") \(folders["status"] ?? "?") measured=\(folders["measured"] ?? 0) carried=\(folders["carried"] ?? 0) pending=\(folders["pending"] ?? 0) changes=\(folders["changes_total"] ?? 0) activity=\((evidence["file_activity"] as? [String: Any])?["status"] ?? "?") \(Int(Date().timeIntervalSince(evidenceStarted) * 1000))ms peakMB=\(peakMemoryBytes() / 1_048_576)")
-        if forceDiagnostics || !evaluation.growth.subtracting(plan.prior).isEmpty {
+        if qa == nil && (forceDiagnostics || !evaluation.growth.subtracting(plan.prior).isEmpty) {
             let snapshot = diagnosticSnapshot(current)
             try db.write("INSERT INTO diagnostics(timestamp,snapshot) VALUES(?,?)", [current.timestamp, snapshot])
         }
         try db.retain(current.timestamp)
+        if qa != nil { try db.state("lifecycle_qa_last_check_role", LifecycleQAScope.compiledFixtureRole) }
         let summary = "\(evaluation.severity.uppercased()) free=\(size(current.free)) used=\(size(current.used)) change=\(evaluation.delta.map(size) ?? "baseline") reasons=\(plan.signature.isEmpty ? "none" : plan.signature) notification=\(notification)"
         log(directory, summary); print(summary)
         // Inventory only wakes after capacity and attribution are durable. Its traversal and
@@ -458,8 +491,14 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         if directory.standardizedFileURL == defaultData.standardizedFileURL, Bundle.main.bundleIdentifier == "local.macbook.storage-monitor" {
             try? db.state("notification_authorization", notificationStatus().1)
         }
-        if let wake = scheduledInventoryWake(directory: directory) { _ = try? run("/bin/launchctl", wake, timeout: 2) }
-          internalFinished = true
+        if let wake = scheduledInventoryWake(directory: directory) {
+            if let qa { try MonitorInstallLayout(home: qa.home, qa: qa).guardedControl(systemLaunchControl)(wake, true) }
+            else { _ = try? run("/bin/launchctl", wake, timeout: 2) }
+        }
+        if let qa, needsInitializer, fm.fileExists(atPath: qa.agentURL(qa.labels[1]).path) {
+            try MonitorInstallLayout(home: qa.home, qa: qa).guardedControl(systemLaunchControl)(["kickstart", "gui/\(getuid())/\(qa.labels[1])"], true)
+        }
+        internalFinished = true
     } catch { log(directory, "ERROR \(error)"); throw error }
 }
 
@@ -479,6 +518,33 @@ func show(_ directory: URL, _ command: String, _ limit: Int) throws {
         print("LaunchAgent: \(service.status == 0 ? "loaded" : "not loaded")")
         for line in service.text.split(separator: "\n") where line.contains("last exit code") || line.contains("runs =") || line.contains("state =") { print(line.trimmingCharacters(in: .whitespaces)) }
     }
+}
+
+// A continuous-output fixture must actually be producing before its 100 ms capture test starts.
+// Process startup (including first Rosetta translation) has its own bounded fixture allowance.
+private func selfTestContinuousOutput() throws -> CommandResult {
+    let task = Process(), pipe = Pipe(), errorPipe = Pipe()
+    task.executableURL = URL(fileURLWithPath: "/usr/bin/yes")
+    task.standardInput = FileHandle.nullDevice; task.standardOutput = pipe; task.standardError = errorPipe
+    try task.run()
+    let fd = pipe.fileHandleForReading.fileDescriptor, errorFD = errorPipe.fileHandleForReading.fileDescriptor
+    _ = fcntl(fd, F_SETFL, O_NONBLOCK); _ = fcntl(errorFD, F_SETFL, O_NONBLOCK)
+    var captured = false
+    defer {
+        if !captured { _ = captureCommandOutput(task, pipe, errorPipe, deadline: .distantPast, cap: 16) }
+    }
+    let clock = SuspendingClock(), readyUntil = SuspendingClock.now.advanced(by: .seconds(10))
+    // FIONREAD = _IOR('f', 127, int) in Darwin sys/filio.h; the macro is unavailable to Swift.
+    let readableBytesRequest: UInt = 0x4004667f
+    var ready = false, available: Int32 = 0
+    while task.isRunning && clock.now < readyUntil {
+        if ioctl(fd, readableBytesRequest, &available) == 0 && available > 16 { ready = true; break }
+        Thread.sleep(forTimeInterval: 0.005)
+    }
+    try required(ready, "Continuous-output self-test fixture did not become ready within 10 active seconds (buffered=\(available))")
+    let result = captureCommandOutput(task, pipe, errorPipe, deadline: Date().addingTimeInterval(0.1), cap: 16)
+    captured = true
+    return result
 }
 
 func selfTest() throws {
@@ -541,12 +607,14 @@ func selfTest() throws {
     let a = open(lockPath,O_RDWR|O_CREAT,0o600), b = open(lockPath,O_RDWR,0o600)
     defer { close(a); close(b) }; _ = flock(a,LOCK_EX|LOCK_NB)
     try test(flock(b,LOCK_EX|LOCK_NB) != 0, "overlapping check lock")
-    let timed = try run("/bin/sleep", ["2"], timeout: 0.1)
+    let timed = try run("/bin/sleep", ["2"], timeout: 0.1, cap: 16)
     try test(timed.timedOut, "subprocess deadlines enforced")
+    try test(timed.data.isEmpty && timed.errors.isEmpty && !timed.truncated, "a deadline before producer output remains a valid bounded capture")
     let streams = try run("/usr/bin/du", ["-k", "-s", folder.appendingPathComponent("missing").path, folder.path], cap: 16)
     try test(!streams.data.isEmpty && !streams.errors.isEmpty && streams.truncated, "noisy stderr cannot displace directory-size stdout")
-    let continuous = try run("/usr/bin/yes", [], timeout: 0.1, cap: 16)
-    try test(continuous.timedOut && continuous.truncated && continuous.data.count == 16, "continuous output cannot starve deadline or exceed capture cap")
+    let continuous = try selfTestContinuousOutput()
+    try test(continuous.timedOut && continuous.truncated && continuous.data.count == 16, "continuous output cannot starve deadline or exceed capture cap (timedOut=\(continuous.timedOut), truncated=\(continuous.truncated), bytes=\(continuous.data.count))")
+    try test(kill(continuous.pid, 0) == -1 && errno == ESRCH, "continuous-output subprocess is terminated and reaped")
     try test(kill(timed.pid, 0) == -1 && errno == ESRCH, "timed-out subprocess is terminated and reaped, not orphaned")
 
     // Truncated property lists are refused, never parsed as partial documents.
@@ -610,6 +678,7 @@ func selfTest() throws {
 
 @MainActor func runMain() async throws {
     umask(0o077)
+    if try await runLifecycleQACommand(arguments: CommandLine.arguments) { return }
     if CommandLine.arguments.contains("--qa-runtime-root") || CommandLine.arguments.contains(where: { $0.hasPrefix("--qa-") }) {
         try await runNativeQAWorker(arguments: CommandLine.arguments); return
     }

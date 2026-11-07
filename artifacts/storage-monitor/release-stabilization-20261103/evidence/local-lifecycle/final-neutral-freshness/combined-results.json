@@ -1,0 +1,420 @@
+{
+  "current_source": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+  "current_records": [
+    {
+      "name": "viewer-model",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-gui.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 221.946,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": [
+        "PASS later discovery page preserves consumed cursor and invalidates earlier evidence when writer commits",
+        "PASS journal change between discovery pages remains consumable",
+        "PASS resynchronization during awaited page discards old result without advancing discovery or clearing stop",
+        "PASS suspended page cannot overwrite newly applied journal identity",
+        "PASS journal invalidation during awaited page preserves cursor and invalidation reasons",
+        "1149 GUI model/read-only tests passed; isolated fixtures: /private/tmp/storage-monitor-viewer-fixtures.sJH801",
+        "PASS viewer binary does not link UserNotifications (cannot send notifications)",
+        "PASS live capacity code launches no process and writes no SQL"
+      ]
+    },
+    {
+      "name": "browser-controller",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-inventory-model.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 128.739,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": [
+        "PASS migration review: on a real catalog tree, the deepest shown folder on each path is highlighted ([\"Data\", \"b\"]), its ancestors are context and unrelated folders fade",
+        "PASS migration readiness: folder loads stay responsive during a scan (p50 3.3 ms, max 3.4 ms; idle max 5.0 ms)",
+        "PASS agreement (APFS): mkfile -n + dd made a 64 GiB image with 50.3 MB allocated, per /usr/bin/stat",
+        "PASS agreement: the Overview leads with this image as a Docker Desktop disk image, with exactly stat's logical and allocated sizes",
+        "PASS agreement: the Inspector's selection is the same node and path; its Migration readiness sizes and its Indexed size (allocated) match",
+        "PASS agreement: the Living Tree draws the same node at its allocated size (50.3 MB label), on the same ancestry, with the Migration Review ring",
+        "PASS agreement: all three show the same text (68.72 GB logical, 50.3 MB allocated)",
+        "97 inventory model tests passed, 0 failed"
+      ]
+    },
+    {
+      "name": "chart-and-input",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-chart-geometry.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 220.424,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": [
+        "PASS presentation filters and focus reuse radial geometry for an already placed selection without catalog work",
+        "PASS filter changes retain a deep selected node through its real parents as a below-filter exception",
+        "PASS re-isolating the active root preserves the original entry selection",
+        "PASS isolation changes only the visual root of the immutable loaded hierarchy",
+        "PASS nested isolation retains the original entry selection",
+        "PASS Up follows actual parents out of isolation instead of restoring the entry child selection",
+        "PASS Reset restores All, Dim, focus off, isolation off and the entry selection",
+        "52 of 52 hosted chart geometry and scroll routing checks passed"
+      ]
+    },
+    {
+      "name": "inspector",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-cleanup-inspector-scroll.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 44.315,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": [
+        "PASS a completed queue refresh rebuilds the preview from its returned row measurement",
+        "PASS an object replacement discovered during refresh closes the old object's preview",
+        "PASS failed queue revalidation discards retained evidence and cannot offer Trash",
+        "PASS a replaced filesystem object with the same catalog ID clears stale evidence and preview",
+        "PASS a different queue selection clears stale evidence and preview",
+        "PASS cleanup Inspector scroll regression",
+        "exit: 0",
+        "log: /private/tmp/storage-monitor-cleanup-scroll.t1wgDJ/test.log"
+      ]
+    },
+    {
+      "name": "production-default-viewer-compile",
+      "argv": [
+        "/usr/bin/xcrun",
+        "swiftc",
+        "-sdk",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+        "-target",
+        "arm64-apple-macos14.0",
+        "-swift-version",
+        "5",
+        "-O",
+        "-parse-as-library",
+        "-module-cache-path",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/module-cache",
+        "-framework",
+        "SwiftUI",
+        "-framework",
+        "Charts",
+        "-framework",
+        "AppKit",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/CleanupInspectorView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/CleanupReviewQueueView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/DiagnosticAnalysis.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/EventDetailView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/EventPanelText.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/HistoryReader.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/HistoryView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/InventoryExplorerView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/InventoryNavigatorView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/InventoryView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/LiveCapacity.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/LivingTreeView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/MigrationReadinessView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/Models.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/MonitoringSetup.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/NativeQABootstrap.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/OverviewView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/PerformanceScript.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/PerformanceTrace.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/StateCompatibility.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/StorageAtlasView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/StorageDesign.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/StorageMonitorApp.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/StructuredExplorerFilterControls.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/StructuredExplorerView.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/ViewerIdentity.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupAssessment.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupDetectors.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupEvidence.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupModel.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupPresentation.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupReviewQueue.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupTrash.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupTrashSafety.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryChanges.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryExplorer.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryMap.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryMetadata.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryModels.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryPresentation.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryReloadPolicy.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryRequests.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LifecycleQAScope.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTree.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTree3D.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTreeCamera.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTreeColor.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/NativeQARuntime.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/SparseStorage.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/SparseStorageDetector.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/SparseStorageGuidance.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/StorageAtlas.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/StructuredExplorer.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/StructuredExplorerFiltering.swift",
+        "-o",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 99.628,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": []
+    },
+    {
+      "name": "fresh-viewer-linkage",
+      "argv": [
+        "/usr/bin/otool",
+        "-L",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 0.047,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": [
+        "\t/usr/lib/swift/libswiftQuartzCore.dylib (compatibility version 1.0.0, current version 5.0.0, weak)",
+        "\t/usr/lib/swift/libswiftSpatial.dylib (compatibility version 1.0.0, current version 1.0.0, weak)",
+        "\t/usr/lib/swift/libswiftUniformTypeIdentifiers.dylib (compatibility version 1.0.0, current version 877.5.1)",
+        "\t/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 128.120.2, weak)",
+        "\t/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 0.0.0, current version 0.0.0)",
+        "\t/usr/lib/swift/libswiftos.dylib (compatibility version 1.0.0, current version 1082.0.0)",
+        "\t/usr/lib/swift/libswiftsimd.dylib (compatibility version 1.0.0, current version 23.0.0, weak)",
+        "\t/usr/lib/swift/libswiftCoreGraphics.dylib (compatibility version 1.0.0, current version 1.0.0)"
+      ]
+    },
+    {
+      "name": "fresh-viewer-structural",
+      "argv": [
+        "python3",
+        "/private/tmp/storage-final-viewer-structural.py",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesGUI/LiveCapacity.swift"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 0.058,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": [
+        "PASS current viewer binary does not link UserNotifications",
+        "PASS live capacity code launches no process and writes no SQL",
+        "2 current-source structural checks passed"
+      ]
+    },
+    {
+      "name": "diff-check",
+      "argv": [
+        "git",
+        "-C",
+        "/Users/nicholaslippa/storage-checker-structured-explorer",
+        "diff",
+        "--check"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 0.079,
+      "source_fingerprint": "a8eced9f62d5c3a3c54e3bb9840970eb8733a66be77e5ed77d054019652eaa77",
+      "warnings": [],
+      "last_lines": []
+    }
+  ],
+  "retained_core_source": "78903e63bf4d700bc464dd1c01d7460856bd99d5f3f4f4bfa4f890ca18c4542b",
+  "retained_core_records": [
+    {
+      "name": "lifecycle-model-safety",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-lifecycle-qa.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 89.946,
+      "source_fingerprint": "78903e63bf4d700bc464dd1c01d7460856bd99d5f3f4f4bfa4f890ca18c4542b",
+      "warnings": [],
+      "last_lines": [
+        "PASS escaped recovery target rejected before launchctl or file restoration",
+        "PASS symlinked operational sidecar rejected",
+        "PASS hard-linked fixture rejected",
+        "PASS source-image substitution fails immutable profile pin",
+        "PASS source role cannot be swapped for another admitted image before transaction",
+        "PASS normal production dispatch remains independent when no QA flag supplied",
+        "PASS malformed lifecycle request rejects before production fallback",
+        "47 lifecycle QA model/safety checks passed; no real launchctl or GUI executed"
+      ]
+    },
+    {
+      "name": "production-default-monitor-compile",
+      "argv": [
+        "/usr/bin/xcrun",
+        "swiftc",
+        "-target",
+        "arm64-apple-macos14.0",
+        "-swift-version",
+        "5",
+        "-O",
+        "-parse-as-library",
+        "-module-cache-path",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/module-cache",
+        "-framework",
+        "AppKit",
+        "-framework",
+        "UserNotifications",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/Attribution.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/Coverage.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/CoverageSelfTest.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/Diagnostics.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/InstallSelfTest.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/InstallTransaction.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/Inventory.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/InventoryChangeJournal.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/InventoryCommands.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/InventoryProfile.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/LifecycleQACommands.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/MonitorSelfTestFixtures.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/NativeQAWorker.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/Sources/StorageMonitor.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupAssessment.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupDetectors.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupEvidence.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupModel.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupPresentation.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupReviewQueue.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupTrash.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/CleanupTrashSafety.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryChanges.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryExplorer.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryMap.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryMetadata.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryModels.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryPresentation.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryReloadPolicy.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/InventoryRequests.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LifecycleQAScope.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTree.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTree3D.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTreeCamera.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/LivingTreeColor.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/NativeQARuntime.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/SparseStorage.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/SparseStorageDetector.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/SparseStorageGuidance.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/StorageAtlas.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/StructuredExplorer.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/SourcesShared/StructuredExplorerFiltering.swift",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/tests/InventoryTests.swift",
+        "-o",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 83.987,
+      "source_fingerprint": "78903e63bf4d700bc464dd1c01d7460856bd99d5f3f4f4bfa4f890ca18c4542b",
+      "warnings": [],
+      "last_lines": []
+    },
+    {
+      "name": "monitor-self-test",
+      "argv": [
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/build/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor",
+        "self-test"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 83.968,
+      "source_fingerprint": "78903e63bf4d700bc464dd1c01d7460856bd99d5f3f4f4bfa4f890ca18c4542b",
+      "warnings": [],
+      "last_lines": [
+        "PASS disabling boots out and removes all three agents",
+        "PASS with background monitoring disabled no check wakes the inventory worker",
+        "PASS disabling retains history and the installed helper",
+        "PASS disabling twice is harmless",
+        "PASS a worker started while another process holds the history write lock waits and completes (exit 0), as after an in-place update",
+        "PASS a failed background worker writes one ERROR line to monitor.log (stderr goes to /dev/null), with the home folder shown as ~",
+        "PASS a quarantined (downloaded) helper is detected so setup can explain Gatekeeper",
+        "235 tests passed"
+      ]
+    },
+    {
+      "name": "inventory-integration",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-inventory.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 369.106,
+      "source_fingerprint": "78903e63bf4d700bc464dd1c01d7460856bd99d5f3f4f4bfa4f890ca18c4542b",
+      "warnings": [],
+      "last_lines": [
+        "PASS explicit refresh can recover a previously blocked inventory region",
+        "PASS an identity-mismatched child retires its retry while parent repair remains durably queued",
+        "PASS a replaced queued directory repairs its parent instead of retrying its old identity forever",
+        "PASS identity replacement recovery removes obsolete children and derives exact parent totals",
+        "PASS a queued directory replaced by a file repairs its parent and prunes obsolete descendants",
+        "PASS root identity replacement remains unfinished instead of completing the old root as unknown",
+        "PASS root replacement resumes in a new generation with exact new-root totals",
+        "379 inventory tests passed"
+      ]
+    },
+    {
+      "name": "structured-filtering",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-structured-filtering.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 63.087,
+      "source_fingerprint": "78903e63bf4d700bc464dd1c01d7460856bd99d5f3f4f4bfa4f890ca18c4542b",
+      "warnings": [],
+      "last_lines": [
+        "PASS migration review: with no detected items it reports no matches and keeps the selection visible",
+        "PASS migration review: path isolation keeps only items beneath the isolated folder",
+        "PASS migration review: path focus on a detected item emphasizes exactly its path to the root",
+        "PASS migration review: node sizes keep their allocated-size semantics (logical capacity is not drawn)",
+        "PASS migration review: a selected folder on a review path is not reported as excluded; only the deepest node is ringed",
+        "PASS migration review: an item grouped in the shown folder's own remainder highlights that group instead of reporting no matches",
+        "exit: 0",
+        "log: /private/tmp/storage-monitor-structured-filtering.Ir0ni2/test.log"
+      ]
+    },
+    {
+      "name": "monitor-supplement",
+      "argv": [
+        "/bin/sh",
+        "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source/scripts/test-monitor-supplement.sh"
+      ],
+      "cwd": "/private/tmp/storage-monitor-lifecycle-1prjqtwv/source",
+      "exit": 0,
+      "seconds": 155.6,
+      "source_fingerprint": "78903e63bf4d700bc464dd1c01d7460856bd99d5f3f4f4bfa4f890ca18c4542b",
+      "warnings": [],
+      "last_lines": [
+        "PASS disabling boots out and removes all three agents",
+        "PASS with background monitoring disabled no check wakes the inventory worker",
+        "PASS disabling retains history and the installed helper",
+        "PASS disabling twice is harmless",
+        "PASS a worker started while another process holds the history write lock waits and completes (exit 0), as after an in-place update",
+        "PASS a failed background worker writes one ERROR line to monitor.log (stderr goes to /dev/null), with the home folder shown as ~",
+        "PASS a quarantined (downloaded) helper is detected so setup can explain Gatekeeper",
+        "148 supplemental monitor tests passed"
+      ]
+    }
+  ],
+  "qualification": "Retained core records keep original78903e63... fingerprint; exact two-literal proof in retained-core-inputs.json. Current GUI recompiled."
+}

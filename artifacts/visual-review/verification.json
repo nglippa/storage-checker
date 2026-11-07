@@ -1,0 +1,177 @@
+{
+  "source_files_unchanged": 41,
+  "source_screenshots": 26,
+  "collages": 2,
+  "png_crc_validation": "passed",
+  "hidden_capture_guard": "passed",
+  "files": {
+    "storage-monitor-collage-1-inventory-cleanup.png": {
+      "width": 6400,
+      "height": 15280,
+      "bytes": 15741948,
+      "sha256": "272f09436265c87152a7feb4051b83aa1c5f45a12a12b53cd0c88b56dc5f7eb8"
+    },
+    "storage-monitor-collage-2-monitoring-experience.png": {
+      "width": 6400,
+      "height": 10100,
+      "bytes": 5595147,
+      "sha256": "b6b61e61d33aec9a395419f62625e523238018ce22feb3c061c41c2271f19f80"
+    },
+    "source-screenshots/i01-storage-default-atlas-light.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 1080407,
+      "sha256": "14b17ec0b4fe0b057f1f525ed67990565c7c022942b1ced6f3d4d4ff3216ee0a"
+    },
+    "source-screenshots/i02-storage-minimum-atlas-dark.png": {
+      "width": 2000,
+      "height": 1280,
+      "bytes": 646113,
+      "sha256": "0f4c8b0bc9403637805107093c19c56970ce3fe54ed073bdeacedc843f64f302"
+    },
+    "source-screenshots/i03-expanded-hierarchy-folder-details-light.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 1063308,
+      "sha256": "9a08e2356fd4a23b1a4eece58eefbdc994fe391b76dfc1e1106448bc299343f3"
+    },
+    "source-screenshots/i04-living-tree-overview-dark.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 1878456,
+      "sha256": "9c11ca0081d8e39a9002d05ded0d60d90dd84c20da9361f57e54a749760810fa"
+    },
+    "source-screenshots/i05-living-tree-3d-dark.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 1944596,
+      "sha256": "d11015cf51836b6de44f729c51dcd81a13af9944d7f40a9aa0f0535f4e96deef"
+    },
+    "source-screenshots/i06-living-tree-selected-folder-dark.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 1953214,
+      "sha256": "3d250f90fc5b590e2347508f0f9a6ab123c4d5b582ba31dbb7e5bad7643d9cd8"
+    },
+    "source-screenshots/i07-living-tree-selection-light.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 1876036,
+      "sha256": "faa28f23d964068cde310419cde413e7abb2d9d5678bef3c8ad9b7342001b398"
+    },
+    "source-screenshots/i08-living-tree-navigation-help-component.png": {
+      "width": 920,
+      "height": 1140,
+      "bytes": 147827,
+      "sha256": "35e3d41199c0b529085d35102331165b843860951bbd5b3fd1a347a32caf67b9"
+    },
+    "source-screenshots/i09-atlas-open-home-light.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 1333436,
+      "sha256": "cfec8fd7b38a39f9af025bce812bf3504672ef91c9a97d3ba208f9891d2ae836"
+    },
+    "source-screenshots/i10-largest-files-dark.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 810462,
+      "sha256": "2d9467d2fa055b8aef3a1ed085f05e89b382052c6416ee11cb15ae0e7e0f4bc1"
+    },
+    "source-screenshots/i11-largest-folders-light.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 663087,
+      "sha256": "6f317f286377d5791d2aa93c5f9edd1be5dec065dad3b28a19fe3dcfbdd7f501"
+    },
+    "source-screenshots/i12-cleanup-review-candidates-dark.png": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 317741,
+      "sha256": "2ee3bf5c767c520ba94b14c61fda3705345393dc09778d86fcacde610d81458e"
+    },
+    "source-screenshots/i13-cleanup-candidate-selected-dark.png": {
+      "width": 2880,
+      "height": 1800,
+      "bytes": 637680,
+      "sha256": "6ceeee0f6aa444de797726a183f4beb052e99cd0dec1170b43c5dd69e4213e8d"
+    },
+    "source-screenshots/i14-cleanup-item-full-details-light.png": {
+      "width": 960,
+      "height": 3200,
+      "bytes": 293203,
+      "sha256": "269440587fe0ea35a32023bd07a8ff7d10841b03c5141c95727d8f7a9856e9ab"
+    },
+    "source-screenshots/i15-cleanup-all-assessments-dark.png": {
+      "width": 1320,
+      "height": 1240,
+      "bytes": 137594,
+      "sha256": "9ccbe83c1795c3758670eb1e9cea271337999198efd64e8af6ab8e2ee8cb2005"
+    },
+    "source-screenshots/i16-cleanup-other-item-details-dark.png": {
+      "width": 960,
+      "height": 3200,
+      "bytes": 348745,
+      "sha256": "d2481d2a8cdab3a89bfc79e4917f72eae36bcd791e58d37bc3d55e421a7fc27a"
+    },
+    "source-screenshots/m01-monitoring-default-large-dark.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 542109,
+      "sha256": "5e5e062552dd0d306387157a1b2d262b23398d1fad0ab897c9100ff932483fe4"
+    },
+    "source-screenshots/m02-monitoring-minimum-dark.png": {
+      "width": 2000,
+      "height": 1280,
+      "bytes": 402290,
+      "sha256": "0d5d423ecc795cca716a616a8965c4589ae634a8246e7f3f7fe7ba5c4cb3f87f"
+    },
+    "source-screenshots/m03-monitoring-minimum-light.png": {
+      "width": 2000,
+      "height": 1280,
+      "bytes": 392694,
+      "sha256": "c1ce1bd90b123b34feed3f7a0bb75d31ca903e60e2966516caa59a0e387fa6cf"
+    },
+    "source-screenshots/m04-monitoring-selected-event-large-light.png": {
+      "width": 2880,
+      "height": 1680,
+      "bytes": 722445,
+      "sha256": "91c2d8d3dcfc0cf6d11c14c9210572bf91343bb6843f156c65b22f8192896572"
+    },
+    "source-screenshots/m05-monitoring-selected-event-minimum-dark.png": {
+      "width": 2000,
+      "height": 1280,
+      "bytes": 453347,
+      "sha256": "f623f39174fcc13bffe225e71a87402c53f2e4dc0a6fbf86718de92c1c0cb0f5"
+    },
+    "source-screenshots/m06-explanation-complete-dark.png": {
+      "width": 880,
+      "height": 2100,
+      "bytes": 211266,
+      "sha256": "de9b6192965eadba729b9c78fd6e82534456da1c25a6ef1a2212f4faac15a0c9"
+    },
+    "source-screenshots/m07-details-and-evidence-expanded-light.png": {
+      "width": 1040,
+      "height": 4700,
+      "bytes": 801335,
+      "sha256": "e66436c17af88453caf350c7a21b61450bda7cc4857d3a8d67b8b4e692bb161b"
+    },
+    "source-screenshots/m08-latest-notable-explanation-light.png": {
+      "width": 880,
+      "height": 2100,
+      "bytes": 183656,
+      "sha256": "dd6bacc55b498f09bb66a524342754a1d0042e3253290522c6e1980fb0ad2343"
+    },
+    "source-screenshots/m09-settings-dark.png": {
+      "width": 1280,
+      "height": 1560,
+      "bytes": 255051,
+      "sha256": "e942be311a2f73d2cba53b392c996297d99e9d63c373f349582cd4f8512b0f6d"
+    },
+    "source-screenshots/m10-monitoring-minimum-summary-scrolled-light.png": {
+      "width": 2000,
+      "height": 1280,
+      "bytes": 359678,
+      "sha256": "9be6920c106993e4090e6c477d09a30f0d56285185cbb872efe6f2fcbc36560c"
+    }
+  }
+}

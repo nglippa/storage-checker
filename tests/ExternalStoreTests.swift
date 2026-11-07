@@ -30,14 +30,14 @@ private actor DelayedHistory {
         let second = try ExternalVolumePaths(baseDirectory: base, uuid: b, capacityScope: "filesystem:" + b)
         try first.prepare(); try second.prepare()
         let startup = base.appendingPathComponent("history.sqlite3").path
-        func history(_ path: String, free: Int64, scope: String = "fixture") throws {
+        func history(_ path: String, free: Int64, scope: String = "fixture", timestamp: Double = 10_000) throws {
             var database: OpaquePointer?
             precondition(sqlite3_open(path, &database) == SQLITE_OK)
             defer { sqlite3_close(database) }
-            let sql = "CREATE TABLE readings(id INTEGER PRIMARY KEY,timestamp REAL,container TEXT,free INTEGER,used INTEGER,volumes TEXT); CREATE TABLE alerts(id INTEGER PRIMARY KEY,timestamp REAL,severity TEXT,reasons TEXT,free INTEGER,delta INTEGER,notification TEXT); CREATE TABLE diagnostics(id INTEGER PRIMARY KEY,timestamp REAL,snapshot TEXT); INSERT INTO readings VALUES(1,10000,'\(scope)',\(free),100000000000,'[]');"
+            let sql = "CREATE TABLE readings(id INTEGER PRIMARY KEY,timestamp REAL,container TEXT,free INTEGER,used INTEGER,volumes TEXT); CREATE TABLE alerts(id INTEGER PRIMARY KEY,timestamp REAL,severity TEXT,reasons TEXT,free INTEGER,delta INTEGER,notification TEXT); CREATE TABLE diagnostics(id INTEGER PRIMARY KEY,timestamp REAL,snapshot TEXT); INSERT INTO readings VALUES(1,\(timestamp),'\(scope)',\(free),100000000000,'[]');"
             precondition(sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK)
         }
-        try history(startup, free: 50_000_000_000); try history(first.capacityDatabase, free: 10_000_000_000, scope: first.capacityScope); try history(second.capacityDatabase, free: 80_000_000_000, scope: second.capacityScope)
+        try history(startup, free: 50_000_000_000); try history(first.capacityDatabase, free: 10_000_000_000, scope: first.capacityScope, timestamp: 20_000); try history(second.capacityDatabase, free: 80_000_000_000, scope: second.capacityScope, timestamp: 30_000)
         let suite = "StorageMonitor.ExternalStoreTests." + UUID().uuidString
         let preferences = UserDefaults(suiteName: suite)!
         defer { preferences.removePersistentDomain(forName: suite) }
@@ -60,6 +60,8 @@ private actor DelayedHistory {
         await delayed.release()
         try await Task.sleep(for: .milliseconds(30))
         precondition(store.target.uuid == b && store.snapshot?.latest?.free == 80_000_000_000, "late previous-drive history cannot overwrite selected drive")
+        for _ in 0..<600 where store.monitoringHealth(at: Date()).lastSuccess != Date(timeIntervalSince1970: 10_000) { try await Task.sleep(for: .milliseconds(5)) }
+        precondition(store.monitoringHealth(at: Date()).lastSuccess == Date(timeIntervalSince1970: 10_000), "global monitoring health uses startup history while an external drive is selected")
         precondition(store.configuration.database == second.capacityDatabase && store.configuration.inventoryDatabase != second.inventoryDatabase, "both sections use the selected immutable context")
         precondition(store.live.state.reading == nil, "offline external drive cannot display startup live capacity")
         precondition(store.section == "history", "drive switching preserves current section")
@@ -113,6 +115,6 @@ private actor DelayedHistory {
         try plist(["Label": MonitoringSetupStatus.labels[0], "ProgramArguments": [executable.path]], agents.appendingPathComponent(MonitoringSetupStatus.labels[0] + ".plist"))
         precondition(!MonitoringSetupStatus.externalVolumesReady(home: fakeHome), "old wake configuration cannot advertise automatic resume")
         precondition(MonitoringSetupStatus.evaluate(home: fakeHome, bundledHelper: app).state == .needsUpdate, "same-version helper still requests update when external capability configuration is missing")
-        print("12 external ViewerStore/helper integration tests passed")
+        print("13 external ViewerStore/helper integration tests passed")
     }
 }

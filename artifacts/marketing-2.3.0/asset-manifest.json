@@ -1,0 +1,248 @@
+{
+  "README.md": {
+    "bytes": 5402,
+    "sha256": "73995b6551f417da1ae5e336dac48512b41bc1e99178df1874d8d820e97c1c3b"
+  },
+  "capture/build-and-render.sh": {
+    "bytes": 1509,
+    "sha256": "254387e97b73dd3c0aa2ffbf70e602860deb275de89c931d4ce40e4649cff0be"
+  },
+  "capture/compose.swift": {
+    "bytes": 5976,
+    "sha256": "b4752aedac6f20970c84b3a7aa35555d2e119ac27109fa44292b5335f07dda38"
+  },
+  "capture/demo-inventory.json": {
+    "bytes": 8555,
+    "sha256": "8208ac74e9d34fa9f088807c5afc3a50383bb632db14b8bfa1106c24e04d3603"
+  },
+  "capture/demo-schema.sql": {
+    "bytes": 23224,
+    "sha256": "7e8378a6441bc6c6a1b8990ef58574e041bd9b62f72d1dfa8d35f33f6e64fb3e"
+  },
+  "capture/make-demo.py": {
+    "bytes": 6546,
+    "sha256": "71c827afdd1c1fb99c8db326353962f7299ca49d47546b0f825772d3cbcd2515"
+  },
+  "capture/package-receipt.json": {
+    "bytes": 1294,
+    "sha256": "c8a71099182fc532557a231825ff623da4731538dafadc259da547ec37fa1c36"
+  },
+  "capture/package.py": {
+    "bytes": 1375,
+    "sha256": "bbb361836cd0cd77463e7d7c7ba1b23c69493de60ef41333c5cf453644f58dd2"
+  },
+  "capture/prepare-source.py": {
+    "bytes": 643,
+    "sha256": "b1c2048f61b911e3d2c4a5fc949a6e7dd3debf58869c52b53eb2327e0cf54dcd"
+  },
+  "capture/render.swift": {
+    "bytes": 6796,
+    "sha256": "8ae165ce09f11c725c94d2685a698592b4dc8eff6e63eacee6bd2b15d6c48bbe"
+  },
+  "capture/set-demo-identities.swift": {
+    "bytes": 2478,
+    "sha256": "4b2ad8c85fa96fdde82945951712b9791f5aa72da0e18efc1272bb30faee6a1d"
+  },
+  "capture/source-wiring.patch": {
+    "bytes": 1060,
+    "sha256": "9b0c79a750ab78cbe27c726e1511477723b4411ef64af1e2d662f555735fd1b4"
+  },
+  "capture/verification.json": {
+    "bytes": 1180,
+    "sha256": "3f013265e56c1491c96a169e3a4b313fdcfd6534500af7ab7fdcd559d8b21525"
+  },
+  "capture/verify-assets.py": {
+    "bytes": 1310,
+    "sha256": "7d6065003c596acf64a5c1d4f544c227c1ea724280c924648dafefb0b47a0dad"
+  },
+  "contact-sheet.png": {
+    "bytes": 1112859,
+    "sha256": "154a3d72ed308403360e6929f4d14d47e2be025a856699dbe5ed25e93d44c63a",
+    "width": 1800,
+    "height": 2450
+  },
+  "marketing/01-storage-overview-dark.png": {
+    "bytes": 883530,
+    "sha256": "2163115b77def5865b2e93aa67730d32155940b76041c3d88cee4d5596b2057d",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/02-storage-atlas-light.png": {
+    "bytes": 1241061,
+    "sha256": "bfdc2349939f90717e0313ebeef51aa21294128e6be1f3a02e504d034309c717",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/03-developer-workspace.png": {
+    "bytes": 878221,
+    "sha256": "6ad5bccef53ab1cd3f95cedb774c288535e486cefff2018056c6d454a1efcc45",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/04-media-library.png": {
+    "bytes": 702760,
+    "sha256": "1513ae48e092f2ffd2e509f5064dab3c7a75bac7073b0e801429820901548ef4",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/05-largest-files.png": {
+    "bytes": 797384,
+    "sha256": "8f6588965a429b76f1d518308517420ca6bf868326313579f66f967476d5c6cf",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/06-largest-folders.png": {
+    "bytes": 687570,
+    "sha256": "b2d5eaaaa2c383656e01fbbfc52fdaca8d6c97a13157e222421be02652eda06d",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/07-find-movies.png": {
+    "bytes": 493120,
+    "sha256": "d3a1c2155a043311b9578be6b694840d5a51c0b59d08b6d7f1dd447b914dd577",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/08-size-filter-dim.png": {
+    "bytes": 872496,
+    "sha256": "65561af7d57cc1568e9dbb1d59fadc0d094b5bfc01d2258aeffa33aaf0d5dc43",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/09-size-filter-hide.png": {
+    "bytes": 699636,
+    "sha256": "57aa75bdeb87d866a8e0bf9df02ac71d358c040e66aa1080bc54e496f1726453",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/10-path-to-root.png": {
+    "bytes": 806217,
+    "sha256": "f44eed6aef8a9fa12888330f4182b91cc315a0a0f43688907a5167457b8ec8ce",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/11-focus-on-folder.png": {
+    "bytes": 827394,
+    "sha256": "7cdbcf158b668216381e87dc3f7461e187351a12cd97ca71f3b7b62504995966",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/12-isolate-a-branch.png": {
+    "bytes": 790422,
+    "sha256": "6544eb3277dc8f7392925493a16835c047cb5fc5961ecfc7d932f2f12d9d0062",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/13-storage-history.png": {
+    "bytes": 650139,
+    "sha256": "58de9a450bdd10f98cbef12f1168c9598b40684110f50943b5c924b2f72c5e53",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/14-recorded-change.png": {
+    "bytes": 871804,
+    "sha256": "872e233d63228bbaff8be35e1abc177d6211c8b4751bcb8a043a98e2bb2f6f74",
+    "width": 3200,
+    "height": 2400
+  },
+  "marketing/15-compact-explorer.png": {
+    "bytes": 799454,
+    "sha256": "6b9e2e584b949c5f0603fc5fba93c9af030106fb18de12ea7310f689251a3155",
+    "width": 3200,
+    "height": 2400
+  },
+  "originals/01-storage-overview-dark.png": {
+    "bytes": 583321,
+    "sha256": "377efb5f33401506135de726bec7a24ef6278b8777610713889455829e7bb223",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/02-storage-atlas-light.png": {
+    "bytes": 965988,
+    "sha256": "e89e7ab70cbf77d2e290f5640bc01296965a5bb683a0f17d7eed6ae264de363f",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/03-developer-workspace.png": {
+    "bytes": 585778,
+    "sha256": "65e01968c475e07a0e43e2e164db24a8582e111bd55b183c82c39592445f3ebd",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/04-media-library.png": {
+    "bytes": 459509,
+    "sha256": "5d75067c2d76d49f5b52f46e1f1708caa245869b3e6c3f931cd39bae468b0fe7",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/05-largest-files.png": {
+    "bytes": 514520,
+    "sha256": "e769761657613fd8562a2b5671c51908a3fbd2b33d08e8fb155b9de0dae37169",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/06-largest-folders.png": {
+    "bytes": 478622,
+    "sha256": "45b4f83685b32f9a7af6a5bc1426aad8c387b7b8e46adfea2ccc107b83a9de60",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/07-find-movies.png": {
+    "bytes": 237060,
+    "sha256": "8b2860be3320a344c39b6c493ad583ee22fbe3888372892667eac63c11fb8592",
+    "width": 2400,
+    "height": 1440
+  },
+  "originals/08-size-filter-dim.png": {
+    "bytes": 587491,
+    "sha256": "d72cc9058f8596d99b316d98688124a729a7771436f909dc496c25e0b52af942",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/09-size-filter-hide.png": {
+    "bytes": 467434,
+    "sha256": "8263ac7074c949174ece05e98979befc697111b5d49e8b2779cdfce7ef0bdb6d",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/10-path-to-root.png": {
+    "bytes": 554924,
+    "sha256": "f3fb3d65d5ea71cb3a634e034634e06ecd9168630eac78bbc28c295ddd3db0fe",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/11-focus-on-folder.png": {
+    "bytes": 575765,
+    "sha256": "81b58b7c6be8d2b4335e2e7ffd139380feebb36d7cb06a44750e763274afd78a",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/12-isolate-a-branch.png": {
+    "bytes": 516349,
+    "sha256": "b50872a7d8eafa143f3b4761957b4369eba9c6dbd0875f67c43f022c26dff93e",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/13-storage-history.png": {
+    "bytes": 412355,
+    "sha256": "6797a6874d632b5f457a198c879adfbc6e6785eacbeaea05133044e36c6452e2",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/14-recorded-change.png": {
+    "bytes": 580054,
+    "sha256": "3350fca81987c1ad5156fbe9b5715104b10684efd88e47f6d3ff1456765f5ccb",
+    "width": 2880,
+    "height": 1920
+  },
+  "originals/15-compact-explorer.png": {
+    "bytes": 391916,
+    "sha256": "4a08c9b83d92ab35949c5bef6b7d5e324c4c7b8c782fd897091c323c4137859e",
+    "width": 2200,
+    "height": 1560
+  },
+  "shots.json": {
+    "bytes": 4576,
+    "sha256": "6feb7f1f66627dbd253d20328f0ef7d5c89734dbbe7de02fed534a67ccdb1e8d"
+  }
+}

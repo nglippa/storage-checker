@@ -1,0 +1,78 @@
+[
+  {
+    "argv": [
+      "/usr/bin/xcrun",
+      "clang",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-constant.c",
+      "-o",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-constant"
+    ],
+    "exit": 0,
+    "seconds": 0.39,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-constant"
+    ],
+    "exit": 0,
+    "seconds": 0.255,
+    "stdout": "0x4004667f\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/usr/bin/xcrun",
+      "swiftc",
+      "-O",
+      "-target",
+      "arm64-apple-macos14.0",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-probe.swift",
+      "-o",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-probe-arm64"
+    ],
+    "exit": 0,
+    "seconds": 2.522,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/usr/bin/arch",
+      "-arm64",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-probe-arm64"
+    ],
+    "exit": 0,
+    "seconds": 0.082,
+    "stdout": "PASS FIONREAD is non-consuming and distinguishes cap+1 from cap bytes\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/usr/bin/xcrun",
+      "swiftc",
+      "-O",
+      "-target",
+      "x86_64-apple-macos14.0",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-probe.swift",
+      "-o",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-probe-x86_64"
+    ],
+    "exit": 0,
+    "seconds": 1.774,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/usr/bin/arch",
+      "-x86_64",
+      "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/readiness-probe-x86_64"
+    ],
+    "exit": 0,
+    "seconds": 1.667,
+    "stdout": "PASS FIONREAD is non-consuming and distinguishes cap+1 from cap bytes\n",
+    "stderr": ""
+  }
+]

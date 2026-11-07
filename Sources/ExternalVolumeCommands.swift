@@ -2,6 +2,7 @@ import Foundation
 
 func externalVolumeCommand(_ command: String, args: [String], directory: URL) throws {
     guard NativeQARuntime.active == nil else { try NativeQARuntime.reject("External commands are outside the native QA fixture") }
+    guard LifecycleQAScope.active == nil else { try LifecycleQAScope.refuse("External commands are outside the lifecycle QA fixture") }
     let control = ExternalVolumeControl(baseDirectory: directory)
     func uuid() throws -> String {
         guard args.count > 1 else { throw Failure("A volume UUID is required") }

@@ -1,5 +1,7 @@
 # Cleanup Inspector — evidence-based storage intelligence
 
+Scroll-jump follow-up (2026-10-31): [reproduction, fix and verification](CLEANUP-INSPECTOR-SCROLL.md). Same-item queue refresh was collapsing the right-side Inspector; scroll retention is verified offscreen. Visible-window wheel/trackpad and disclosure checks remain **NOT VERIFIED**.
+
 <!-- rc-current:start -->
 ## User-directed single-item Trash — current milestone (2026-10-27)
 

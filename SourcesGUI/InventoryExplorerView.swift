@@ -495,7 +495,7 @@ struct InventoryExplorerView: View {
             .onChange(of: explorer.scrollRequest) { _, id in
                 guard let id else { return }
                 if explorer.rows.contains(where: { $0.id == id }) {
-                    withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
                     explorer.scrollHandled()
                 }
             }
@@ -551,7 +551,7 @@ struct InventoryExplorerView: View {
 
     @ViewBuilder private func disclosure(_ node: InventoryNode) -> some View {
         if node.kind == .directory && node.childCount > 0 {
-            Button { withAnimation(.easeOut(duration: 0.15)) { explorer.toggle(node.id) } } label: {
+            Button { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { explorer.toggle(node.id) } } label: {
                 Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                     .rotationEffect(.degrees(explorer.state.isExpanded(node.id) ? 90 : 0))
                     .frame(width: 14, height: 14).contentShape(Rectangle())

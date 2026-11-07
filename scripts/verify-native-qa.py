@@ -19,9 +19,9 @@ def snap(path):
  s=path.lstat();return {'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'mode':s.st_mode&0o777,'size':s.st_size}
 prefs=Path.home()/'Library/Preferences/local.macbook.storage-monitor.viewer.plist';before=snap(prefs)
 try:
- p=worker();check(p.returncode in [0,75],'actual bounded pinned helper initializes only fixture catalog')
+ p=worker();summary=json.loads(p.stdout);check(p.returncode in [0,75] and summary.get('outcome') != 'failed' and summary.get('status') in ['completed','continuing','deferred'] and isinstance(summary.get('generation'),int),'actual bounded pinned helper produces a fixture inventory generation')
  p=run('bootstrap-verify',[str(exe),'--qa-runtime-root',str(root),'--qa-verify-only']);check(p.returncode==0,'actual QA executable verifies before native lifecycle from unrelated working directory')
- data=json.loads(p.stdout);check(data['bundle_identifier']=='local.macbook.storage-monitor.viewer.native-qa' and data['qa_preference_readback'],'actual QA preference domain readback')
+ data=json.loads(p.stdout);check(data.get('foundation_process_worker_outcome') != 'failed' and data.get('foundation_process_persisted_fixture_nodes',0)>1 and isinstance(data.get('foundation_process_worker_generation'),int),'Foundation Process child produced actual fixture inventory before NSApplication');check(data['bundle_identifier']=='local.macbook.storage-monitor.viewer.native-qa' and data['qa_preference_readback'],'actual QA preference domain readback')
  check(data['nsapplication_initialized'] is False and data['native_window_launched'] is False,'bootstrap probe did not initialize NSApplication')
  check(data['sqlite_vfs_temporary_filename'].startswith(str(root/'Temporary')+'/'),'actual SQLite VFS temporary filename inside QA temporary directory')
  check(data['destinations']['root']==str(root) and data['destinations']['catalog']==str(root/'ApplicationSupport/history.sqlite3'),'actual runtime path manifest uses exact anchored QA root')

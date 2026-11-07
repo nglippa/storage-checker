@@ -1,0 +1,175 @@
+{
+  "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+  "records": [
+    {
+      "stage": "compile-delayed-producer-arm64",
+      "argv": [
+        "/usr/bin/xcrun",
+        "clang",
+        "-O2",
+        "-target",
+        "arm64-apple-macos14.0",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/delayed-producer.c",
+        "-o",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/DelayedProducer-arm64"
+      ],
+      "cwd": "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/source",
+      "started_utc": "2026-11-05T05:29:57Z",
+      "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+      "pid": 17761,
+      "exit": 0,
+      "seconds": 0.257,
+      "passed_checks": 0,
+      "last_lines": [],
+      "failure_lines": [],
+      "warning_lines": [],
+      "source_unchanged": true
+    },
+    {
+      "stage": "compile-counterexamples-arm64",
+      "argv": [
+        "/usr/bin/xcrun",
+        "swiftc",
+        "-O",
+        "-parse-as-library",
+        "-target",
+        "arm64-apple-macos14.0",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/CounterexampleProbes.swift",
+        "-o",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/Counterexamples-arm64"
+      ],
+      "cwd": "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/source",
+      "started_utc": "2026-11-05T05:29:57Z",
+      "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+      "pid": 17764,
+      "exit": 0,
+      "seconds": 1.556,
+      "passed_checks": 0,
+      "last_lines": [],
+      "failure_lines": [],
+      "warning_lines": [],
+      "source_unchanged": true
+    },
+    {
+      "stage": "compile-delayed-producer-x86_64",
+      "argv": [
+        "/usr/bin/xcrun",
+        "clang",
+        "-O2",
+        "-target",
+        "x86_64-apple-macos14.0",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/delayed-producer.c",
+        "-o",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/DelayedProducer-x86_64"
+      ],
+      "cwd": "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/source",
+      "started_utc": "2026-11-05T05:29:59Z",
+      "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+      "pid": 17798,
+      "exit": 0,
+      "seconds": 0.082,
+      "passed_checks": 0,
+      "last_lines": [],
+      "failure_lines": [],
+      "warning_lines": [],
+      "source_unchanged": true
+    },
+    {
+      "stage": "compile-counterexamples-x86_64",
+      "argv": [
+        "/usr/bin/xcrun",
+        "swiftc",
+        "-O",
+        "-parse-as-library",
+        "-target",
+        "x86_64-apple-macos14.0",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/CounterexampleProbes.swift",
+        "-o",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/Counterexamples-x86_64"
+      ],
+      "cwd": "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/source",
+      "started_utc": "2026-11-05T05:29:59Z",
+      "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+      "pid": 17801,
+      "exit": 0,
+      "seconds": 0.868,
+      "passed_checks": 0,
+      "last_lines": [],
+      "failure_lines": [],
+      "warning_lines": [],
+      "source_unchanged": true
+    },
+    {
+      "stage": "counterexamples-arm64",
+      "argv": [
+        "/usr/bin/arch",
+        "-arm64",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/Counterexamples-arm64",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/DelayedProducer-arm64",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/counterexample-fixture-arm64"
+      ],
+      "cwd": "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/source",
+      "started_utc": "2026-11-05T05:30:00Z",
+      "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+      "pid": 17835,
+      "exit": 0,
+      "seconds": 4.194,
+      "passed_checks": 2,
+      "last_lines": [
+        "PASS delayed producer proves timeout does not imply readiness/truncation: timedOut=true, truncated=false, bytes=0, reaped=true",
+        "PASS explicit preparation delay proves broad timer false negative: unrelatedPreparation=3.1s, wholeElapsed=3.651461958885193, actualWait=0.545489917 seconds, busy=true"
+      ],
+      "failure_lines": [],
+      "warning_lines": [],
+      "source_unchanged": true
+    },
+    {
+      "stage": "counterexamples-x86_64",
+      "argv": [
+        "/usr/bin/arch",
+        "-x86_64",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/Counterexamples-x86_64",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/build/DelayedProducer-x86_64",
+        "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/counterexample-fixture-x86_64"
+      ],
+      "cwd": "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/source",
+      "started_utc": "2026-11-05T05:30:04Z",
+      "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+      "pid": 17892,
+      "exit": 0,
+      "seconds": 5.625,
+      "passed_checks": 2,
+      "last_lines": [
+        "PASS delayed producer proves timeout does not imply readiness/truncation: timedOut=true, truncated=false, bytes=0, reaped=true",
+        "PASS explicit preparation delay proves broad timer false negative: unrelatedPreparation=3.1s, wholeElapsed=3.639389991760254, actualWait=0.524723375 seconds, busy=true"
+      ],
+      "failure_lines": [],
+      "warning_lines": [],
+      "source_unchanged": true
+    },
+    {
+      "stage": "headless-browser-controller",
+      "argv": [
+        "/bin/sh",
+        "scripts/test-inventory-model.sh"
+      ],
+      "cwd": "/private/tmp/storage-selftest-diagnostics-20261104-4fl_ckz5/source",
+      "started_utc": "2026-11-05T05:30:10Z",
+      "source_fingerprint": "19bab05cf59e04ec8dfc8993b0557bf5f9aa82bba8faf5963447f1291fb861d2",
+      "pid": 17988,
+      "exit": 0,
+      "seconds": 166.188,
+      "passed_checks": 97,
+      "last_lines": [
+        "PASS agreement: the Overview leads with this image as a Docker Desktop disk image, with exactly stat's logical and allocated sizes",
+        "PASS agreement: the Inspector's selection is the same node and path; its Migration readiness sizes and its Indexed size (allocated) match",
+        "PASS agreement: the Living Tree draws the same node at its allocated size (50.3 MB label), on the same ancestry, with the Migration Review ring",
+        "PASS agreement: all three show the same text (68.72 GB logical, 50.3 MB allocated)",
+        "97 inventory model tests passed, 0 failed"
+      ],
+      "failure_lines": [],
+      "warning_lines": [],
+      "source_unchanged": true
+    }
+  ]
+}

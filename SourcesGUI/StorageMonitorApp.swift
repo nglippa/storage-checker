@@ -10,8 +10,12 @@ struct ViewerConfiguration {
     let readinessOutput: String?
     var selectedTarget: StorageTargetContext? = nil
     var inventoryDatabase: String { selectedTarget?.inventoryDatabase ?? database }
-    var windowTitle: String { ViewerIdentity.windowTitle(isQA: isQA, nativeQA: NativeQARuntime.active != nil, database: database) }
+    var windowTitle: String {
+        if LifecycleQAScope.active != nil { return "Storage Monitor — Lifecycle QA — Disposable Fixtures" }
+        return ViewerIdentity.windowTitle(isQA: isQA, nativeQA: NativeQARuntime.active != nil, database: database)
+    }
     static let current: Self = {
+        if let scope = LifecycleQAScope.active { return Self(database: scope.database, appearance: nil, windowSize: nil, isQA: true, readinessOutput: nil) }
         if let runtime = NativeQARuntime.active { return Self(database: runtime.database, appearance: nil, windowSize: nil, isQA: true, readinessOutput: runtime.readiness) }
         let args = CommandLine.arguments
         func value(_ key: String) -> String? { guard let i = args.firstIndex(of: key), args.count > i+1 else { return nil }; return args[i+1] }
@@ -72,6 +76,13 @@ struct ViewerConfiguration {
     // Viewer-only appearance; the system-wide setting is never changed.
     @Published var appearance: AppAppearance = .system { didSet { if configuration.appearance == nil { appearance.save(preferences) }; applyAppearance() } }
     @Published private(set) var inventoryRefreshTick = 0
+    @Published private(set) var monitoring: MonitoringSetupStatus?
+    @Published private(set) var lastWake: Date?
+    private var healthEvidence = MonitoringHealthEvidence()
+    private var inventoryHealthEvidence: InventoryWorkerEvidence?
+    private var startupLastSuccess: Date?
+    private var monitoringTask: Task<Void, Never>?
+    private var lastMonitoringRefresh: Date?
     let live = LiveCapacityMonitor()
     private let baseConfiguration: ViewerConfiguration
     @Published private(set) var target: StorageTargetContext
@@ -118,6 +129,7 @@ struct ViewerConfiguration {
         appearance = AppAppearance.load(preferences, override: configuration.appearance)
     }
     nonisolated static func preferences(for configuration: ViewerConfiguration) -> UserDefaults {
+        if LifecycleQAScope.active != nil { return .standard }
         guard let suite = ViewerIdentity.preferencesSuite(isQA: configuration.isQA, nativeQA: NativeQARuntime.active != nil) else { return .standard }
         return UserDefaults(suiteName: suite)!
     }
@@ -138,8 +150,45 @@ struct ViewerConfiguration {
             if live.state.reading != nil { readiness.mark("live_capacity_ready") }
         }
     }
+    func refreshMonitoring() {
+        guard monitoringTask == nil else { return }
+        lastMonitoringRefresh = Date()
+        let configuration = baseConfiguration
+        monitoringTask = Task {
+            let status = await Task.detached(priority: .utility) {
+                if let scope = LifecycleQAScope.active {
+                    do {
+                        try scope.validateStorage()
+                        return MonitoringSetupStatus.evaluate(home: scope.home, bundledHelper: scope.bundle("Installer"), launchd: LaunchdState.current(), labels: scope.labels)
+                    } catch {
+                        var status = MonitoringSetupStatus(state: .incomplete, summary: "Disposable lifecycle scope needs attention: \(error)", installedVersion: nil, bundledVersion: nil, helperExecutable: nil, installedApp: scope.app)
+                        status.jobLabels = scope.labels; return status
+                    }
+                }
+                if configuration.isQA {
+                    return MonitoringSetupStatus(state: .off, summary: "QA fixture worker only. Production background monitoring is unavailable in this session.", installedVersion: nil, bundledVersion: nil, helperExecutable: nil, installedApp: URL(fileURLWithPath: "/private/tmp/no-installed-monitor"))
+                }
+                return MonitoringSetupStatus.evaluate(home: FileManager.default.homeDirectoryForCurrentUser, bundledHelper: MonitoringSetupStatus.bundledHelper(in: Bundle.main.bundleURL), launchd: LaunchdState.current())
+            }.value
+            if !configuration.isQA || LifecycleQAScope.active != nil {
+                let observed = await Task.detached(priority: .utility) {
+                    InventoryWorkerEvidence.read(directory: URL(fileURLWithPath: configuration.database).deletingLastPathComponent(), now: Date())
+                }.value
+                inventoryHealthEvidence = InventoryWorkerEvidence.retainingFailure(inventoryHealthEvidence, observed: observed)
+            }
+            healthEvidence.observe(status.launchd, at: Date(), labels: status.jobLabels)
+            do { startupLastSuccess = try await HistoryReader(path: configuration.database).latestTimestamp() }
+            catch { /* Keep the last known startup success qualified by its age. */ }
+            monitoring = status
+            monitoringTask = nil
+        }
+    }
+    func monitoringHealth(at now: Date) -> MonitoringHealthPresentation {
+        MonitoringHealthPresentation(setup: monitoring, lastSuccess: startupLastSuccess, evidence: healthEvidence, lastWake: lastWake, inventory: inventoryHealthEvidence, now: now)
+    }
+    func woke() { lastWake = Date(); refreshAll() }
     func refreshAll() {
-        refresh(); refreshLive()
+        refresh(); refreshLive(); refreshMonitoring()
         if inventoryVisible { inventoryRefreshTick &+= 1; lastInventoryRefresh = Date() }
     }
     func setInventoryBusy(_ busy: Bool) { inventoryBusy = busy }
@@ -203,6 +252,7 @@ struct ViewerConfiguration {
                 }
                 if lastHistoryRefresh.map({ Date().timeIntervalSince($0) >= 30 }) ?? true { refresh() }
                 if live.isDue(at: Date()) { refreshLive() }
+                if lastMonitoringRefresh.map({ Date().timeIntervalSince($0) >= 30 }) ?? true { refreshMonitoring() }
             }
         }
     }
@@ -314,12 +364,10 @@ struct ViewerConfiguration {
 final class ViewerAppDelegate: NSObject, NSApplicationDelegate {
     var reopen: (() -> Void)?
     func applicationWillTerminate(_ notification: Notification) { if NativeQARuntime.active != nil { NativeQAWorker.shared.stopAndWait() } }
-    static let launchedAt = Date()
     // Apply the saved appearance before any window is created.
     func applicationWillFinishLaunching(_ notification: Notification) {
-        _ = Self.launchedAt
         let configuration = ViewerConfiguration.current
-        if NativeQARuntime.active != nil { NSApp.disableRelaunchOnLogin() }
+        if NativeQARuntime.active != nil || LifecycleQAScope.active != nil { NSApp.disableRelaunchOnLogin() }
         MainActor.assumeIsolated { ViewerStore.apply(AppAppearance.load(ViewerStore.preferences(for: configuration), override: configuration.appearance)) }
     }
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -334,6 +382,7 @@ final class ViewerAppDelegate: NSObject, NSApplicationDelegate {
     var body: some Scene { StorageMonitorApplication().body }
     static func main() {
         do {
+            try NativeQABootstrap.prepareLifecycle()
             let runtime = try NativeQABootstrap.prepare()
             if CommandLine.arguments.contains("--qa-verify-only") {
                 guard let runtime else { try NativeQARuntime.reject("verification requires explicit QA activation") }
@@ -350,7 +399,6 @@ struct StorageMonitorApplication: App {
     @StateObject private var store = ViewerStore()
     @Environment(\.openWindow) private var openWindow
     var body: some Scene {
-        Settings { AppearanceSettings(store:store) }
         Window("Storage Monitor",id:"main") {
             // Top-aligned and bounded by the window: content taller than the window must never be centred
             // under the title bar and toolbar (D6). The minimum content height holds the whole layout.
@@ -361,17 +409,19 @@ struct StorageMonitorApplication: App {
                 .onAppear { delegate.reopen = { openWindow(id:"main") }; store.start() }
                 .onDisappear { store.stop() }
                 .onReceive(NotificationCenter.default.publisher(for:NSApplication.didBecomeActiveNotification)) { _ in store.refreshAll() }
+                .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)) { _ in store.woke() }
         }
         .defaultSize(width:1240,height:820)
         .windowStyle(.titleBar)
         .commands {
             CommandGroup(replacing:.newItem) { Button("Show Storage Monitor") { openWindow(id:"main") }.keyboardShortcut("0") }
             CommandGroup(after:.toolbar) {
-                Button("Refresh") { store.refreshAll() }.keyboardShortcut("r")
+                Button("Reload Data and Check Capacity") { store.refreshAll() }.keyboardShortcut("r")
                 Picker("Appearance",selection:$store.appearance) { ForEach(AppAppearance.allCases) { Text($0.title).tag($0) } }
                 Toggle("Show Event Details",isOn:$store.showInspector).keyboardShortcut("i",modifiers:[.command,.option])
             }
         }
+        Settings { AppearanceSettings(store:store) }
     }
 }
 
@@ -457,33 +507,24 @@ private struct WindowSetup: NSViewRepresentable {
 
 private struct AppearanceSettings: View {
     @ObservedObject var store: ViewerStore
-    @Environment(\.openWindow) private var openWindow
-    nonisolated private static func monitoringState() -> MonitoringSetupStatus {
-        if let runtime = NativeQARuntime.active { return MonitoringSetupStatus(state: .off, summary: "QA fixture worker only. Production background monitoring is unavailable in this session.", installedVersion: nil, bundledVersion: nil, helperExecutable: nil, installedApp: URL(fileURLWithPath: runtime.root + "/no-installed-app")) }
-        return MonitoringSetupStatus.evaluate(home: FileManager.default.homeDirectoryForCurrentUser, bundledHelper: MonitoringSetupStatus.bundledHelper(in: Bundle.main.bundleURL), launchd: LaunchdState.current())
-    }
-    /// Read off the main thread when Settings appears (nil until then). The read launches `launchctl`; as a State
-    /// initial value it ran synchronously on every evaluation of the app's scenes, i.e. on every store update.
-    @State private var monitoring: MonitoringSetupStatus?
     @State private var pending: MonitoringSetupAction?
     @State private var working = false
     @State private var result: String?
     @ViewState private var showPrivacyDetails = false
-    private func refreshMonitoring() {
-        Task { monitoring = await Task.detached(priority: .userInitiated) { Self.monitoringState() }.value }
-    }
+    private var monitoring: MonitoringSetupStatus? { store.monitoring }
+    private func refreshMonitoring() { store.refreshMonitoring() }
     private func perform(_ action: MonitoringSetupAction) {
         guard NativeQARuntime.active == nil else { return }
         guard let helper = monitoring?.helperExecutable else { return }
         working = true; result = nil
         Task {
-            let outcome = await action.run(helper: helper)
+            let outcome = await action.run(helper: helper, scope: LifecycleQAScope.active)
             working = false; result = outcome.ok ? outcome.output : "Could not complete: \(outcome.output)"
             refreshMonitoring()
         }
     }
     // QA/development configurations never change the person's real LaunchAgents.
-    private var actionsAllowed: Bool { !store.configuration.isQA && monitoring?.helperExecutable != nil && !working }
+    private var actionsAllowed: Bool { (!store.configuration.isQA || LifecycleQAScope.active != nil) && monitoring?.helperExecutable != nil && !working }
     @ViewBuilder private func monitoringControls(_ monitoring: MonitoringSetupStatus) -> some View {
         Text(monitoring.summary).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.status")
         HStack {
@@ -494,17 +535,21 @@ private struct AppearanceSettings: View {
             case .on:
                 Button("Disable…") { pending = .disable }
                 // macOS prompts only while the choice is undecided; otherwise its settings decide.
-                if monitoring.notifications.canPrompt { Button("Allow Low-Space Notifications…") { perform(.notifications) } }
-                else { Button("Notification Settings…") { if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") { NSWorkspace.shared.open(url) } } }
+                if LifecycleQAScope.active == nil {
+                    if monitoring.notifications.canPrompt { Button("Allow Low-Space Notifications…") { perform(.notifications) } }
+                    else { Button("Notification Settings…") { if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") { NSWorkspace.shared.open(url) } } }
+                }
             }
             if working { ProgressView().controlSize(.small) }
         }.disabled(!actionsAllowed).accessibilityIdentifier("settings.monitoring.actions")
-        if store.configuration.isQA {
+        if LifecycleQAScope.active != nil {
+            Text("Disposable lifecycle installation. Background tasks scan only the private fixtures; notifications are suppressed.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
+        } else if store.configuration.isQA {
             Text("Disabled in QA builds, which never change your real background tasks.").font(.caption).foregroundStyle(.secondary)
         } else if monitoring.helperExecutable == nil {
             Text("This build does not include the background monitor. Install Storage Monitor from its disk image to manage monitoring here.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
         }
-        if monitoring.state == .on {
+        if monitoring.state == .on && LifecycleQAScope.active == nil {
             Text(monitoring.notifications.text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.notifications")
         }
     }
@@ -520,6 +565,15 @@ private struct AppearanceSettings: View {
             Section("Background Monitoring") {
                 if let monitoring { monitoringControls(monitoring) }
                 else { Text("Checking background monitoring…").foregroundStyle(.secondary).accessibilityIdentifier("settings.monitoring.status") }
+                TimelineView(.periodic(from: .now, by: 15)) { context in
+                    let health = store.monitoringHealth(at: context.date)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(health.title).font(.callout.weight(.medium))
+                        Text(health.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        ForEach(health.jobDetails, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                    }.accessibilityIdentifier("settings.monitoring.health")
+                }
+                Button("Reload Monitoring Status") { store.refresh(); refreshMonitoring() }
                 if let result { Text(result).font(.caption).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal:false,vertical:true).accessibilityIdentifier("settings.monitoring.result") }
             }
             Section("Privacy") {
@@ -530,32 +584,47 @@ private struct AppearanceSettings: View {
                 }
                 Button("Open Full Disk Access Settings…") {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") { NSWorkspace.shared.open(url) }
-                }.disabled(NativeQARuntime.active != nil).accessibilityIdentifier("settings.privacy.fullDiskAccess")
+                }.disabled(NativeQARuntime.active != nil || LifecycleQAScope.active != nil).accessibilityIdentifier("settings.privacy.fullDiskAccess")
             }
         }
         .formStyle(.grouped)
-        .frame(width:480)
+        .frame(width:540)
+        .background(SettingsWindowSetup())
+        .task {
+            // Scoped to the visible Settings view; cancellation stops this clock on disappearance.
+            while !Task.isCancelled {
+                refreshMonitoring(); store.refresh()
+                do { try await Task.sleep(for: .seconds(30)) } catch { break }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in refreshMonitoring(); store.refresh() }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)) { _ in store.woke() }
         .onAppear {
             refreshMonitoring()
-            if NativeQARuntime.active != nil || store.configuration.isQA { for window in NSApp.windows { window.isRestorable = false; window.disableSnapshotRestoration() } }
         }
         .alert(pending == .disable ? "Disable background monitoring?" : (monitoring?.state == .off ? "Enable background monitoring?" : "Update background monitoring?"),
                isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
             Button(pending == .disable ? "Disable" : (monitoring?.state == .off ? "Enable" : "Update")) { if let action = pending { perform(action) }; pending = nil }
             Button("Cancel", role: .cancel) { pending = nil }
         } message: {
-            Text(pending == .disable ? MonitoringSetupStatus.disableConfirmation : MonitoringSetupStatus.consent)
-        }
-        // macOS can restore Settings alone at launch; the history window must always be available.
-        .onAppear {
-            let hasMain = NSApp.windows.contains { $0.identifier?.rawValue.hasPrefix("main") == true || ($0.title.hasPrefix("Storage Monitor") && !$0.title.contains("Settings")) }
-            if !hasMain { openWindow(id:"main") }
-            // Settings shown within moments of launch was restored by macOS, not opened
-            // by the person: show the history window instead.
-            if Date().timeIntervalSince(ViewerAppDelegate.launchedAt) < 3 {
-                DispatchQueue.main.async { for window in NSApp.windows where window.title.contains("Settings") { window.isRestorable = false; window.close() } }
-            }
+            if let scope = LifecycleQAScope.active {
+                Text(pending == .disable ? "Remove this disposable session's three background tasks. Its private fixture history is kept." : "Install the disposable helper and register three session-specific tasks. They scan only \(scope.fixtures). Production monitoring is untouched. Private plists do not establish login persistence. Notifications are suppressed.")
+            } else { Text(pending == .disable ? MonitoringSetupStatus.disableConfirmation : MonitoringSetupStatus.consent) }
         }
     }
 }
 
+/// The Settings scene owns one window. Never close it based on launch timing: an immediate Command-comma
+/// is as deliberate as a later request. Disable future restoration on this window only, without finding
+/// or modifying any other window by title.
+struct SettingsWindowSetup: NSViewRepresentable {
+    static func configure(_ window: NSWindow) {
+        window.isRestorable = false
+        window.disableSnapshotRestoration()
+    }
+    func makeNSView(context: Context) -> NSView { Host() }
+    func updateNSView(_ view: NSView, context: Context) { if let window = view.window { Self.configure(window) } }
+    final class Host: NSView {
+        override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); if let window { SettingsWindowSetup.configure(window) } }
+    }
+}

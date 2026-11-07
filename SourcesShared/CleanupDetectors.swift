@@ -670,11 +670,14 @@ public enum ArtifactProtection {
     static let systemPrefixes = ["/System", "/usr", "/bin", "/sbin", "/private/var/db", "/private/var/vm", "/private/var/folders", "/Library/Apple", "/.Spotlight-V100", "/.fseventsd", "/.DocumentRevisions-V100", "/.vol", "/dev", "/cores"]
 
     /// Why a path is protected, or nil.
-    public static func reason(_ c: ArtifactContext) -> String? {
+    public static func reason(_ c: ArtifactContext) -> String? { reason(c, baseInterpreterLink: false) }
+
+    // Only the qualified Trash descendant-link role may retain a shared base interpreter.
+    static func reason(_ c: ArtifactContext, baseInterpreterLink: Bool) -> String? {
         let logical = c.logical
         if logical == "/" { return "The startup volume itself." }
         let canonical = c.probe.canonical(c.subject.path).map(ArtifactPaths.logical)
-        if systemPrefixes.contains(where: { prefix in
+        if !(baseInterpreterLink && canonical == "/usr/bin/python3") && systemPrefixes.contains(where: { prefix in
             let direct = ArtifactPaths.isWithin(logical, prefix) && !(prefix == "/usr" && ArtifactPaths.isWithin(logical, "/usr/local"))
             let resolved = canonical.map { ArtifactPaths.isWithin($0, prefix) && !(prefix == "/usr" && ArtifactPaths.isWithin($0, "/usr/local")) } ?? false
             return direct || resolved
@@ -700,7 +703,7 @@ public enum ArtifactProtection {
         if let canonical, canonical != logical {
             let resolved = ArtifactContext(subject: .init(nodeID: c.subject.nodeID, path: canonical, kind: c.subject.kind, identity: c.subject.identity),
                                            probe: c.probe, environment: c.environment)
-            return reason(resolved)
+            return reason(resolved, baseInterpreterLink: baseInterpreterLink)
         }
         return nil
     }
