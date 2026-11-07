@@ -13,7 +13,7 @@ let inventoryAgentURL = home.appendingPathComponent("Library/LaunchAgents/\(inve
 /// retry limit, so it would never be deferred and the worker would relaunch every minute.
 let inventoryAgentBudget = 1_200
 func inventoryAgentPlist(_ executable: String, _ data: String) -> [String: Any] {
-    ["Label": inventoryLabel, "ProgramArguments": [executable, "inventory-work", "--budget", String(inventoryAgentBudget), "--data-dir", data],
+    ["Label": inventoryLabel, "AssociatedBundleIdentifiers": agentAssociatedBundleIdentifiers, "ProgramArguments": [executable, "inventory-work", "--budget", String(inventoryAgentBudget), "--data-dir", data],
      "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false], "ThrottleInterval": 60,
      "WatchPaths": [URL(fileURLWithPath: data).appendingPathComponent("inventory-requests").path],
      "ProcessType": "Background", "LowPriorityIO": true, "Nice": 15, "Umask": 63,

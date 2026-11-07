@@ -215,8 +215,12 @@ func notify(_ title: String, _ body: String) -> String {
 let defaultData = home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor")
 let installedApp = home.appendingPathComponent("Applications/MacBook Storage Monitor.app")
 let agentURL = home.appendingPathComponent("Library/LaunchAgents/\(label).plist")
+/// Attributes every Storage Monitor LaunchAgent to the app (macOS 13+). The build is ad-hoc signed, so it has no
+/// Team ID for Background Task Management to group by: without this key each agent is a separate background
+/// item, and a first install shows three "Background Items Added" notifications instead of one.
+let agentAssociatedBundleIdentifiers = ["local.macbook.storage-monitor.viewer", "local.macbook.storage-monitor"]
 func agentPlist(_ executable: String, _ data: String) -> [String: Any] {
-    ["Label": label, "ProgramArguments": [executable, "check", "--data-dir", data], "RunAtLoad": true, "StartOnMount": true,
+    ["Label": label, "AssociatedBundleIdentifiers": agentAssociatedBundleIdentifiers, "ProgramArguments": [executable, "check", "--data-dir", data], "RunAtLoad": true, "StartOnMount": true,
      "WatchPaths": [URL(fileURLWithPath: data).appendingPathComponent("external-volumes/registry.json").path],
      "StartCalendarInterval": [["Minute": 0], ["Minute": 30]], "ProcessType": "Background", "LowPriorityIO": true, "Nice": 10, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
 }
@@ -227,7 +231,7 @@ func agentPlist(_ executable: String, _ data: String) -> [String: Any] {
 let baselineLabel = "local.macbook.storage-monitor.baseline"
 let baselineAgentURL = home.appendingPathComponent("Library/LaunchAgents/\(baselineLabel).plist")
 func baselineAgentPlist(_ executable: String, _ data: String) -> [String: Any] {
-    ["Label": baselineLabel, "ProgramArguments": [executable, "initialize-baseline", "--data-dir", data], "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false], "ThrottleInterval": 300,
+    ["Label": baselineLabel, "AssociatedBundleIdentifiers": agentAssociatedBundleIdentifiers, "ProgramArguments": [executable, "initialize-baseline", "--data-dir", data], "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false], "ThrottleInterval": 300,
      "ProcessType": "Background", "LowPriorityIO": true, "Nice": 15, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
 }
 func launchctl(_ args: [String], acceptable: Bool = false) throws -> CommandResult {
@@ -603,6 +607,9 @@ func selfTest() throws {
     try test(parsed["StartInterval"] == nil && parsed["RunAtLoad"] as? Bool == true, "single calendar schedule and login startup")
     try test((parsed["StartCalendarInterval"] as? [[String:Int]]) == [["Minute":0],["Minute":30]], "calendar wake catch-up")
     try test((parsed["ProgramArguments"] as? [String])?.count == 4, "LaunchAgent absolute executable/data arguments with spaces")
+    for agent in [plist, baselineAgentPlist("/x", "/x"), inventoryAgentPlist("/x", "/x")] {
+        try test(agent["AssociatedBundleIdentifiers"] as? [String] == agentAssociatedBundleIdentifiers, "every LaunchAgent is attributed to the app (one Background Items notification)")
+    }
     let lockPath = folder.appendingPathComponent("lock").path
     let a = open(lockPath,O_RDWR|O_CREAT,0o600), b = open(lockPath,O_RDWR,0o600)
     defer { close(a); close(b) }; _ = flock(a,LOCK_EX|LOCK_NB)

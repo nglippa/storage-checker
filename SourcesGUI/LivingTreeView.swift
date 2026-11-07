@@ -594,7 +594,7 @@ import AppKit
     // MARK: Labels
 
     private struct LabelKey: Equatable {
-        let revision: Int, size: CGSize, focus: LivingTreeKey?, scale: Int, x: Int, y: Int
+        let revision: Int, trunk: Int64, size: CGSize, focus: LivingTreeKey?, scale: Int, x: Int, y: Int
         let dimension: LivingTreeDimension, yaw: Int, pitch: Int
     }
 
@@ -603,7 +603,7 @@ import AppKit
     func labels(for size: CGSize, focus: LivingTreeKey?, measure: (String, Bool) -> CGSize) -> [LivingTreeLabel] {
         guard let model, let layout = layout(), let transform = transform(for: size) else { return [] }
         // In 3D labels are placed again every ~7° of turn; in between they follow their tips.
-        let key = LabelKey(revision: revision, size: size, focus: focus, scale: Int((log2(transform.scale) * 8).rounded()),
+        let key = LabelKey(revision: revision, trunk: model.root.id, size: size, focus: focus, scale: Int((log2(transform.scale) * 8).rounded()),
                            x: Int((transform.translation.dx / 48).rounded()), y: Int((transform.translation.dy / 48).rounded()),
                            dimension: dimension, yaw: dimension == .depth ? Int((orbit.yaw / 0.12).rounded()) : 0, pitch: dimension == .depth ? Int((orbit.pitch / 0.12).rounded()) : 0)
         if let labelCache, labelCache.key == key { return labelCache.labels }
@@ -612,7 +612,10 @@ import AppKit
            labelCache.key.dimension == dimension, labelCache.key.focus == focus { return labelCache.labels }
         let started = Date()
         let labels = LivingTreeLabeler.layout(model: model, geometry: layout.geometry, hits: layout.hits, transform: transform, viewport: size,
-                                              zoom: camera.zoom, focus: focus, measure: measure)
+                                              zoom: camera.zoom, focus: focus,
+                                              // Same tree and size: prefer what was shown, so rebuilds while indexing do not reshuffle labels.
+                                              previous: labelCache.flatMap { $0.key.trunk == key.trunk && $0.key.size == size && $0.key.dimension == dimension ? $0.labels : nil } ?? [],
+                                              measure: measure)
         statistics.labelPlacements += 1; statistics.lastLabelSeconds = Date().timeIntervalSince(started)
         labelCache = (key, labels)
         return labels
@@ -847,7 +850,12 @@ struct LivingTreeView: View {
         case .moved(let point):
             pointer = point
             guard !gesture.isDragging else { return }
-            hover = point.flatMap { p in hit(p).map { ($0, p) } }
+            // Held while the pointer stays near what is already hovered, so the highlight does not flicker between labels
+            // or along branch edges.
+            let laid = tree.layout()
+            hover = point.flatMap { p in
+                LivingTreeHover.resolve(p, current: hover?.key, labels: labels, tips: tips, geometry: laid?.geometry, hits: laid?.hits, transform: transform).map { ($0, p) }
+            }
         case .scroll(let delta, let precise, let momentum, let modifiers, let point):
             if let action = LivingTreeGesture.scroll(delta, precise: precise, modifiers: modifiers, at: point, momentum: momentum) { apply([action], model: model) }
         case .magnify(let magnification, let point):

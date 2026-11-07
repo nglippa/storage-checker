@@ -438,6 +438,20 @@ func livingTreeModelTests(_ test: (Bool, String) throws -> Void) throws {
     flood.receive(batch((0..<10_000).map { signal(Int64(100 + $0), Int64(1 + $0), from: 1_000, to: 5_000) }, latest: 10_000), now: t0)
     try test(flood.glows.count == LivingTreeIllumination.capacity,
              "living tree light: at most \(LivingTreeIllumination.capacity) glows are kept, however many signals arrive")
+    // A folder that keeps changing while lit (indexing) must not strobe: no dip back to the start of the rise, no
+    // amber/blue swap on a small wobble, and a return to where it started just lets the light fade.
+    var steady = LivingTreeIllumination()
+    steady.receive(batch([], latest: 1, resync: true), now: t0)
+    steady.receive(batch([signal(30, 2, from: 100_000_000, to: 120_000_000)], latest: 2), now: t0)
+    let beforeRelight = steady.intensity(of: 30, at: t0.addingTimeInterval(5), reduceMotion: false)!.value
+    steady.receive(batch([signal(30, 3, from: 120_000_000, to: 121_000_000)], latest: 3), now: t0.addingTimeInterval(5))
+    let afterRelight = steady.intensity(of: 30, at: t0.addingTimeInterval(5), reduceMotion: false)!.value
+    steady.receive(batch([signal(30, 4, from: 121_000_000, to: 110_000_000)], latest: 4), now: t0.addingTimeInterval(6))
+    let wobble = steady.glows[30]
+    steady.receive(batch([signal(30, 5, from: 110_000_000, to: 100_000_000)], latest: 5), now: t0.addingTimeInterval(7))
+    try test(afterRelight >= beforeRelight && wobble?.trend == .growth && wobble?.previousBytes == 100_000_000 && wobble?.deltaBytes == 10_000_000
+             && steady.glows[30]?.sequence == 4,
+             "living tree light: a folder that changes again while lit keeps its light (no dip, no colour swap on a wobble) and shows the net change since it was first lit")
 
     let litOutside = light.isActive(at: t0.addingTimeInterval(1)) { _ in false }
     let litInside = light.isActive(at: t0.addingTimeInterval(1)) { $0 == 10 }
@@ -665,6 +679,21 @@ func livingTreeCameraTests(_ test: (Bool, String) throws -> Void) throws {
         labelsValid = labelsValid && zip(labels, rects).allSatisfy { LivingTreeLabeler.cost(of: $1, excluding: $0.key, hits: hits, transform: transform) <= 2 }
         labelsValid = labelsValid && labels.allSatisfy { model[$0.key]?.role != .rest || $0.title.hasSuffix("grouped items") }
     }
+    // Hysteresis: placing again with the previous labels changes nothing, and a previous placement from another zoom
+    // still yields valid labels.
+    var stickyValid = true
+    for (zoom, from) in [(1.0, 1.0), (2.0, 2.0), (1.0, 2.0), (4.0, 1.0)] {
+        let transform = LivingTreeCamera.fit.zoomed(by: zoom, around: CGPoint(x: 560, y: 300), in: framing).transform(in: framing)
+        let fromTransform = LivingTreeCamera.fit.zoomed(by: from, around: CGPoint(x: 560, y: 300), in: framing).transform(in: framing)
+        let earlier = LivingTreeLabeler.layout(model: model, geometry: geometry, hits: hits, transform: fromTransform, viewport: viewport, zoom: from, focus: nil, measure: measure)
+        let fresh = LivingTreeLabeler.layout(model: model, geometry: geometry, hits: hits, transform: transform, viewport: viewport, zoom: zoom, focus: nil, measure: measure)
+        let again = LivingTreeLabeler.layout(model: model, geometry: geometry, hits: hits, transform: transform, viewport: viewport, zoom: zoom, focus: nil, previous: earlier, measure: measure)
+        let rects = again.map { $0.rect(transform) }
+        if zoom == from { stickyValid = stickyValid && again == fresh }
+        stickyValid = stickyValid && again.count <= LivingTreeLabeler.budget(zoom: zoom) && rects.allSatisfy { screen.contains($0) }
+        for i in rects.indices { for j in rects.indices where j > i { stickyValid = stickyValid && !rects[i].intersects(rects[j]) } }
+    }
+    try test(stickyValid, "living tree labels: labels shown last time keep their place on a rebuild (no reshuffle), and still never overlap or leave the view")
     try test(labelsValid && labelCounts[0] >= 4,
              "living tree labels: labels never overlap each other, stay inside the view, sit clear of other branches, stay within the zoom's budget and never present grouped items as one file (\(labelCounts))")
     try test(LivingTreeLabeler.budget(zoom: 1) < LivingTreeLabeler.budget(zoom: 2) && LivingTreeLabeler.budget(zoom: 2) < LivingTreeLabeler.budget(zoom: 8) && LivingTreeLabeler.budget(zoom: 32) <= 90
@@ -683,6 +712,24 @@ func livingTreeCameraTests(_ test: (Bool, String) throws -> Void) throws {
     let twinLabels = LivingTreeLabeler.layout(model: twinModel, geometry: twinGeometry, hits: LivingTreeHitIndex(twinGeometry), transform: LivingTreeCamera.fit.transform(in: twinFraming), viewport: viewport, zoom: 1, focus: nil, measure: measure)
     try test(twinLabels.contains { $0.key == .node(twinIDs["Users"]!) } && !twinLabels.contains { $0.key == .node(twinIDs["home"]!) },
              "living tree labels: a folder that is nearly all of its labelled parent (Users › home) is named once")
+
+    // Hover hysteresis: the hovered label stays hovered in the gap next to it, a different label takes over once the
+    // pointer is inside it, and empty space well away from everything clears the hover.
+    let hoverLabels = LivingTreeLabeler.layout(model: model, geometry: geometry, hits: hits, transform: fitTransform, viewport: viewport, zoom: 1, focus: nil, measure: measure)
+    let hoverTips = hoverLabels.map { fitTransform.apply($0.tip) }
+    var hoverValid = hoverLabels.count >= 2
+    if hoverValid {
+        let first = hoverLabels[0].rect(fitTransform), second = hoverLabels[1].rect(fitTransform)
+        let resolve = { (p: CGPoint, current: LivingTreeKey?) in
+            LivingTreeHover.resolve(p, current: current, labels: hoverLabels, tips: hoverTips, geometry: geometry, hits: hits, transform: fitTransform) }
+        let inside = CGPoint(x: first.midX, y: first.midY)
+        let justOutside = CGPoint(x: first.maxX + 2, y: first.midY)
+        hoverValid = resolve(inside, nil) == hoverLabels[0].key
+            && resolve(justOutside, hoverLabels[0].key) == hoverLabels[0].key
+            && resolve(CGPoint(x: second.midX, y: second.midY), hoverLabels[0].key) == hoverLabels[1].key
+            && LivingTreeHover.resolve(CGPoint(x: -500, y: -500), current: hoverLabels[0].key, labels: hoverLabels, tips: hoverTips, geometry: geometry, hits: hits, transform: fitTransform) == nil
+    }
+    try test(hoverValid, "living tree hover: the highlight holds in the gap beside its label and along its branch edge, switches only inside another label, and clears away from everything")
 
     // MARK: Pointer, scroll and pinch
     let folderKey = LivingTreeKey.node(ids["Projects"]!), fileKey = LivingTreeKey.node(ids["film"]!)

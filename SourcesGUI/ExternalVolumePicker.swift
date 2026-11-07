@@ -19,12 +19,9 @@ struct ExternalVolumePicker: View {
     private var management: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("External drives").font(.headline)
-            Text("Choose which connected drives to monitor and index. Chosen drives resume automatically when they reconnect.")
+            Text("Chosen drives resume automatically when they reconnect.")
                 .font(.callout).foregroundStyle(.secondary)
-            if !store.externalSupportReady {
-                Text(store.externalSupportMessage).font(.callout)
-                SettingsLink { Text("Open Settings") }
-            }
+            setupSteps
             if let error = store.externalError { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -68,6 +65,38 @@ struct ExternalVolumePicker: View {
             }
             Text("Pause stops indexing only. Disable stops both indexing and capacity monitoring; saved data is kept.").font(.caption).foregroundStyle(.secondary)
         }.padding(18).frame(width: 480)
+    }
+    /// The linking procedure as explicit, checkable steps, so a first-time user knows exactly what to do next.
+    private var setupSteps: some View {
+        let ready = store.externalSupportReady
+        let connected = !(store.externalObservations?.descriptors ?? []).isEmpty
+        let linked = store.externalSettings.volumes.values.contains { $0.enabled }
+        return VStack(alignment: .leading, spacing: 8) {
+            step(1, done: ready, "Turn on background monitoring",
+                 ready ? "Background monitoring is running." : store.externalSupportMessage + " In Settings, click “Enable Background Monitoring…” (or “Update…” / “Repair…”) and approve the prompt. If macOS later asks, allow Storage Monitor in System Settings → General → Login Items.") {
+                if !ready { SettingsLink { Text("Open Settings") }.controlSize(.small) }
+            }
+            step(2, done: connected, "Connect the drive",
+                 connected ? "A drive is connected." : "Plug in an APFS, HFS+ or exFAT drive and wait for it to appear in Finder, then click “Refresh connected drives” below.") { EmptyView() }
+            step(3, done: linked, "Link it",
+                 linked ? "At least one drive is linked." : "Click “Enable monitoring & indexing” next to the drive in the list below. If macOS asks for access to removable volumes, click Allow.") { EmptyView() }
+            step(4, done: linked && store.target.uuid != nil, "View it",
+                 "Choose the drive from the Drive menu in the toolbar (or click “View” below). The first index can take a while on a large drive.") { EmptyView() }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain).accessibilityIdentifier("storage.driveSetupSteps")
+    }
+    private func step<Action: View>(_ number: Int, done: Bool, _ title: String, _ detail: String, @ViewBuilder action: () -> Action) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
+                .foregroundStyle(done ? Color.green : Color.secondary)
+                .accessibilityLabel(done ? "Step \(number), done" : "Step \(number)")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.callout.weight(.medium))
+                Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                action()
+            }
+        }
     }
     private var unregistered: [ExternalVolumeDescriptor] {
         (store.externalObservations?.descriptors ?? []).filter { drive in

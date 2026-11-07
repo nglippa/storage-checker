@@ -354,6 +354,38 @@ public struct LivingTreeLabel: Equatable, Sendable {
     }
 }
 
+/// Hover with hysteresis. Picking a fresh winner on every pointer move makes the highlight flicker wherever two
+/// targets nearly tie: in the narrow gaps between labels, and along the edges of neighbouring or crossing branches.
+/// The element already hovered stays hovered while the pointer remains within `margin` points of its label or of its
+/// drawn branch; a different label takes over only once the pointer is inside it.
+public enum LivingTreeHover {
+    public static let margin: CGFloat = 6
+    public static let tolerance: CGFloat = 4
+
+    public static func resolve(_ point: CGPoint, current: LivingTreeKey?, labels: [LivingTreeLabel], tips: [CGPoint],
+                               geometry: LivingTreeGeometry?, hits: LivingTreeHitIndex?, transform: LivingTreeTransform) -> LivingTreeKey? {
+        let label = LivingTreeLabel.hit(point, labels: labels, tips: tips)
+        let fresh = label ?? hits?.hit(point, transform: transform, tolerance: tolerance)
+        guard let current, fresh != current else { return fresh }
+        if label != nil { return label }  // inside another label: that is unambiguous
+        if let i = labels.firstIndex(where: { $0.key == current }), i < tips.count,
+           labels[i].frame.offsetBy(dx: tips[i].x, dy: tips[i].y).insetBy(dx: -margin, dy: -margin).contains(point) { return current }
+        if let branch = geometry?[current], edgeDistance(point, to: branch, transform: transform) <= tolerance + margin { return current }
+        return fresh
+    }
+
+    /// Distance in view points from `point` to the drawn edge of `branch` (negative inside it).
+    static func edgeDistance(_ point: CGPoint, to branch: LivingTreeGeometry.Branch, transform: LivingTreeTransform) -> CGFloat {
+        let ws = transform.widthScale
+        var best = CGFloat.infinity
+        for i in 0...24 {
+            let t = CGFloat(i) / 24, q = transform.apply(branch.point(at: t))
+            best = min(best, hypot(point.x - q.x, point.y - q.y) - branch.width(at: t) * ws / 2)
+        }
+        return best
+    }
+}
+
 /// Places branch names without collisions: important branches first, each beside its own branch where neither
 /// other labels nor other branches (forks, thick limbs) are underneath, and more of them as the view zooms in.
 public enum LivingTreeLabeler {
@@ -387,7 +419,10 @@ public enum LivingTreeLabeler {
     ///   - geometry: layout-space geometry; `hits`: its hit index.
     ///   - measure: the size of one line of text (`true`: the title line).
     public static func layout(model: LivingTreeModel, geometry: LivingTreeGeometry, hits: LivingTreeHitIndex, transform: LivingTreeTransform, viewport: CGSize,
-                              zoom: Double, focus: LivingTreeKey?, measure: (String, Bool) -> CGSize) -> [LivingTreeLabel] {
+                              zoom: Double, focus: LivingTreeKey?, previous: [LivingTreeLabel] = [], measure: (String, Bool) -> CGSize) -> [LivingTreeLabel] {
+        // Hysteresis: while indexing, the tree is rebuilt every second or two and shares move slightly. A label shown
+        // last time keeps its place unless it clearly no longer qualifies, so labels do not swap, jump or blink.
+        let shown = Dictionary(previous.map { ($0.key, $0.frame) }, uniquingKeysWith: { a, _ in a })
         guard let trunk = model.trunkBytes, trunk > 0 else { return [] }
         let screen = CGRect(origin: .zero, size: viewport)
         let threshold = minimumShare(zoom: zoom)
@@ -404,17 +439,18 @@ public enum LivingTreeLabeler {
             case .rest: need = zoom >= 2.5 ? threshold * 3 : .infinity
             default: continue
             }
-            guard isFocus || share >= need else { continue }
+            guard isFocus || share >= need * (shown[branch.key] == nil ? 1 : stickyShare) else { continue }
             guard LivingTreeDetail.isDrawn(branch, through: transform) || isFocus else { continue }
             let tip = transform.apply(branch.end)
             guard screen.insetBy(dx: -40, dy: -40).contains(tip) else { continue }
             let start = transform.apply(branch.start)
-            guard isFocus || branch.depth == 1 || hypot(tip.x - start.x, tip.y - start.y) >= 18 else { continue }
+            guard isFocus || branch.depth == 1 || hypot(tip.x - start.x, tip.y - start.y) >= (shown[branch.key] == nil ? 18 : 14) else { continue }
             candidates.append(Candidate(branch: branch, element: element, share: share))
         }
         candidates.sort { a, b in
             if (a.branch.key == focus) != (b.branch.key == focus) { return a.branch.key == focus }
-            return a.share != b.share ? a.share > b.share : a.branch.key < b.branch.key
+            let sa = a.share * (shown[a.branch.key] == nil ? 1 : stickyRank), sb = b.share * (shown[b.branch.key] == nil ? 1 : stickyRank)
+            return sa != sb ? sa > sb : a.branch.key < b.branch.key
         }
 
         let budget = budget(zoom: zoom)
@@ -430,9 +466,18 @@ public enum LivingTreeLabeler {
             let a = measure(words.title, true), b = measure(words.detail, false)
             let size = CGSize(width: max(a.width, b.width) + 2 * paddingX, height: a.height + b.height + 2 * paddingY)
             var best: (rect: CGRect, cost: Int)?
-            for rect in positions(for: branch, element: element, size: size, transform: transform) {
+            var options = positions(for: branch, element: element, size: size, transform: transform)
+            if let last = shown[branch.key] {
+                // Try the side it was on first (frames are relative to the tip).
+                let tip = transform.apply(branch.end)
+                let distance = { (r: CGRect) in hypot(r.midX - tip.x - last.midX, r.midY - tip.y - last.midY) }
+                if let i = options.indices.min(by: { distance(options[$0]) < distance(options[$1]) }), distance(options[i]) < 12 { options.insert(options.remove(at: i), at: 0) }
+            }
+            for (index, rect) in options.enumerated() {
                 guard bounds.contains(rect), !placed.contains(where: { $0.insetBy(dx: -3, dy: -2).intersects(rect) }) else { continue }
                 let cost = Self.cost(of: rect, excluding: branch.key, hits: hits, transform: transform)
+                // The previous side wins ties, and small cost increases, so a label does not hop between sides.
+                if index == 0, shown[branch.key] != nil, cost <= 2 { best = (rect, cost); break }
                 if best == nil || cost < best!.cost { best = (rect, cost) }
                 if cost == 0 { break }
             }
@@ -445,6 +490,11 @@ public enum LivingTreeLabeler {
         }
         return result
     }
+
+    /// A label shown last time stays while its share is at least this fraction of what a new label needs.
+    static let stickyShare = 0.7
+    /// ...and ranks as if this much larger, so a near-tie does not swap which of two labels is shown.
+    static let stickyRank = 1.5
 
     /// Where a label may go, in order of preference. A folder whose children are drawn forks at its tip, so its name
     /// goes beside the limb, clear of the fork; a twig or file is named just beyond its tip.

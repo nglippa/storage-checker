@@ -760,6 +760,8 @@ public struct LivingTreeIllumination: Sendable, Equatable {
 
     /// How long a change stays lit.
     public static let duration: TimeInterval = 36
+    /// How long a new light takes to rise to full.
+    public static let rise: TimeInterval = 0.6
     /// Comparisons measured longer ago than this are not shown as new (a viewer that was closed or asleep).
     public static let replayHorizon: TimeInterval = 300
     public static let capacity = 2_048
@@ -801,6 +803,20 @@ public struct LivingTreeIllumination: Sendable, Equatable {
             let strength = Self.strength(previous: signal.previousAllocatedBytes, current: signal.allocatedBytes, confidence: signal.confidence)
             guard strength > 0 else { continue }
             if let measured = signal.measuredAt, now.timeIntervalSince(measured) > Self.replayHorizon { continue }
+            // A folder that changes again while still lit (every few seconds during indexing) keeps its light: it must
+            // not drop back to the start of the rise, or swap amber/blue on every small wobble. The light then shows the
+            // net change since it was first lit, and restarts its fade without dimming.
+            if let existing = glows[signal.nodeID], now.timeIntervalSince(existing.observed) < Self.duration {
+                let confidence: InventorySizeSignal.Confidence = existing.confidence == .complete && signal.confidence == .complete ? .complete : signal.confidence
+                let net = Self.strength(previous: existing.previousBytes, current: signal.allocatedBytes, confidence: confidence)
+                guard net > 0 else { continue }  // back to where it started: let the current light fade out
+                let age = now.timeIntervalSince(existing.observed)
+                glows[signal.nodeID] = Glow(trend: signal.allocatedBytes >= existing.previousBytes ? .growth : .reduction, strength: net, confidence: confidence,
+                                            deltaBytes: signal.allocatedBytes - existing.previousBytes, previousBytes: existing.previousBytes, bytes: signal.allocatedBytes,
+                                            observed: age < Self.rise ? existing.observed : now.addingTimeInterval(-Self.rise), sequence: signal.sequence)
+                lit += 1
+                continue
+            }
             glows[signal.nodeID] = Glow(trend: signal.trend, strength: strength, confidence: signal.confidence, deltaBytes: signal.deltaBytes,
                                         previousBytes: signal.previousAllocatedBytes, bytes: signal.allocatedBytes, observed: now, sequence: signal.sequence)
             lit += 1
@@ -824,7 +840,7 @@ public struct LivingTreeIllumination: Sendable, Equatable {
         let remaining = 1 - age / Self.duration
         let value: Double
         if reduceMotion { value = glow.strength * (ceil(remaining * 3) / 3) }
-        else { value = glow.strength * min(1, age / 0.6 + 0.2) * pow(remaining, 1.6) }
+        else { value = glow.strength * min(1, age / Self.rise + 0.2) * pow(remaining, 1.6) }
         return value > 0.001 ? (glow.trend, value) : nil
     }
 

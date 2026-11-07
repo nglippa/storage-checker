@@ -64,6 +64,10 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     @Published var error: String?
     @Published var message: String?
     @Published var loading = false
+    /// True only while a load the person started (Reload, navigation, paging) is running. Automatic refreshes
+    /// during indexing reload silently, so the Reload button does not flash a spinner every few seconds.
+    @Published private(set) var showsLoadingIndicator = false
+    private var nextLoadIsBackground = false
     @Published var selected: Int64?
     @Published var parentID: Int64?
     @Published var mode = InventoryBrowserMode.explorer
@@ -172,8 +176,11 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     }
     func refreshIfIdle() {
         guard reloads.request(loading: loading) else { return }
+        nextLoadIsBackground = true
         revision &+= 1
     }
+    /// A reload the person asked for: always shows progress.
+    func reloadNow() { nextLoadIsBackground = false; revision &+= 1 }
     func load() async {
         await PerformanceTrace.measure("inventory.load", "mode=\(mode.rawValue) folder=\(parentID.map(String.init) ?? "root")") { await loadPage() }
     }
@@ -181,12 +188,16 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         loadGeneration &+= 1
         let generation = loadGeneration
         loading = true
+        let background = nextLoadIsBackground
+        nextLoadIsBackground = false
+        showsLoadingIndicator = !background
         // Only the newest load clears the flag and replays a refresh requested meanwhile. A cancelled older load
         // must not clear its successor's flag, and a cancelled newest load must still replay the refresh.
         defer {
             if generation == loadGeneration {
                 loading = false
-                if reloads.finish() { revision &+= 1 }
+                showsLoadingIndicator = false
+                if reloads.finish() { nextLoadIsBackground = true; revision &+= 1 }
             }
         }
         // Before background monitoring is enabled there is no database yet: that is "not started",
@@ -457,7 +468,7 @@ struct DiskInventoryView: View {
             if let item = model.selectedNode { itemDetails(item); Divider() }
             HStack {
                 Text(model.items.isEmpty ? "No items found on this page" : "Page \(model.offset / 100 + 1) · \(model.items.count) items")
-                if model.loading { ProgressView().controlSize(.mini) }
+                if model.showsLoadingIndicator { ProgressView().controlSize(.mini) }
                 Spacer()
                 Button("Previous") { model.offset = max(0, model.offset - 100) }.disabled(model.offset == 0).accessibilityIdentifier("inventory.previous")
                 Button("Next") { model.offset += 100 }.disabled(!model.hasMore).accessibilityIdentifier("inventory.next")
@@ -483,8 +494,8 @@ struct DiskInventoryView: View {
         .onChange(of: model.scopeToFolder) { _, _ in model.offset = 0 }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button { model.revision += 1 } label: {
-                    if model.loading { ProgressView().controlSize(.small) } else { Label("Reload Inventory", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon) }
+                Button { model.reloadNow() } label: {
+                    if model.showsLoadingIndicator { ProgressView().controlSize(.small) } else { Label("Reload Inventory", systemImage: "arrow.clockwise").labelStyle(.titleAndIcon) }
                 }
                     .help("Reload indexed results. No filesystem scan is performed.").accessibilityLabel("Reload inventory").accessibilityIdentifier("inventory.reload")
             }
@@ -508,7 +519,7 @@ struct DiskInventoryView: View {
                 }
             case .startIndexing: Button("Start indexing") { model.request("refresh") }.disabled(!workerAvailable).accessibilityIdentifier("inventory.start")
             case .retry:
-                HStack { Button("Reload Inventory") { model.revision &+= 1 }; Button("Open Settings…") { openSettings() } }
+                HStack { Button("Reload Inventory") { model.reloadNow() }; Button("Open Settings…") { openSettings() } }
             case nil: EmptyView()
             }
         }.frame(maxWidth: 500).padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
