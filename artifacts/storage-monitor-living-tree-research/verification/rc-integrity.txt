@@ -1,0 +1,10 @@
+checked 2026-10-29T08:51:56Z
+3484abea58524cd090808714e38672cc0f82a628d3b42b9c797c66674f774f0c  build/release-artifacts/2.1.0-9-20261029T063406Z/Storage-Monitor-2.1.0.dmg
+expected 3484abea58524cd090808714e38672cc0f82a628d3b42b9c797c66674f774f0c
+main checkout: v2.1-rc 873e069
+?? .DS_Store
+?? artifacts/
+?? docs/
+v2.1-rc tip: 873e069
+85896 /Users/nicholaslippa/storage-checker/build/Storage Monitor.app/Contents/MacOS/StorageMonitorViewer
+4

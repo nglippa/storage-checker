@@ -1,0 +1,7 @@
+build-monitor PASS 72s
+monitor-self-test PASS 77s
+inventory-integration PASS 305s
+build-viewer PASS 72s
+viewer-model-tests PASS 136s
+inventory-browser-model PASS 82s
+hosted-chart-and-scroll PASS 156s

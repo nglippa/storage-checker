@@ -704,14 +704,30 @@ func livingTreeCameraTests(_ test: (Bool, String) throws -> Void) throws {
              && g.up(at: .zero, clickCount: 2, target: folderKey) == [],
              "living tree input: double-click opens a folder (subtree navigation as before), focuses a file, and Option-double-click focuses any branch")
     let p = CGPoint(x: 300, y: 200)
-    try test(LivingTreeGesture.scroll(CGVector(dx: 4, dy: -7), precise: true, modifiers: [], at: p) == .pan(CGVector(dx: 4, dy: -7))
+    try test(LivingTreeGesture.scroll(CGVector(dx: 4, dy: -7), precise: true, modifiers: [], at: p) == .zoom(factor: exp(-7 * LivingTreeGesture.preciseZoomRate), at: p, animated: false)
              && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 1), precise: false, modifiers: [], at: p) == .zoom(factor: 1.2, at: p, animated: true)
              && LivingTreeGesture.scroll(CGVector(dx: 0, dy: -10), precise: false, modifiers: [], at: p) == .zoom(factor: pow(1.2, -3), at: p, animated: true)
              && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 50), precise: true, modifiers: .command, at: p) == .zoom(factor: exp(0.6), at: p, animated: false)
              && LivingTreeGesture.scroll(CGVector(dx: 2, dy: 0), precise: false, modifiers: .shift, at: p) == .pan(CGVector(dx: 32, dy: 0))
+             && LivingTreeGesture.scroll(CGVector(dx: 4, dy: -7), precise: true, modifiers: .option, at: p) == .pan(CGVector(dx: 4, dy: -7))
+             && LivingTreeGesture.scroll(CGVector(dx: 12, dy: 3), precise: true, modifiers: [], at: p) == .pan(CGVector(dx: 12, dy: 0))
+             && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 9), precise: true, modifiers: [], at: p, momentum: true) == nil
              && LivingTreeGesture.scroll(.zero, precise: true, modifiers: [], at: p) == nil
              && LivingTreeGesture.magnify(0.25, at: p) == .zoom(factor: 1.25, at: p, animated: false) && LivingTreeGesture.magnify(0, at: p) == nil,
-             "living tree input: trackpad scrolling pans; a mouse wheel zooms about the pointer in animated steps; Command-scroll and pinch zoom directly; Shift-wheel pans sideways")
+             "living tree input: vertical scrolling zooms about the pointer from any device (wheel lines animated, pixel deltas direct); Shift/Option-scroll and sideways swipes pan; momentum does not zoom; pinch zooms")
+    // Regression: smooth-scrolling mice and the Magic Mouse report precise deltas like a trackpad, and used to pan the
+    // 2D tree and turn the 3D one. No scroll, of any kind, may turn the tree or select anything.
+    var scrollTurnsOrSelects = 0
+    for precise in [true, false] { for momentum in [true, false] { for modifiers: LivingTreeGesture.Modifiers in [[], .shift, .option, .command, [.command, .option]] {
+        for delta in [CGVector(dx: 0, dy: 3), CGVector(dx: 0, dy: -40), CGVector(dx: 25, dy: -4), CGVector(dx: -1, dy: 0.5)] {
+            switch LivingTreeGesture.scroll(delta, precise: precise, modifiers: modifiers, at: p, momentum: momentum) {
+            case .orbit?, .select?, .open?, .focus?: scrollTurnsOrSelects += 1
+            default: break
+            }
+        }
+    } } }
+    try test(scrollTurnsOrSelects == 0 && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 2.5), precise: true, modifiers: [], at: p).map { if case .zoom = $0 { return true } else { return false } } == true,
+             "living tree input regression: a precise (smooth-scrolling mouse) vertical scroll zooms; no scroll input in 2D or 3D orbits or selects (80 combinations)")
 }
 
 // MARK: - 3D
@@ -846,10 +862,9 @@ func livingTree3DTests(_ test: (Bool, String) throws -> Void) throws {
     try test(actions == [.dragBegan, .orbit(yaw: 20 * LivingTreeGesture.orbitRate, pitch: -10 * LivingTreeGesture.orbitRate), .dragEnded]
              && panned == [.dragBegan, .pan(CGVector(dx: 20, dy: -10))]
              && LivingTreeGesture.rotate(90) == .orbit(yaw: -.pi / 2, pitch: 0) && LivingTreeGesture.rotate(0) == nil
-             && LivingTreeGesture.scroll(CGVector(dx: 10, dy: -5), precise: true, modifiers: [], at: .zero, orbits: true) == .orbit(yaw: 10 * LivingTreeGesture.scrollOrbitRate, pitch: -5 * LivingTreeGesture.scrollOrbitRate)
-             && LivingTreeGesture.scroll(CGVector(dx: 10, dy: -5), precise: true, modifiers: .shift, at: .zero, orbits: true) == .pan(CGVector(dx: 10, dy: -5))
-             && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 1), precise: false, modifiers: [], at: .zero, orbits: true) == .zoom(factor: 1.2, at: .zero, animated: true),
-             "living tree 3d input: dragging and two-finger scrolling turn the tree, Shift pans, a trackpad rotation turns it, a mouse wheel still zooms")
+             && LivingTreeGesture.scroll(CGVector(dx: 10, dy: -5), precise: true, modifiers: .shift, at: .zero) == .pan(CGVector(dx: 10, dy: -5))
+             && LivingTreeGesture.scroll(CGVector(dx: 0, dy: 1), precise: false, modifiers: [], at: .zero) == .zoom(factor: 1.2, at: .zero, animated: true),
+             "living tree 3d input: dragging turns the tree, Shift-drag and Shift-scroll pan, a trackpad rotation turns it, scrolling zooms")
 
     // MARK: Labels
     func measure(_ text: String, _ title: Bool) -> CGSize { CGSize(width: CGFloat(text.count) * (title ? 6.2 : 5.6), height: title ? 13 : 12) }
