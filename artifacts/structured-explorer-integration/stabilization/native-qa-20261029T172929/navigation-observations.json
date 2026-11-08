@@ -1,0 +1,722 @@
+[
+  {
+    "i": 0,
+    "target": "Users",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 46.5,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Users"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Users",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 1,
+    "target": "Applications",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 99,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Applications"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Applications",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 2,
+    "target": "Users",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 46.5,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Users"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Users",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 3,
+    "target": "Applications",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 99,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Applications"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Applications",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 4,
+    "target": "Users",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 46.5,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Users"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Users",
+        "frame": {
+          "h": 22.56410092491916,
+          "w": 66.44533930259092,
+          "x": 4729,
+          "y": 569.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 5,
+    "target": "Applications",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 99,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Applications"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Applications",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 6,
+    "target": "Users",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 46.5,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Users"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Users",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 7,
+    "target": "Applications",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 99,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Applications"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Applications",
+        "frame": {
+          "h": 7.8367378520124475,
+          "w": 23.077130674741852,
+          "x": 4719,
+          "y": 662
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 8,
+    "target": "Users",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 46.5,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Users"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Users",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "i": 9,
+    "target": "Applications",
+    "open": [
+      {
+        "description": "Startup Data",
+        "frame": {
+          "h": 19,
+          "w": 87,
+          "x": 4202,
+          "y": 297.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXButton"
+      },
+      {
+        "description": "Forward",
+        "frame": {
+          "h": 9,
+          "w": 5.5,
+          "x": 4297,
+          "y": 305
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXImage"
+      },
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 99,
+          "x": 4309,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Applications"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Applications",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "app": "/Users/nicholaslippa/storage-checker-structured-explorer/build/Storage Monitor.app",
+  "disposable_catalog": "/private/tmp/storage-monitor-structured-native-review.vilxh1qb/structured-explorer-native.sqlite3",
+  "window_title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3",
+  "launched": true,
+  "permission_required": "The authorized session is complete. Further native access requires fresh permission.",
+  "launch_arguments": [
+    "--database-path",
+    "/private/tmp/storage-monitor-structured-native-review.vilxh1qb/structured-explorer-native.sqlite3",
+    "--window-size",
+    "1440x900",
+    "--appearance",
+    "dark",
+    "-inventory.explorer.visualization",
+    "tree",
+    "-inventory.livingTree.renderer",
+    "structured",
+    "-inventory.explorer.treeNavigatorExpanded",
+    "true",
+    "-inventory.explorer.inspector",
+    "true",
+    "-inventory.explorer.mapHeight",
+    "600",
+    "-inventory.structuredExplorer.depth",
+    "3"
+  ],
+  "notes": "Launching on a copied database uses the existing development QA preference suite, not production preferences. No app is launched by this preparation.",
+  "qa_session_completed": true,
+  "qa_process_closed": true,
+  "qa_results": "../native-qa/NATIVE-RESULTS.md",
+  "disposable_catalog_available": false,
+  "temporary_catalog_disposed": true
+}

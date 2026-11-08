@@ -1,0 +1,35 @@
+{
+  "recorded_utc": "2026-10-29T10:12:00.849852+00:00",
+  "release_head": "873e069dc88788d24d620b4f9f6ff1904ea52f6a",
+  "release_status": [
+    "?? .DS_Store",
+    "?? artifacts/",
+    "?? docs/"
+  ],
+  "research_head": "873e069dc88788d24d620b4f9f6ff1904ea52f6a",
+  "research_status": [
+    " M LIVING-TREE-3D.md",
+    " M LIVING-TREE-CAMERA.md",
+    " M SourcesGUI/LivingTreeView.swift",
+    " M SourcesGUI/OverviewView.swift",
+    " M SourcesShared/LivingTreeCamera.swift",
+    " M tests/LivingTreeTests.swift",
+    "?? .DS_Store",
+    "?? Prototypes/",
+    "?? artifacts/",
+    "?? scripts/build-prototype-showcase.sh",
+    "?? scripts/prototype-living-tree.sh",
+    "?? scripts/test-chart-geometry.sh",
+    "?? tests/CapacityChartGeometryTests.swift",
+    "?? tests/LivingTreeScrollRoutingTests.swift"
+  ],
+  "dmg_sha256": "3484abea58524cd090808714e38672cc0f82a628d3b42b9c797c66674f774f0c",
+  "research_fix_source_matches": {
+    "SourcesGUI/OverviewView.swift": true,
+    "SourcesGUI/LivingTreeView.swift": true,
+    "SourcesShared/LivingTreeCamera.swift": true
+  },
+  "research_prototype_files_carried_forward": 6,
+  "research_prototypes_all_identical": true,
+  "actions": "No commits, pushes, merges, installs, launches, production preference changes, production database changes, LaunchAgent operations or full-volume scans."
+}

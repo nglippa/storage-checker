@@ -1,0 +1,30 @@
+{
+  "pid": 63381,
+  "bundle": "local.macbook.storage-monitor.viewer.dev",
+  "window_title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3",
+  "started_unix": 1793298320.407407,
+  "deadline_unix": 1793298920.407407,
+  "catalog": "/private/tmp/storage-monitor-structured-native-review.vilxh1qb/structured-explorer-native.sqlite3",
+  "arguments": [
+    "--database-path",
+    "/private/tmp/storage-monitor-structured-native-review.vilxh1qb/structured-explorer-native.sqlite3",
+    "--window-size",
+    "1440x900",
+    "--appearance",
+    "dark",
+    "-inventory.explorer.visualization",
+    "tree",
+    "-inventory.explorer.treeNavigatorExpanded",
+    "true",
+    "-inventory.explorer.inspector",
+    "true",
+    "-inventory.explorer.mapHeight",
+    "600",
+    "-inventory.structuredExplorer.depth",
+    "3",
+    "--perf-log",
+    "/Users/nicholaslippa/storage-checker-structured-explorer/artifacts/structured-explorer-integration/native-qa/native-performance.log",
+    "-chartRange",
+    "Last 30 Days"
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "results" : {
+    "classic" : {
+      "elements" : 3000,
+      "firstFrameMs" : 15.223945518310547,
+      "labelsFit" : 4,
+      "layoutMs" : 6.2374580000000002,
+      "panP50" : 2.3133274152832031,
+      "panP95" : 7.0120966188354492,
+      "zoomP50" : 4.2821176450805662,
+      "zoomP95" : 7.9062123790893564
+    },
+    "structured" : {
+      "discHits4x" : 101,
+      "discHitsFit" : 101,
+      "discs" : 101,
+      "firstFrameMs" : 3.653810104919434,
+      "labelHits4x" : 8,
+      "labelHitsFit" : 19,
+      "labels4x" : 8,
+      "labelsFit" : 19,
+      "labelsTested4x" : 8,
+      "labelsTestedFit" : 19,
+      "layoutMs" : 0.54916700000000007,
+      "memoryDeltaMB" : 0.078125,
+      "pageClassicMs" : [
+        451.50494575500488,
+        412.26303577423096,
+        414.39402103424072
+      ],
+      "pageStructuredMs" : [
+        355.23104667663574,
+        357.83505439758301,
+        349.00403022766113
+      ],
+      "pan4xP50" : 0.95745648193359367,
+      "pan4xP95" : 1.2071200180053712,
+      "panP50" : 2.0869680866088864,
+      "panP95" : 2.5469608455810548,
+      "recentreMs" : [
+        114.71295356750488,
+        121.26100063323975,
+        98.096966743469238
+      ],
+      "relayoutsForSelections" : 1,
+      "selectP50" : 2.1302500000000002,
+      "selectP95" : 2.2537090000000002,
+      "shown" : 101,
+      "upMs" : [
+        437.96205520629883,
+        97.514033317565918,
+        98.20103645324707
+      ],
+      "zoomP50" : 1.4675448533935547,
+      "zoomP95" : 2.2445032958984377
+    }
+  },
+  "scaling" : [
+    {
+      "budget" : 10000,
+      "elements" : 5704,
+      "layout3Ms" : 1.6664159999999999,
+      "layout6Ms" : 2.5055000000000001,
+      "shown3" : 101,
+      "shown6" : 1658,
+      "truncated" : true
+    },
+    {
+      "budget" : 20000,
+      "elements" : 6645,
+      "layout3Ms" : 1.8317080000000001,
+      "layout6Ms" : 2.8644159999999999,
+      "shown3" : 104,
+      "shown6" : 1747,
+      "truncated" : true
+    },
+    {
+      "frameMs" : 2.0160420000000001,
+      "layoutMs" : 0.70316599999999996,
+      "shown" : 56,
+      "spurLevels" : 33,
+      "unbalancedElements" : 3111
+    }
+  ]
+}

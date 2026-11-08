@@ -1,0 +1,10 @@
+{
+  "out": "/Users/nicholaslippa/storage-checker-structured-explorer/artifacts/structured-explorer-integration/stabilization/native-qa-20261029T172929",
+  "tmp": "/private/tmp/storage-stabilization-qa-cy5c_0o7",
+  "snapshot": "/Users/nicholaslippa/storage-checker/build/inventory-fresh-20261023T031313Z/previous-catalog.sqlite3",
+  "snapshot_sha256_before": "0fa4373a1198e6dc17fe145c79fc9e882195a3e67ff6b298329bf54114f133a1",
+  "bundle": "local.macbook.storage-monitor.viewer.dev",
+  "window_title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3",
+  "authorization": "User: go for QA; continue",
+  "app": "/Users/nicholaslippa/storage-checker-structured-explorer/build/Storage Monitor.app"
+}

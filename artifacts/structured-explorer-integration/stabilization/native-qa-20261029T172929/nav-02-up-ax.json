@@ -1,0 +1,3117 @@
+{
+  "elements": [
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "id": "main",
+      "role": "AXWindow",
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    },
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Available now, 19.60 GB, Disk usage, 474.78 GB used of 494.38 GB, Low space",
+      "frame": {
+        "h": 48,
+        "w": 536,
+        "x": 4202,
+        "y": 241
+      },
+      "id": "inventory.capacity",
+      "role": "AXProgressIndicator",
+      "value": 0.9603517955799835
+    },
+    {
+      "frame": {
+        "h": 20.5,
+        "w": 101.5,
+        "x": 4202,
+        "y": 296.75
+      },
+      "id": "inventory.breadcrumbs",
+      "role": "AXStaticText",
+      "value": "Startup Data"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 138.5,
+        "x": 5459.5,
+        "y": 295
+      },
+      "id": "inventory.refresh",
+      "role": "AXMenuButton",
+      "title": "Folder updates"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 145.5,
+        "x": 4202,
+        "y": 325
+      },
+      "id": "inventory.status",
+      "role": "AXStaticText",
+      "value": "Updating older measurements"
+    },
+    {
+      "description": "Indexing details",
+      "frame": {
+        "h": 13,
+        "w": 76,
+        "x": 4353.5,
+        "y": 325
+      },
+      "id": "inventory.indexDetails",
+      "role": "AXLink"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 3.5,
+        "x": 4435.5,
+        "y": 325
+      },
+      "role": "AXStaticText",
+      "value": "\u00b7"
+    },
+    {
+      "description": "Disk details",
+      "frame": {
+        "h": 13,
+        "w": 56,
+        "x": 4445,
+        "y": 325
+      },
+      "id": "inventory.accounting",
+      "role": "AXLink"
+    },
+    {
+      "description": "Browse",
+      "frame": {
+        "h": 24,
+        "w": 162.5,
+        "x": 4202,
+        "y": 359
+      },
+      "id": "inventory.mode",
+      "role": "AXPopUpButton",
+      "value": "Explorer"
+    },
+    {
+      "description": "Go to folder\u2026",
+      "frame": {
+        "h": 24,
+        "w": 105.5,
+        "x": 4372.5,
+        "y": 359
+      },
+      "id": "inventory.goToFolder",
+      "role": "AXButton"
+    },
+    {
+      "description": "Review Cleanup",
+      "frame": {
+        "h": 24,
+        "w": 146,
+        "x": 4486,
+        "y": 359
+      },
+      "id": "inventory.reviewCleanup",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 290,
+        "x": 5308,
+        "y": 359
+      },
+      "id": "inventory.search",
+      "role": "AXTextField",
+      "value": ""
+    },
+    {
+      "description": "Folder path",
+      "frame": {
+        "h": 22,
+        "w": 103,
+        "x": 4200,
+        "y": 400
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXGroup"
+    },
+    {
+      "description": "Up one level",
+      "frame": {
+        "h": 22,
+        "w": 33,
+        "x": 4200,
+        "y": 400
+      },
+      "id": "explorer.up",
+      "role": "AXButton"
+    },
+    {
+      "description": "Startup Data",
+      "frame": {
+        "h": 13,
+        "w": 64,
+        "x": 4239,
+        "y": 404.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 40,
+        "x": 5025.5,
+        "y": 404.5
+      },
+      "role": "AXStaticText",
+      "value": "Levels 3"
+    },
+    {
+      "description": "Levels shown",
+      "frame": {
+        "h": 20,
+        "w": 17,
+        "x": 5073.5,
+        "y": 401
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXIncrementor",
+      "value": 3
+    },
+    {
+      "frame": {
+        "h": 10,
+        "w": 17,
+        "x": 5073.5,
+        "y": 401
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 10,
+        "w": 17,
+        "x": 5073.5,
+        "y": 411
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Zoom Out",
+      "frame": {
+        "h": 20,
+        "w": 22,
+        "x": 5103.5,
+        "y": 401
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 29,
+        "x": 5136,
+        "y": 404.5
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXStaticText",
+      "value": "Zoom 100%"
+    },
+    {
+      "description": "Zoom In",
+      "frame": {
+        "h": 20,
+        "w": 22,
+        "x": 5175.5,
+        "y": 401
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Fit",
+      "frame": {
+        "h": 14,
+        "w": 13.5,
+        "x": 5210.5,
+        "y": 404
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Reset",
+      "frame": {
+        "h": 14,
+        "w": 30,
+        "x": 5230,
+        "y": 404
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Help",
+      "frame": {
+        "h": 11,
+        "w": 11,
+        "x": 5267,
+        "y": 405.5
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Structured Explorer of Startup Data",
+      "frame": {
+        "h": 380,
+        "w": 1119,
+        "x": 4180,
+        "y": 430
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXGroup"
+    },
+    {
+      "description": "Users, current folder, 323.88 GB, centre, selected",
+      "frame": {
+        "h": 22,
+        "w": 22,
+        "x": 4728.5,
+        "y": 609
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "nicholaslippa, folder, 323.88 GB, 100% of Users, level 1",
+      "frame": {
+        "h": 22,
+        "w": 22,
+        "x": 4728.5,
+        "y": 664.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 2 grouped items, 2.5 MB, less than 0.1% of Users, level 1",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4725,
+        "y": 677
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".ollama, folder, 116.03 GB, 36% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12.5,
+        "w": 12.5,
+        "x": 4741.5,
+        "y": 543.25
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "ComfyUI-Shared, folder, 73.41 GB, 23% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4758,
+        "y": 554
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Projects, folder, 56.27 GB, 17% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4800.5,
+        "y": 587
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".cache, folder, 15.35 GB, 4.7% of nicholaslippa, level 2, in /System/Volumes/Data/Users/nicholaslippa",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4828.5,
+        "y": 656.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "storage-checker, folder, 9.77 GB, 3.0% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4823,
+        "y": 702.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "ai-tools, folder, 9.29 GB, 2.9% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4798.5,
+        "y": 747
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Library, folder, 7.9 GB, 2.4% of nicholaslippa, level 2, in /System/Volumes/Data/Users/nicholaslippa",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4750,
+        "y": 779.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".codex, folder, 7.29 GB, 2.3% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4688.5,
+        "y": 777.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".codex-account-3, folder, 3.91 GB, 1.2% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4641.5,
+        "y": 726.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".codex-account-2, folder, 3.49 GB, 1.1% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4647.5,
+        "y": 670
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "ComfyUI-Installs, folder, 2.84 GB, 0.9% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4670.5,
+        "y": 647
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".local, folder, 2.57 GB, 0.8% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4686,
+        "y": 643.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".npm, folder, 2.24 GB, 0.7% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4706,
+        "y": 643
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".proliferate, folder, 1.82 GB, 0.6% of nicholaslippa, level 2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4725,
+        "y": 647.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "models, folder, 116.03 GB, 100% of .ollama, level 3, in /System/Volumes/Data/Users/nicholaslippa/.ollama",
+      "frame": {
+        "h": 12.5,
+        "w": 12.5,
+        "x": 4741.5,
+        "y": 607.25
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 5 grouped items, 25 KB, less than 0.1% of .ollama, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4750,
+        "y": 616.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "models, folder, 73.41 GB, 100% of ComfyUI-Shared, level 3, in /System/Volumes/Data/Users/nicholaslippa/ComfyUI-Shared",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4766.5,
+        "y": 627.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 12 KB, less than 0.1% of ComfyUI-Shared, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4774.5,
+        "y": 637.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Bonsai-demo, folder, 17.33 GB, 31% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4790,
+        "y": 651
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "wand-or-steel, folder, 6.1 GB, 11% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4797.5,
+        "y": 662.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "video-editing, folder, 5.39 GB, 9.6% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4805,
+        "y": 674.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SpendFence, folder, 3.86 GB, 6.9% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4812,
+        "y": 687
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "better-nursing, folder, 3.55 GB, 6.3% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4818.5,
+        "y": 699.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "steam-tycoon, folder, 3.29 GB, 5.8% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4825,
+        "y": 713
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "TD-Era-Expanse, folder, 2.78 GB, 4.9% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4831.5,
+        "y": 726.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Command Center, folder, 2.76 GB, 4.9% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4837,
+        "y": 740
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "GigWise, folder, 1.94 GB, 3.5% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4842.5,
+        "y": 754.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "TradersDelight, folder, 1.63 GB, 2.9% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4848,
+        "y": 769
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Whodunnit, folder, 1.54 GB, 2.7% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4852.5,
+        "y": 783.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PeacefulParents, folder, 1.21 GB, 2.2% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4857,
+        "y": 798.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "rigging-studio, folder, 1.2 GB, 2.1% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4861,
+        "y": 814
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Find-My-Needs, folder, 1.12 GB, 2.0% of Projects, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4864.5,
+        "y": 829.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "uv, folder, 12.74 GB, 83% of .cache, level 3, in /System/Volumes/Data/Users/nicholaslippa/.cache",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4870,
+        "y": 853
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "codex-runtimes, folder, 1.68 GB, 11% of .cache, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4872,
+        "y": 869
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "codebase-memory-mcp, folder, 606.2 MB, 3.9% of .cache, level 3, in /System/Volumes/Data/Users/nicholaslippa/.cache",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4874,
+        "y": 885
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "chrome-devtools-mcp, folder, 176.3 MB, 1.1% of .cache, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4875,
+        "y": 901.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "node, folder, 109.8 MB, 0.7% of .cache, level 3, in /System/Volumes/Data/Users/nicholaslippa/.cache",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4876,
+        "y": 917.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "huggingface, folder, 24.5 MB, 0.2% of .cache, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4876,
+        "y": 934
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "fontconfig, folder, 9.6 MB, less than 0.1% of .cache, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4876,
+        "y": 950.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "opencode, folder, 4.3 MB, less than 0.1% of .cache, level 3, in /System/Volumes/Data/Users/nicholaslippa/.cache",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4875,
+        "y": 966.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 4 grouped items, 225 KB, less than 0.1% of .cache, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4874,
+        "y": 983
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "build, folder, 9.76 GB, 100% of storage-checker, level 3, in /System/Volumes/Data/Users/nicholaslippa/storage-checker",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4870,
+        "y": 1007
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "graft, folder, 4 MB, less than 0.1% of storage-checker, level 3, in /System/Volumes/Data/Users/nicholaslippa/storage-checker",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4867.5,
+        "y": 1023
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 21 grouped items, 5.3 MB, less than 0.1% of storage-checker, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4864.5,
+        "y": 1038.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "open-design, folder, 5.14 GB, 55% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4857,
+        "y": 1061.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "codebasememorymcp, folder, 1.63 GB, 18% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4852.5,
+        "y": 1076.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "cortex, folder, 981.6 MB, 11% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4848,
+        "y": 1091
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MoneyPrinterTurbo, folder, 777.8 MB, 8.4% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4842.5,
+        "y": 1105.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "awesome-mcp-servers, folder, 402.3 MB, 4.3% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4837,
+        "y": 1120
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "x-algorithm, folder, 135.4 MB, 1.5% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4831.5,
+        "y": 1133.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "postiz-app, folder, 103.6 MB, 1.1% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4825,
+        "y": 1147
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "openmontage, folder, 64.3 MB, 0.7% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4818.5,
+        "y": 1160.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "godot-mcp, folder, 43.6 MB, 0.5% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4812,
+        "y": 1173
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Bonsai-model-test, folder, 7.3 MB, less than 0.1% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4805,
+        "y": 1185.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 5 grouped items, 2.3 MB, less than 0.1% of ai-tools, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4797.5,
+        "y": 1197.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Caches, folder, 5.95 GB, 75% of Library, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4782.5,
+        "y": 1212
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Application Support, folder, 1.86 GB, 24% of Library, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4774.5,
+        "y": 1222.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Logs, folder, 87 MB, 1.1% of Library, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4766.5,
+        "y": 1232.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 91 grouped items, 12 KB, less than 0.1% of Library, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4758.5,
+        "y": 1242.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Accessibility, size unknown, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4750,
+        "y": 1251.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Accounts, size unknown, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4742,
+        "y": 1260.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "AppleMediaServices, size unknown, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4733.5,
+        "y": 1268.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "packages, folder, 2.35 GB, 32% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4717,
+        "y": 1275.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "sessions, folder, 1.67 GB, 23% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4708.5,
+        "y": 1282.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "archived_sessions, folder, 1.03 GB, 14% of .codex, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4700.5,
+        "y": 1288.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "thread_history_1.sqlite, file, 721.5 MB, 9.9% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4692.5,
+        "y": 1294.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "plugins, folder, 644.3 MB, 8.8% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4684.5,
+        "y": 1300
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".tmp, folder, 508.4 MB, 7.0% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4677,
+        "y": 1305
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "cache, folder, 103.9 MB, 1.4% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4669.5,
+        "y": 1309.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "logs_2.sqlite, file, 75.3 MB, 1.0% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4662,
+        "y": 1313.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "computer-use, folder, 73 MB, 1.0% of .codex, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4655,
+        "y": 1317
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "generated_images, folder, 66.9 MB, 0.9% of .codex, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4648.5,
+        "y": 1320.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "gsd-core, folder, 14.1 MB, 0.2% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4642,
+        "y": 1323
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "vendor_imports, folder, 8.3 MB, 0.1% of .codex, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4635.5,
+        "y": 1325.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "state_5.sqlite, file, 6.4 MB, less than 0.1% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4630,
+        "y": 1328
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "logs_2.sqlite-wal, file, 5.2 MB, less than 0.1% of .codex, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4624.5,
+        "y": 1329.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "packages, folder, 2.34 GB, 60% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4614.5,
+        "y": 1324.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "sessions, folder, 734.6 MB, 19% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4610,
+        "y": 1325.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "plugins, folder, 226.3 MB, 5.8% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4606,
+        "y": 1326
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".tmp, folder, 220.4 MB, 5.6% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4602.5,
+        "y": 1326.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "thread_history_1.sqlite, file, 218.2 MB, 5.6% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4599.5,
+        "y": 1327
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "logs_2.sqlite, file, 71.8 MB, 1.8% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4597,
+        "y": 1327
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "cache, folder, 44.5 MB, 1.1% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4595,
+        "y": 1327
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "logs_2.sqlite-wal, file, 31.5 MB, 0.8% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4593,
+        "y": 1327
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "state_5.sqlite, file, 4.3 MB, 0.1% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4592,
+        "y": 1326.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "state_5.sqlite-wal, file, 4.2 MB, 0.1% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4591,
+        "y": 1326.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "thread_history_1.sqlite-wal, file, 4.2 MB, 0.1% of .codex-account-3, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4591,
+        "y": 1326
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 35 grouped items, 2.7 MB, less than 0.1% of .codex-account-3, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4591,
+        "y": 1325.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "packages, folder, 2.68 GB, 77% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4593,
+        "y": 1317
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "sessions, folder, 282.6 MB, 8.1% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4595,
+        "y": 1317
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".tmp, folder, 220.3 MB, 6.3% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4597,
+        "y": 1317
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "thread_history_1.sqlite, file, 100.7 MB, 2.9% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4599.5,
+        "y": 1317
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "plugins, folder, 78.4 MB, 2.2% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4602.5,
+        "y": 1317.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "logs_2.sqlite, file, 68.7 MB, 2.0% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4606,
+        "y": 1318
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "cache, folder, 42.5 MB, 1.2% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4610,
+        "y": 1318.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "thread_history_1.sqlite-wal, file, 4.2 MB, 0.1% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4614.5,
+        "y": 1319.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "state_5.sqlite-wal, file, 4.2 MB, 0.1% of .codex-account-2, level 3, in /System/Volumes/Data/Users/nicholaslippa/.codex-account-2",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4619,
+        "y": 1321
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 31 grouped items, 4.6 MB, 0.1% of .codex-account-2, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4624.5,
+        "y": 1322.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Nicholas Lippa, folder, 2.84 GB, 100% of ComfyUI-Installs, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4635.5,
+        "y": 1318.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 1 grouped items, 12 KB, less than 0.1% of ComfyUI-Installs, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4642,
+        "y": 1321
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "share, folder, 2.24 GB, 87% of .local, level 3, in /System/Volumes/Data/Users/nicholaslippa/.local",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4655,
+        "y": 1319
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "bin, folder, 324.9 MB, 13% of .local, level 3, in /System/Volumes/Data/Users/nicholaslippa/.local",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4662,
+        "y": 1322.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 1 grouped items, 131 KB, less than 0.1% of .local, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4669.5,
+        "y": 1326.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_cacache, folder, 1.87 GB, 83% of .npm, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4684.5,
+        "y": 1328
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_npx, folder, 370.8 MB, 17% of .npm, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4692.5,
+        "y": 1333.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 1.8 MB, less than 0.1% of .npm, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4700.5,
+        "y": 1339.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "anyharness, folder, 1.82 GB, 100% of .proliferate, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4717,
+        "y": 1344.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 9 grouped items, 41 KB, less than 0.1% of .proliferate, level 3",
+      "frame": {
+        "h": 12,
+        "w": 12,
+        "x": 4725,
+        "y": 1351.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 26,
+        "w": 735,
+        "x": 4196,
+        "y": 816
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXStaticText",
+      "value": "Disc area shows indexed size (small items have a visible minimum); arcs show share of parent; rings show levels \u00b7 110 shown, 286 more inside (+N) \u00b7 not reclaimable storage"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 256.5,
+        "x": 5026.5,
+        "y": 822.5
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXStaticText",
+      "value": "Click to select \u00b7 double-click to explore \u00b7 Esc goes up"
+    },
+    {
+      "description": "Resize storage map",
+      "frame": {
+        "h": 7,
+        "w": 1119,
+        "x": 4180,
+        "y": 847
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Hide Navigator",
+      "frame": {
+        "h": 20,
+        "w": 123,
+        "x": 4196,
+        "y": 860
+      },
+      "id": "inventory.navigatorToggle",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 20,
+        "w": 87,
+        "x": 4329,
+        "y": 860
+      },
+      "role": "AXMenuButton",
+      "title": "List style"
+    },
+    {
+      "description": "Visualization",
+      "frame": {
+        "h": 20,
+        "w": 155,
+        "x": 5039,
+        "y": 860
+      },
+      "id": "inventory.visualization",
+      "role": "AXRadioGroup"
+    },
+    {
+      "description": "Atlas",
+      "frame": {
+        "h": 20,
+        "w": 77.5,
+        "x": 5039,
+        "y": 860
+      },
+      "role": "AXRadioButton",
+      "value": 0
+    },
+    {
+      "description": "Living Tree",
+      "frame": {
+        "h": 20,
+        "w": 77.5,
+        "x": 5116.5,
+        "y": 860
+      },
+      "role": "AXRadioButton",
+      "value": 1
+    },
+    {
+      "description": "Visualization",
+      "frame": {
+        "h": 18,
+        "w": 33,
+        "x": 5204,
+        "y": 861
+      },
+      "id": "square.grid.2x2",
+      "role": "AXCheckBox",
+      "value": 1
+    },
+    {
+      "description": "Inspector",
+      "frame": {
+        "h": 18,
+        "w": 36,
+        "x": 5247,
+        "y": 861
+      },
+      "id": "sidebar.right",
+      "role": "AXCheckBox",
+      "value": 1
+    },
+    {
+      "frame": {
+        "h": 158,
+        "w": 1119,
+        "x": 4180,
+        "y": 887
+      },
+      "role": "AXScrollArea"
+    },
+    {
+      "frame": {
+        "h": 158,
+        "w": 1119,
+        "x": 4180,
+        "y": 887
+      },
+      "id": "inventory.navigator",
+      "role": "AXOutline"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 897
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 897
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Users",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 902
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 902
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 36,
+        "x": 4259,
+        "y": 903
+      },
+      "role": "AXStaticText",
+      "value": "Users"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 62,
+        "x": 5154,
+        "y": 903.5
+      },
+      "role": "AXStaticText",
+      "value": "323.88 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 925
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 925
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand private",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 930
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 930
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 43,
+        "x": 4259,
+        "y": 931
+      },
+      "role": "AXStaticText",
+      "value": "private"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 54.5,
+        "x": 5161.5,
+        "y": 931.5
+      },
+      "role": "AXStaticText",
+      "value": "98.07 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 953
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 953
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Applications",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 958
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 958
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 77,
+        "x": 4259,
+        "y": 959
+      },
+      "role": "AXStaticText",
+      "value": "Applications"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 54.5,
+        "x": 5161.5,
+        "y": 959.5
+      },
+      "role": "AXStaticText",
+      "value": "29.21 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 981
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 981
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand System",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 986
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 986
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 46.5,
+        "x": 4259,
+        "y": 987
+      },
+      "role": "AXStaticText",
+      "value": "System"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 987.5
+      },
+      "role": "AXStaticText",
+      "value": "5.94 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1009
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1009
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand opt",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 1014
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 1014
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 21,
+        "x": 4259,
+        "y": 1015
+      },
+      "role": "AXStaticText",
+      "value": "opt"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 1015.5
+      },
+      "role": "AXStaticText",
+      "value": "4.27 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1037
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1037
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Library",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 1042
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 1042
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 44,
+        "x": 4259,
+        "y": 1043
+      },
+      "role": "AXStaticText",
+      "value": "Library"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 1043.5
+      },
+      "role": "AXStaticText",
+      "value": "1.72 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1065
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1065
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand usr",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "usr"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "4.3 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1093
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1093
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand .PreviousSystemInformation",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".PreviousSystemInformation"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "3.7 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1121
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1121
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand .com.apple.templatemigration.boot-install",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".com.apple.templatemigration.boot-install"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "1.2 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1149
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1149
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand MobileSoftwareUpdate",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "MobileSoftwareUpdate"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "737 KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1177
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1177
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "cores"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1205
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1205
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "mnt"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1233
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1233
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand pkg",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "pkg"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1261
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1261
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "sw"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1289
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1289
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Volumes",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Volumes"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1317
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1317
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".DocumentRevisions-V100"
+    },
+    {
+      "description": "Access restricted",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "lock",
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u2014"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1345
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1345
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".fseventsd"
+    },
+    {
+      "description": "Access restricted",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "lock",
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u2014"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1373
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1373
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".Spotlight-V100"
+    },
+    {
+      "description": "Access restricted",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "lock",
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u2014"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1401
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1401
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".TemporaryItems"
+    },
+    {
+      "description": "Access restricted",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "lock",
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u2014"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1429
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1429
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "home"
+    },
+    {
+      "description": "Outside measured scope",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "hourglass",
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u2014"
+    },
+    {
+      "frame": {
+        "h": 580,
+        "w": 1099,
+        "x": 4190,
+        "y": 887
+      },
+      "id": "ListColumn",
+      "role": "AXColumn"
+    },
+    {
+      "frame": {
+        "h": 160,
+        "w": 19,
+        "x": 5281,
+        "y": 886
+      },
+      "role": "AXScrollBar",
+      "value": 0
+    },
+    {
+      "frame": {
+        "h": 41,
+        "w": 6,
+        "x": 5290,
+        "y": 890
+      },
+      "role": "AXValueIndicator",
+      "value": 0
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 5282,
+        "y": 887
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 5282,
+        "y": 887
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 110.5,
+        "w": 6,
+        "x": 5290,
+        "y": 931.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 6,
+        "x": 5290,
+        "y": 890
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 652,
+        "w": 320,
+        "x": 5300,
+        "y": 393
+      },
+      "id": "inventory.inspector",
+      "role": "AXScrollArea"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 45,
+        "x": 5320,
+        "y": 413
+      },
+      "role": "AXStaticText",
+      "value": "Selection"
+    },
+    {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 5320,
+        "y": 436
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 19,
+        "w": 42,
+        "x": 5362,
+        "y": 436
+      },
+      "role": "AXStaticText",
+      "value": "Users"
+    },
+    {
+      "frame": {
+        "h": 19,
+        "w": 42,
+        "x": 5362,
+        "y": 436
+      },
+      "role": "AXStaticText",
+      "value": "Users"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 36,
+        "x": 5362,
+        "y": 458
+      },
+      "role": "AXStaticText",
+      "value": "Folder"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 139.5,
+        "x": 5320,
+        "y": 483
+      },
+      "role": "AXStaticText",
+      "value": "/System/Volumes/Data/Users"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 139.5,
+        "x": 5320,
+        "y": 483
+      },
+      "role": "AXStaticText",
+      "value": "/System/Volumes/Data/Users"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 60,
+        "x": 5320,
+        "y": 516
+      },
+      "role": "AXStaticText",
+      "value": "Indexed size"
+    },
+    {
+      "frame": {
+        "h": 20.5,
+        "w": 86.5,
+        "x": 5320,
+        "y": 534
+      },
+      "role": "AXStaticText",
+      "value": "323.88 GB"
+    },
+    {
+      "description": "Share of parent",
+      "frame": {
+        "h": 20,
+        "w": 280,
+        "x": 5320,
+        "y": 566.5
+      },
+      "role": "AXProgressIndicator",
+      "value": 0.6993733572375319
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 115.5,
+        "x": 5320,
+        "y": 592.5
+      },
+      "role": "AXStaticText",
+      "value": "70% of Startup Data"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 100.5,
+        "x": 5320,
+        "y": 612.5
+      },
+      "role": "AXStaticText",
+      "value": "Previously measured"
+    },
+    {
+      "description": "Explore Folder",
+      "frame": {
+        "h": 24,
+        "w": 134.5,
+        "x": 5320,
+        "y": 645.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Finder",
+      "frame": {
+        "h": 15,
+        "w": 59,
+        "x": 5321.5,
+        "y": 680.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Copy path",
+      "frame": {
+        "h": 15,
+        "w": 12,
+        "x": 5394,
+        "y": 680.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 115,
+        "x": 5320,
+        "y": 716.5
+      },
+      "role": "AXStaticText",
+      "value": "Largest loaded items"
+    },
+    {
+      "description": "nicholaslippa, 323.88 GB",
+      "frame": {
+        "h": 13,
+        "w": 280,
+        "x": 5320,
+        "y": 739.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Shared, 2.5 MB",
+      "frame": {
+        "h": 13,
+        "w": 280,
+        "x": 5320,
+        "y": 761.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": ".localized, Zero KB",
+      "frame": {
+        "h": 13,
+        "w": 280,
+        "x": 5320,
+        "y": 783.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 26,
+        "w": 264.5,
+        "x": 5320,
+        "y": 805.5
+      },
+      "role": "AXStaticText",
+      "value": "From the currently loaded folder page. Some sizes are from the last completed measurement."
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 84,
+        "x": 5320,
+        "y": 872.5
+      },
+      "role": "AXStaticText",
+      "value": "Cleanup review"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 264,
+        "x": 5320,
+        "y": 892.5
+      },
+      "role": "AXStaticText",
+      "value": "No automatic cleanup suggestion for this item."
+    },
+    {
+      "description": "Cleanup & safety",
+      "frame": {
+        "h": 24,
+        "w": 280,
+        "x": 5320,
+        "y": 927.5
+      },
+      "role": "AXButton",
+      "value": "Collapsed"
+    },
+    {
+      "description": "Storage details",
+      "frame": {
+        "h": 24,
+        "w": 280,
+        "x": 5320,
+        "y": 992.5
+      },
+      "role": "AXButton",
+      "value": "Collapsed"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 408.5,
+        "x": 4202,
+        "y": 1055
+      },
+      "role": "AXStaticText",
+      "value": "Indexed sizes can include shared storage and are not guaranteed recoverable space."
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXToolbar"
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 181,
+        "x": 4809.5,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 36,
+        "w": 177,
+        "x": 4813.5,
+        "y": 185
+      },
+      "id": "app.section",
+      "role": "AXRadioGroup"
+    },
+    {
+      "description": "Storage",
+      "frame": {
+        "h": 36,
+        "w": 88.5,
+        "x": 4813.5,
+        "y": 185
+      },
+      "role": "AXRadioButton",
+      "value": 1
+    },
+    {
+      "description": "Monitoring",
+      "frame": {
+        "h": 36,
+        "w": 88.5,
+        "x": 4902,
+        "y": 185
+      },
+      "role": "AXRadioButton",
+      "value": 0
+    },
+    {
+      "description": "Reload inventory",
+      "frame": {
+        "h": 52,
+        "w": 40,
+        "x": 5576,
+        "y": 177
+      },
+      "id": "inventory.reload",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4198,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4244,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 14,
+        "x": 4245,
+        "y": 196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 14,
+        "x": 4245,
+        "y": 196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4221,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 537.5,
+        "x": 4272,
+        "y": 177
+      },
+      "role": "AXStaticText",
+      "value": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  ],
+  "identity": {
+    "bundle": "local.macbook.storage-monitor.viewer.dev",
+    "frame": {
+      "h": 900,
+      "w": 1440,
+      "x": 4180,
+      "y": 177
+    },
+    "pid": 39667,
+    "time": 1793313009.852406,
+    "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+  }
+}

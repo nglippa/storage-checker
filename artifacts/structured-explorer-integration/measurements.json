@@ -1,0 +1,91 @@
+{
+  "checks" : 43,
+  "failures" : [
+
+  ],
+  "frameBudgetMs" : 16.666666666666668,
+  "results" : {
+    "classic" : {
+      "elements" : 3000,
+      "firstFrameMs" : 10.116643020812988,
+      "labelsFit" : 6,
+      "layoutMs" : 4.9522500000000003,
+      "panP50" : 1.896703415283203,
+      "panP95" : 4.5309693372802737,
+      "zoomP50" : 2.5486042709350585,
+      "zoomP95" : 5.0092712398681645
+    },
+    "structured" : {
+      "discHits4x" : 101,
+      "discHitsFit" : 101,
+      "discs" : 101,
+      "firstFrameMs" : 2.8977754745483404,
+      "labelHits4x" : 8,
+      "labelHitsFit" : 18,
+      "labels4x" : 8,
+      "labelsFit" : 18,
+      "labelsTested4x" : 8,
+      "labelsTestedFit" : 18,
+      "layoutMs" : 0.48887500000000006,
+      "memoryDeltaMB" : 0.078125,
+      "pageClassicHostAndBitmapMs" : [
+        139.48579300000003,
+        154.274249,
+        149.37866700000001
+      ],
+      "pageStructuredHostAndBitmapMs" : [
+        103.983042,
+        89.856999999999999,
+        106.096084
+      ],
+      "pan4xP50" : 0.91142373657226561,
+      "pan4xP95" : 1.0084725267333985,
+      "panP50" : 1.9149613494873048,
+      "panP95" : 2.1759770280761721,
+      "recentreMs" : [
+        96.302032470703125,
+        98.252058029174805,
+        100.04091262817383
+      ],
+      "relayoutsForSelections" : 1,
+      "selectP50" : 1.933708,
+      "selectP95" : 2.149,
+      "shown" : 101,
+      "upMs" : [
+        99.888920783996582,
+        95.92592716217041,
+        96.548080444335938
+      ],
+      "zoomP50" : 1.3548371124267578,
+      "zoomP95" : 1.9936878051757811
+    }
+  },
+  "scaling" : [
+    {
+      "budget" : 10000,
+      "elements" : 7583,
+      "layout3Ms" : 1.1610830000000001,
+      "layout6Ms" : 2.0477920000000003,
+      "shown3" : 104,
+      "shown6" : 1843,
+      "truncated" : true
+    },
+    {
+      "budget" : 20000,
+      "elements" : 8451,
+      "layout3Ms" : 1.0720419999999999,
+      "layout6Ms" : 2.1529579999999999,
+      "shown3" : 106,
+      "shown6" : 1966,
+      "truncated" : true
+    },
+    {
+      "frameMs" : 1.7169590000000001,
+      "layoutMs" : 0.67458299999999993,
+      "shown" : 56,
+      "spurLevels" : 33,
+      "unbalancedElements" : 3111
+    }
+  ],
+  "scope" : "Headless model\/layout and offscreen raster costs on the current Mac. Warm caches; not physical input, display pacing, cold launch, or Mac mini acceptance. Page timings exclude fixed settling and deferred work during settling. Memory delta is warmed incremental allocation, not total app footprint."
+}

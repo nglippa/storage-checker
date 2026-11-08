@@ -1,0 +1,4550 @@
+{
+  "elements": [
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "id": "main",
+      "role": "AXWindow",
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    },
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXSplitGroup"
+    },
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 243,
+        "x": 4203,
+        "y": 235
+      },
+      "role": "AXStaticText",
+      "value": "QA history \u00b7 structured-explorer-native.sqlite3"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 223.5,
+        "x": 4222.5,
+        "y": 235.02294921875
+      },
+      "role": "AXStaticText",
+      "value": "QA history \u00b7 structured-explorer-native.sqlite3"
+    },
+    {
+      "frame": {
+        "h": 525,
+        "w": 1440,
+        "x": 4180,
+        "y": 254
+      },
+      "id": "history.summaryScroll",
+      "role": "AXScrollArea"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 129,
+        "x": 4203.5,
+        "y": 267
+      },
+      "role": "AXStaticText",
+      "value": "Internal storage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 103.5,
+        "x": 4229,
+        "y": 267
+      },
+      "role": "AXStaticText",
+      "value": "Internal storage"
+    },
+    {
+      "description": "Severity: Warning",
+      "frame": {
+        "h": 9.5,
+        "w": 10.5,
+        "x": 5541.5,
+        "y": 271.5
+      },
+      "id": "exclamationmark.triangle.fill",
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 41,
+        "x": 5557,
+        "y": 269.920166015625
+      },
+      "role": "AXStaticText",
+      "value": "Severity: Warning"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 41,
+        "x": 5557,
+        "y": 269.920166015625
+      },
+      "role": "AXStaticText",
+      "value": "Warning"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 65.5,
+        "x": 4202,
+        "y": 294
+      },
+      "role": "AXStaticText",
+      "value": "Available now"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 65.5,
+        "x": 4202,
+        "y": 294
+      },
+      "role": "AXStaticText",
+      "value": "Available now"
+    },
+    {
+      "description": "Live, updated 17:30:32",
+      "frame": {
+        "h": 14,
+        "w": 138,
+        "x": 5460,
+        "y": 293
+      },
+      "id": "overview.liveStatus",
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 38,
+        "w": 142,
+        "x": 4202,
+        "y": 308
+      },
+      "id": "overview.available",
+      "role": "AXStaticText",
+      "value": "19.55 GB"
+    },
+    {
+      "frame": {
+        "h": 38,
+        "w": 142,
+        "x": 4202,
+        "y": 308
+      },
+      "role": "AXStaticText",
+      "value": "19.55 GB"
+    },
+    {
+      "description": "Physical storage used",
+      "frame": {
+        "h": 20,
+        "w": 1396,
+        "x": 4202,
+        "y": 356
+      },
+      "role": "AXProgressIndicator",
+      "value": 0.9604487720250967
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 79,
+        "x": 4202,
+        "y": 380
+      },
+      "role": "AXStaticText",
+      "value": "474.83 GB used"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 79,
+        "x": 4202,
+        "y": 380
+      },
+      "role": "AXStaticText",
+      "value": "474.83 GB used"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 77.5,
+        "x": 5520.5,
+        "y": 380
+      },
+      "role": "AXStaticText",
+      "value": "494.38 GB total"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 77.5,
+        "x": 5520.5,
+        "y": 380
+      },
+      "role": "AXStaticText",
+      "value": "494.38 GB total"
+    },
+    {
+      "description": "Storage status",
+      "frame": {
+        "h": 24,
+        "w": 1396,
+        "x": 4202,
+        "y": 403
+      },
+      "role": "AXButton",
+      "value": "Collapsed"
+    },
+    {
+      "frame": {
+        "h": 76,
+        "w": 1396,
+        "x": 4202,
+        "y": 453
+      },
+      "id": "latest.change",
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 208.5,
+        "x": 4202,
+        "y": 453
+      },
+      "role": "AXStaticText",
+      "value": "Latest change \u00b7 Oct 22, 2026 at 00:30"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 208.5,
+        "x": 4202,
+        "y": 453
+      },
+      "role": "AXStaticText",
+      "value": "Latest change \u00b7 Oct 22, 2026 at 00:30"
+    },
+    {
+      "frame": {
+        "h": 19,
+        "w": 481.5,
+        "x": 4202,
+        "y": 472
+      },
+      "role": "AXStaticText",
+      "value": "Your Mac lost 3.22 GB of available storage between 00:11 and 00:30."
+    },
+    {
+      "frame": {
+        "h": 19,
+        "w": 481.5,
+        "x": 4202,
+        "y": 472
+      },
+      "role": "AXStaticText",
+      "value": "Your Mac lost 3.22 GB of available storage between 00:11 and 00:30."
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 784.5,
+        "x": 4202,
+        "y": 496
+      },
+      "role": "AXStaticText",
+      "value": "macOS used 3.22 GB more disk space for virtual memory (swap: memory moved onto the disk when apps need more than the Mac's RAM)."
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 784.5,
+        "x": 4202,
+        "y": 496
+      },
+      "role": "AXStaticText",
+      "value": "macOS used 3.22 GB more disk space for virtual memory (swap: memory moved onto the disk when apps need more than the Mac's RAM)."
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 239.5,
+        "x": 4202,
+        "y": 516
+      },
+      "role": "AXStaticText",
+      "value": "Measured \u00b7 which app caused it was not recorded"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 239.5,
+        "x": 4202,
+        "y": 516
+      },
+      "role": "AXStaticText",
+      "value": "Measured \u00b7 which app caused it was not recorded"
+    },
+    {
+      "description": "Explain",
+      "frame": {
+        "h": 24,
+        "w": 67.5,
+        "x": 5530.5,
+        "y": 479
+      },
+      "id": "latest.details",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 153,
+        "x": 4202,
+        "y": 559
+      },
+      "role": "AXStaticText",
+      "value": "Recorded available capacity"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 153,
+        "x": 4202,
+        "y": 559
+      },
+      "role": "AXStaticText",
+      "value": "Recorded available capacity"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 49.5,
+        "x": 4363,
+        "y": 559
+      },
+      "role": "AXStaticText",
+      "value": "29 points"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 49.5,
+        "x": 4363,
+        "y": 559
+      },
+      "role": "AXStaticText",
+      "value": "29 points"
+    },
+    {
+      "description": "Chart time range",
+      "frame": {
+        "h": 24,
+        "w": 132.5,
+        "x": 5459.5,
+        "y": 554
+      },
+      "id": "chart.range",
+      "role": "AXPopUpButton",
+      "value": "Last 30 Days"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 158.5,
+        "x": 4202,
+        "y": 586
+      },
+      "role": "AXStaticText",
+      "value": "Orange/red: 25/15 GB thresholds"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 158.5,
+        "x": 4202,
+        "y": 586
+      },
+      "role": "AXStaticText",
+      "value": "Orange/red: 25/15 GB thresholds"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 188,
+        "x": 4370.5,
+        "y": 586
+      },
+      "role": "AXStaticText",
+      "value": "Colored points: loss or recovery \u2265 1 GB"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 188,
+        "x": 4370.5,
+        "y": 586
+      },
+      "role": "AXStaticText",
+      "value": "Colored points: loss or recovery \u2265 1 GB"
+    },
+    {
+      "frame": {
+        "h": 160,
+        "w": 1396,
+        "x": 4202,
+        "y": 607
+      },
+      "id": "capacity.chart",
+      "role": "AXGroup"
+    },
+    {
+      "description": "",
+      "frame": {
+        "h": 1,
+        "w": 1361,
+        "x": 4202,
+        "y": 638.6738720063496
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "",
+      "frame": {
+        "h": 1,
+        "w": 1361,
+        "x": 4202,
+        "y": 683.0043232038097
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 12:00 to Oct 21, 2026 at 13:00",
+      "frame": {
+        "h": 143,
+        "w": 109.0352548152553,
+        "x": 4199.847598876252,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 13:00 to Oct 21, 2026 at 14:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525534,
+        "x": 4308.882853691507,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 14:00 to Oct 21, 2026 at 15:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525534,
+        "x": 4417.918108506763,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 15:00 to Oct 21, 2026 at 16:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525526,
+        "x": 4526.953363322018,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 16:00 to Oct 21, 2026 at 17:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525537,
+        "x": 4635.988618137273,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 17:00 to Oct 21, 2026 at 18:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525526,
+        "x": 4745.023872952529,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 18:00 to Oct 21, 2026 at 19:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525526,
+        "x": 4854.059127767784,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 19:00 to Oct 21, 2026 at 20:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525537,
+        "x": 4963.094382583039,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 20:00 to Oct 21, 2026 at 21:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525537,
+        "x": 5072.129637398295,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 21:00 to Oct 21, 2026 at 22:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525526,
+        "x": 5181.16489221355,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 22:00 to Oct 21, 2026 at 23:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525548,
+        "x": 5290.200147028805,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 21, 2026 at 23:00 to Oct 22, 2026 at 00:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525526,
+        "x": 5399.235401844061,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Oct 22, 2026 at 00:00 to Oct 22, 2026 at 01:00",
+      "frame": {
+        "h": 143,
+        "w": 109.03525481525503,
+        "x": 5508.270656659316,
+        "y": 607
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 137,
+        "x": 4202,
+        "y": 795.02294921875
+      },
+      "role": "AXStaticText",
+      "value": "All recorded changes"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 137,
+        "x": 4202,
+        "y": 795.02294921875
+      },
+      "role": "AXStaticText",
+      "value": "All recorded changes"
+    },
+    {
+      "description": "Filters (1)",
+      "frame": {
+        "h": 24,
+        "w": 104.5,
+        "x": 4349,
+        "y": 791
+      },
+      "id": "filter.expand",
+      "role": "AXButton"
+    },
+    {
+      "description": "Search",
+      "frame": {
+        "h": 13,
+        "w": 12.5,
+        "x": 5081,
+        "y": 796.5
+      },
+      "id": "magnifyingglass",
+      "role": "AXImage"
+    },
+    {
+      "description": "Search descriptions, categories, and diagnostic evidence",
+      "frame": {
+        "h": 16,
+        "w": 202.5,
+        "x": 5101,
+        "y": 795
+      },
+      "id": "filter.search",
+      "role": "AXTextField",
+      "value": ""
+    },
+    {
+      "description": "Sort",
+      "frame": {
+        "h": 24,
+        "w": 170,
+        "x": 5321.5,
+        "y": 791
+      },
+      "id": "filter.sort",
+      "role": "AXPopUpButton",
+      "value": "Newest First"
+    },
+    {
+      "description": "Clear Filters",
+      "frame": {
+        "h": 24,
+        "w": 96.5,
+        "x": 5501.5,
+        "y": 791
+      },
+      "id": "filter.clear",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 221,
+        "w": 1440,
+        "x": 4180,
+        "y": 827
+      },
+      "role": "AXScrollArea"
+    },
+    {
+      "frame": {
+        "h": 221,
+        "w": 1440,
+        "x": 4180,
+        "y": 827
+      },
+      "id": "history.table",
+      "role": "AXOutline"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 860
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 860
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 860
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 864.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 22 at 00:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 860
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 860
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 864
+      },
+      "role": "AXStaticText",
+      "value": "\u22123.22 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 860
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 860
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss, Warning",
+      "frame": {
+        "h": 15,
+        "w": 136.5,
+        "x": 4516.5,
+        "y": 864.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 860
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 860
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 864
+      },
+      "role": "AXStaticText",
+      "value": "24.11 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 884
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 884
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 884
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 888.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 22 at 00:11"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 884
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 884
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 73,
+        "x": 4425,
+        "y": 888
+      },
+      "role": "AXStaticText",
+      "value": "\u2212188.42 KB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 884
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 884
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 15,
+        "w": 88.5,
+        "x": 4516.5,
+        "y": 888.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 884
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 884
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 888
+      },
+      "role": "AXStaticText",
+      "value": "27.33 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 908
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 908
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 908
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 912.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 22 at 00:10"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 908
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 908
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 912
+      },
+      "role": "AXStaticText",
+      "value": "\u22120.07 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 908
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 908
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 15,
+        "w": 88.5,
+        "x": 4516.5,
+        "y": 912.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 908
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 908
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 912
+      },
+      "role": "AXStaticText",
+      "value": "27.33 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 932
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 932
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 932
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 936.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 22 at 00:05"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 932
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 932
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 936
+      },
+      "role": "AXStaticText",
+      "value": "\u22120.01 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 932
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 932
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 15,
+        "w": 88.5,
+        "x": 4516.5,
+        "y": 936.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 932
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 932
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 936
+      },
+      "role": "AXStaticText",
+      "value": "27.40 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 956
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 956
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 956
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 960.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 22 at 00:04"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 956
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 956
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 960
+      },
+      "role": "AXStaticText",
+      "value": "+2.41 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 956
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 956
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 15,
+        "w": 115,
+        "x": 4516.5,
+        "y": 960.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 956
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 956
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 960
+      },
+      "role": "AXStaticText",
+      "value": "27.41 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 980
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 980
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 980
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 984.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 22 at 00:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 980
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 980
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 984
+      },
+      "role": "AXStaticText",
+      "value": "+1.76 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 980
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 980
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery, Warning",
+      "frame": {
+        "h": 15,
+        "w": 163,
+        "x": 4516.5,
+        "y": 984.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 980
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 980
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 984
+      },
+      "role": "AXStaticText",
+      "value": "25.00 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1004
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1004
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1004
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 1008.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 23:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1004
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1004
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 1008
+      },
+      "role": "AXStaticText",
+      "value": "\u22121.22 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1004
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1004
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss, Warning",
+      "frame": {
+        "h": 15,
+        "w": 136.5,
+        "x": 4516.5,
+        "y": 1008.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1004
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1004
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 1008
+      },
+      "role": "AXStaticText",
+      "value": "23.23 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1028
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1028
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1028
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 1032.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 23:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1028
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1028
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 1032
+      },
+      "role": "AXStaticText",
+      "value": "\u22121.98 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1028
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1028
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss, Warning",
+      "frame": {
+        "h": 15,
+        "w": 136.5,
+        "x": 4516.5,
+        "y": 1032.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1028
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1028
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 1032
+      },
+      "role": "AXStaticText",
+      "value": "24.45 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1052
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1052
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1052
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 1056.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 22:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1052
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1052
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 1056
+      },
+      "role": "AXStaticText",
+      "value": "\u22120.59 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1052
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1052
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 15,
+        "w": 88.5,
+        "x": 4516.5,
+        "y": 1056.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1052
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1052
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 1056
+      },
+      "role": "AXStaticText",
+      "value": "26.43 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1076
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1076
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1076
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 1080.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 22:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1076
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1076
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22122.23 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1076
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1076
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 15,
+        "w": 88.5,
+        "x": 4516.5,
+        "y": 1080.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1076
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1076
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "27.02 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1100
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1100
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1100
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 1104.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 21:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1100
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1100
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 60,
+        "x": 4438,
+        "y": 1104
+      },
+      "role": "AXStaticText",
+      "value": "\u22124.06 MB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1100
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1100
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 15,
+        "w": 88.5,
+        "x": 4516.5,
+        "y": 1104.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1100
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1100
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 1104
+      },
+      "role": "AXStaticText",
+      "value": "29.25 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1124
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1124
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1124
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 90.5,
+        "x": 4196,
+        "y": 1128.5
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 21:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1124
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1124
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 4440,
+        "y": 1128
+      },
+      "role": "AXStaticText",
+      "value": "+0.02 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1124
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1124
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 15,
+        "w": 115,
+        "x": 4516.5,
+        "y": 1128.5
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1124
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1124
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 58,
+        "x": 5546,
+        "y": 1128
+      },
+      "role": "AXStaticText",
+      "value": "29.26 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1148
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1148
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1148
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 20:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1148
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1148
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22126.22 MB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1148
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1148
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1148
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1148
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.24 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1172
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1172
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1172
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 20:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1172
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1172
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22126.26 MB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1172
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1172
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1172
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1172
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.24 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1196
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1196
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 19:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1196
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "+0.17 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1196
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1196
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.25 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1220
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1220
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1220
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 19:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1220
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1220
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u2212299.01 KB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1220
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1220
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1220
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1220
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.08 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1244
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1244
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1244
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 18:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1244
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1244
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "+0.02 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1244
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1244
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1244
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1244
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.08 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1268
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1268
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1268
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 18:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1268
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1268
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "+7.74 MB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1268
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1268
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1268
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1268
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.07 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1292
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1292
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1292
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 17:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1292
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1292
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22120.03 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1292
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1292
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1292
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1292
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.06 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1316
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1316
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1316
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 17:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1316
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1316
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22127.65 MB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1316
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1316
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1316
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1316
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.09 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1340
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1340
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1340
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 16:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1340
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1340
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "+0.02 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1340
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1340
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1340
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1340
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.10 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1364
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1364
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1364
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 16:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1364
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1364
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22120.02 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1364
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1364
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1364
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1364
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.08 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1388
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1388
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1388
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 15:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1388
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1388
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22127.71 MB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1388
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1388
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1388
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1388
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.10 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1412
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1412
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1412
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 15:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1412
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1412
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22120.09 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1412
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1412
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1412
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1412
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.10 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1436
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1436
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1436
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 14:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1436
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1436
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u22120.02 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1436
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1436
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage loss",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1436
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1436
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.20 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1460
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1460
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1460
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 14:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1460
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1460
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "+0.02 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1460
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1460
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1460
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1460
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.22 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1484
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1484
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1484
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 13:30"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1484
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1484
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "+0.05 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1484
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1484
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1484
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1484
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.20 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1508
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1508
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1508
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 13:00"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1508
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1508
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "+0.07 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1508
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1508
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage recovery",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1508
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1508
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.14 GB"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 1440,
+        "x": 4180,
+        "y": 1532
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1532
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 155,
+        "x": 4196,
+        "y": 1532
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Oct 21 at 12:01"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1532
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 130,
+        "x": 4368,
+        "y": 1532
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "\u2014"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1532
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 927,
+        "x": 4515,
+        "y": 1532
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Recorded scan",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1532
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 145,
+        "x": 5459,
+        "y": 1532
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29.07 GB"
+    },
+    {
+      "frame": {
+        "h": 711,
+        "w": 170,
+        "x": 4190,
+        "y": 855
+      },
+      "id": "6759FA57-585B-4C94-B1BD-5F232F245B90",
+      "role": "AXColumn"
+    },
+    {
+      "frame": {
+        "h": 711,
+        "w": 147,
+        "x": 4360,
+        "y": 855
+      },
+      "id": "4747CE3E-E1A0-4F92-BDD4-2602EF9DF664",
+      "role": "AXColumn"
+    },
+    {
+      "frame": {
+        "h": 711,
+        "w": 944,
+        "x": 4507,
+        "y": 855
+      },
+      "id": "49A888EA-E064-44BA-8605-04F34E6CEF95",
+      "role": "AXColumn"
+    },
+    {
+      "frame": {
+        "h": 711,
+        "w": 159,
+        "x": 5451,
+        "y": 855
+      },
+      "id": "987971B2-7E33-4C4E-820D-A7623C12BAB2",
+      "role": "AXColumn"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1440,
+        "x": 4180,
+        "y": 827
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 170,
+        "x": 4190,
+        "y": 827
+      },
+      "role": "AXButton",
+      "title": "Time"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 147,
+        "x": 4360,
+        "y": 827
+      },
+      "role": "AXButton",
+      "title": "Change"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 944,
+        "x": 4507,
+        "y": 827
+      },
+      "role": "AXButton",
+      "title": "Event"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 159,
+        "x": 5451,
+        "y": 827
+      },
+      "role": "AXButton",
+      "title": "Available"
+    },
+    {
+      "frame": {
+        "h": 195,
+        "w": 19,
+        "x": 5602,
+        "y": 854
+      },
+      "role": "AXScrollBar",
+      "value": 0
+    },
+    {
+      "frame": {
+        "h": 55.5,
+        "w": 6,
+        "x": 5611,
+        "y": 858
+      },
+      "role": "AXValueIndicator",
+      "value": 0
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 5603,
+        "y": 855
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 5603,
+        "y": 855
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 131,
+        "w": 6,
+        "x": 5611,
+        "y": 914
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 6,
+        "x": 5611,
+        "y": 858
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 76,
+        "x": 4202,
+        "y": 1056
+      },
+      "id": "history.resultCount",
+      "role": "AXStaticText",
+      "value": "29 of 29 events"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 76,
+        "x": 4202,
+        "y": 1056
+      },
+      "role": "AXStaticText",
+      "value": "29 of 29 events"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 229.5,
+        "x": 5368.5,
+        "y": 1056
+      },
+      "role": "AXStaticText",
+      "value": "Read-only \u00b7 background monitor is independent"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 229.5,
+        "x": 5368.5,
+        "y": 1056
+      },
+      "role": "AXStaticText",
+      "value": "Read-only \u00b7 background monitor is independent"
+    },
+    {
+      "frame": {
+        "h": 848,
+        "w": 0.5,
+        "x": 5620,
+        "y": 229
+      },
+      "role": "AXSplitter",
+      "value": 1440
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXToolbar"
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 181,
+        "x": 4809.5,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 36,
+        "w": 177,
+        "x": 4813.5,
+        "y": 185
+      },
+      "id": "app.section",
+      "role": "AXRadioGroup"
+    },
+    {
+      "description": "Storage",
+      "frame": {
+        "h": 36,
+        "w": 88.5,
+        "x": 4813.5,
+        "y": 185
+      },
+      "role": "AXRadioButton",
+      "value": 0
+    },
+    {
+      "description": "Monitoring",
+      "frame": {
+        "h": 36,
+        "w": 88.5,
+        "x": 4902,
+        "y": 185
+      },
+      "role": "AXRadioButton",
+      "value": 1
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 44,
+        "x": 4272,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Storage Monitor",
+      "frame": {
+        "h": 12,
+        "w": 16,
+        "x": 4286,
+        "y": 197
+      },
+      "role": "AXStaticText",
+      "value": "Storage Monitor"
+    },
+    {
+      "description": "Refresh",
+      "frame": {
+        "h": 52,
+        "w": 36,
+        "x": 5535,
+        "y": 177
+      },
+      "id": "history.refresh",
+      "role": "AXButton"
+    },
+    {
+      "description": "Show Event Details",
+      "frame": {
+        "h": 52,
+        "w": 45,
+        "x": 5571,
+        "y": 177
+      },
+      "id": "history.inspector",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4198,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4244,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 14,
+        "x": 4245,
+        "y": 196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 14,
+        "x": 4245,
+        "y": 196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4221,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 493.5,
+        "x": 4316,
+        "y": 177
+      },
+      "role": "AXStaticText",
+      "value": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  ],
+  "identity": {
+    "bundle": "local.macbook.storage-monitor.viewer.dev",
+    "frame": {
+      "h": 900,
+      "w": 1440,
+      "x": 4180,
+      "y": 177
+    },
+    "pid": 39667,
+    "time": 1793313085.8970819,
+    "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+  }
+}

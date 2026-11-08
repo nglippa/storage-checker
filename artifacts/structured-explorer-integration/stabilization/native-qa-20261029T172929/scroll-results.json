@@ -1,0 +1,277 @@
+[
+  {
+    "case": "wheel-in",
+    "zoom": [
+      "Zoom 113%"
+    ]
+  },
+  {
+    "case": "wheel-reverse",
+    "zoom": [
+      "Zoom 100%"
+    ]
+  },
+  {
+    "case": "wheel-below100",
+    "zoom": [
+      "Zoom 89%"
+    ]
+  },
+  {
+    "case": "wheel-max",
+    "zoom": [
+      "Zoom 100%"
+    ]
+  },
+  {
+    "case": "wheel-min",
+    "zoom": [
+      "Zoom 89%"
+    ]
+  },
+  {
+    "case": "pixel-in",
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 143%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "case": "pixel-reverse",
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 22.5,
+          "x": 5139.25,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 70%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "case": "sideways-pan",
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 22.5,
+          "x": 5139.25,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 70%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "case": "shift-pan",
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 22.5,
+          "x": 5139.25,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 70%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  },
+  {
+    "case": "option-pan",
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 22.5,
+          "x": 5139.25,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 70%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ]
+  }
+]

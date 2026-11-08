@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>appearance</key>
+	<string>system</string>
+	<key>chartRange</key>
+	<string>Last 7 Days</string>
+	<key>filters</key>
+	<data>
+	eyJzZWFyY2giOiIiLCJzdGFydCI6ODE0NzcwMDAwLCJzZXZlcml0eSI6LTEsInRpbWUi
+	OiJMYXN0IDMwIERheXMiLCJjdXN0b21Vbml0IjoiR0IiLCJjdXN0b21UaHJlc2hvbGQi
+	OiIxIiwiZW5kIjo4MTQ5MzQ2NDAsInNvcnQiOiJOZXdlc3QgRmlyc3QiLCJ0eXBlIjoi
+	QWxsIEV2ZW50cyIsInNpemUiOiJBbGwgQ2hhbmdlcyJ9
+	</data>
+</dict>
+</plist>

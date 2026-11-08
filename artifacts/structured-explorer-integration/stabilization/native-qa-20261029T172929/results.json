@@ -1,0 +1,23 @@
+{
+  "status": "NATIVE SESSION COMPLETE; ACCEPTANCE PARTIAL",
+  "duration_seconds": 538.4111931324005,
+  "stop_reason": "requested completion",
+  "cleanup": {
+    "pid_exited": true,
+    "preferences_restored_equal": true,
+    "snapshot_sha256_after": "0fa4373a1198e6dc17fe145c79fc9e882195a3e67ff6b298329bf54114f133a1",
+    "snapshot_unchanged": true,
+    "clone_removed": true,
+    "ended_unix": 1793313508.95169
+  },
+  "physical_input": "NOT VERIFIED \u2014 no operator confirmation received",
+  "hover": "Native last-reading callout visually verified in normal/dark and minimum/light; full hover matrix incomplete",
+  "warm_tree_read_p50_ms": 179.4,
+  "warm_tree_read_max_ms": 213.9,
+  "up_tree_read_p50_ms": 196.85,
+  "up_tree_read_max_ms": 218.2,
+  "up_target_misses": 4,
+  "up_n": 10,
+  "strict_up_target_ms": 200,
+  "report": "/Users/nicholaslippa/storage-checker-structured-explorer/artifacts/structured-explorer-integration/stabilization/native-qa-20261029T172929/NATIVE-RESULTS.md"
+}

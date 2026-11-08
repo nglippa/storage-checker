@@ -1,0 +1,10 @@
+build-monitor exit=0 68s
+build-viewer exit=0 82s
+monitor-self-test exit=0 88s
+viewer-model exit=0 143s
+inventory-integration exit=0 331s
+inventory-browser exit=0 100s
+chart-input exit=0 194s
+structured-benchmark exit=0 185s
+navigation-benchmark exit=0 114s
+snapshot unchanged

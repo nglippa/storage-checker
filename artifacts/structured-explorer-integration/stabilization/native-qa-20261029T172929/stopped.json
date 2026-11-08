@@ -1,0 +1,16 @@
+{
+  "ended_unix" : 1793313507.3406281,
+  "last_identity" : {
+    "bundle" : "local.macbook.storage-monitor.viewer.dev",
+    "frame" : {
+      "h" : 900,
+      "w" : 1440,
+      "x" : 4180,
+      "y" : 177
+    },
+    "pid" : 39667,
+    "time" : 1793313507.2366428,
+    "title" : "Storage Monitor — QA: structured-explorer-native.sqlite3"
+  },
+  "reason" : "requested completion"
+}

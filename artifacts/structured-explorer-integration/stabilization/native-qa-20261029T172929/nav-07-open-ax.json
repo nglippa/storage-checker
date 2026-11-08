@@ -1,0 +1,4420 @@
+{
+  "elements": [
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "id": "main",
+      "role": "AXWindow",
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    },
+    {
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "description": "Available now, 19.60 GB, Disk usage, 474.78 GB used of 494.38 GB, Low space",
+      "frame": {
+        "h": 48,
+        "w": 536,
+        "x": 4202,
+        "y": 241
+      },
+      "id": "inventory.capacity",
+      "role": "AXProgressIndicator",
+      "value": 0.9603517955799835
+    },
+    {
+      "description": "Startup Data",
+      "frame": {
+        "h": 19,
+        "w": 87,
+        "x": 4202,
+        "y": 297.75
+      },
+      "id": "inventory.breadcrumbs",
+      "role": "AXButton"
+    },
+    {
+      "description": "Forward",
+      "frame": {
+        "h": 9,
+        "w": 5.5,
+        "x": 4297,
+        "y": 305
+      },
+      "id": "inventory.breadcrumbs",
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 20.5,
+        "w": 99,
+        "x": 4309,
+        "y": 296.75
+      },
+      "id": "inventory.breadcrumbs",
+      "role": "AXStaticText",
+      "value": "Applications"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 138.5,
+        "x": 5459.5,
+        "y": 295
+      },
+      "id": "inventory.refresh",
+      "role": "AXMenuButton",
+      "title": "Folder updates"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 145.5,
+        "x": 4202,
+        "y": 325
+      },
+      "id": "inventory.status",
+      "role": "AXStaticText",
+      "value": "Updating older measurements"
+    },
+    {
+      "description": "Indexing details",
+      "frame": {
+        "h": 13,
+        "w": 76,
+        "x": 4353.5,
+        "y": 325
+      },
+      "id": "inventory.indexDetails",
+      "role": "AXLink"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 3.5,
+        "x": 4435.5,
+        "y": 325
+      },
+      "role": "AXStaticText",
+      "value": "\u00b7"
+    },
+    {
+      "description": "Disk details",
+      "frame": {
+        "h": 13,
+        "w": 56,
+        "x": 4445,
+        "y": 325
+      },
+      "id": "inventory.accounting",
+      "role": "AXLink"
+    },
+    {
+      "description": "Browse",
+      "frame": {
+        "h": 24,
+        "w": 162.5,
+        "x": 4202,
+        "y": 359
+      },
+      "id": "inventory.mode",
+      "role": "AXPopUpButton",
+      "value": "Explorer"
+    },
+    {
+      "description": "Go to folder\u2026",
+      "frame": {
+        "h": 24,
+        "w": 105.5,
+        "x": 4372.5,
+        "y": 359
+      },
+      "id": "inventory.goToFolder",
+      "role": "AXButton"
+    },
+    {
+      "description": "Review Cleanup",
+      "frame": {
+        "h": 24,
+        "w": 146,
+        "x": 4486,
+        "y": 359
+      },
+      "id": "inventory.reviewCleanup",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 24,
+        "w": 290,
+        "x": 5308,
+        "y": 359
+      },
+      "id": "inventory.search",
+      "role": "AXTextField",
+      "value": ""
+    },
+    {
+      "description": "Folder path",
+      "frame": {
+        "h": 22,
+        "w": 180.5,
+        "x": 4200,
+        "y": 400
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXGroup"
+    },
+    {
+      "description": "Up one level",
+      "frame": {
+        "h": 22,
+        "w": 33,
+        "x": 4200,
+        "y": 400
+      },
+      "id": "explorer.up",
+      "role": "AXButton"
+    },
+    {
+      "description": "Startup Data",
+      "frame": {
+        "h": 13,
+        "w": 61.5,
+        "x": 4239,
+        "y": 404.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Compact Right Chevron",
+      "frame": {
+        "h": 9,
+        "w": 3,
+        "x": 4307.5,
+        "y": 406.5
+      },
+      "id": "chevron.compact.right",
+      "role": "AXImage"
+    },
+    {
+      "description": "Applications",
+      "frame": {
+        "h": 13,
+        "w": 63,
+        "x": 4317.5,
+        "y": 404.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 40,
+        "x": 5025.5,
+        "y": 404.5
+      },
+      "role": "AXStaticText",
+      "value": "Levels 3"
+    },
+    {
+      "description": "Levels shown",
+      "frame": {
+        "h": 20,
+        "w": 17,
+        "x": 5073.5,
+        "y": 401
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXIncrementor",
+      "value": 3
+    },
+    {
+      "frame": {
+        "h": 10,
+        "w": 17,
+        "x": 5073.5,
+        "y": 401
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 10,
+        "w": 17,
+        "x": 5073.5,
+        "y": 411
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Zoom Out",
+      "frame": {
+        "h": 20,
+        "w": 22,
+        "x": 5103.5,
+        "y": 401
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 29,
+        "x": 5136,
+        "y": 404.5
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXStaticText",
+      "value": "Zoom 100%"
+    },
+    {
+      "description": "Zoom In",
+      "frame": {
+        "h": 20,
+        "w": 22,
+        "x": 5175.5,
+        "y": 401
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Fit",
+      "frame": {
+        "h": 14,
+        "w": 13.5,
+        "x": 5210.5,
+        "y": 404
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Reset",
+      "frame": {
+        "h": 14,
+        "w": 30,
+        "x": 5230,
+        "y": 404
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Help",
+      "frame": {
+        "h": 11,
+        "w": 11,
+        "x": 5267,
+        "y": 405.5
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXButton"
+    },
+    {
+      "description": "Structured Explorer of Applications",
+      "frame": {
+        "h": 7.8367378520124475,
+        "w": 23.077130674741852,
+        "x": 4719,
+        "y": 662
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXGroup"
+    },
+    {
+      "description": "Applications, current folder, 29.21 GB, centre",
+      "frame": {
+        "h": 0.4537058756428678,
+        "w": 0.4537058756428678,
+        "x": 4730.31171239955,
+        "y": 665.6915159881848
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft Word.app, folder, 2.95 GB, 10% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.2474759321687543,
+        "x": 4730.641680309108,
+        "y": 665.0109571747205
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft Outlook.app, folder, 2.82 GB, 9.7% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.24747593216886798,
+        "x": 4731.074763190403,
+        "y": 665.3924825701474
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft Excel.app, folder, 2.74 GB, 9.4% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.2474759321687543,
+        "x": 4731.34286211692,
+        "y": 665.9699264118747
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft PowerPoint.app, folder, 2.49 GB, 8.5% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.24747593216886798,
+        "x": 4731.384108105614,
+        "y": 666.5886162422968
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "ChatGPT.app, folder, 1.68 GB, 5.8% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.24747593216886798,
+        "x": 4731.270681636704,
+        "y": 667.1041911009818
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Visual Studio Code.app, folder, 1.55 GB, 5.3% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.24747593216886798,
+        "x": 4731.095386184751,
+        "y": 667.4960279935824
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "OneDrive.app, folder, 1.53 GB, 5.2% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.24747593216886798,
+        "x": 4730.59012282324,
+        "y": 667.9187993777041
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Google Chrome.app, folder, 1.52 GB, 5.2% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.24747593216886798,
+        "x": 4729.992055987164,
+        "y": 668.0012913550937
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft OneNote.app, folder, 1.42 GB, 4.9% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.2474759321687543,
+        "x": 4729.682711071954,
+        "y": 667.9291108748778
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "UTM.app, folder, 1.22 GB, 4.2% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.2474759321687543,
+        "x": 4729.4764811284795,
+        "y": 667.7435039257512
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft Teams.app, folder, 1.17 GB, 4.0% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.24747593216886798,
+        "x": 4729.445546636958,
+        "y": 667.4547820048876
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "VMware Fusion.app, folder, 1.02 GB, 3.5% of Applications, level 1",
+      "frame": {
+        "h": 0.24747593216881114,
+        "w": 0.2474759321687543,
+        "x": 4729.662088077606,
+        "y": 667.1557485868502
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Blender.app, folder, 950.6 MB, 3.3% of Applications, level 1",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680215476,
+        "x": 4729.075675682284,
+        "y": 667.4940383082721
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "GeForceNOW.app, folder, 918.3 MB, 3.1% of Applications, level 1",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4729.990802181143,
+        "y": 667.7149309114451
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 2.95 GB, 100% of Microsoft Word.app, level 2, in /System/Volumes/Data/Applications/Microsoft Word.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4731.821055178862,
+        "y": 665.348224448878
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 2.82 GB, 100% of Microsoft Outlook.app, level 2, in /System/Volumes/Data/Applications/Microsoft Outlook.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4734.440210330769,
+        "y": 667.2415896189317
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 2.74 GB, 100% of Microsoft Excel.app, level 2, in /System/Volumes/Data/Applications/Microsoft Excel.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4736.081126811483,
+        "y": 670.2078617186824
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 2.49 GB, 100% of Microsoft PowerPoint.app, level 2, in /System/Volumes/Data/Applications/Microsoft PowerPoint.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4736.365131586991,
+        "y": 673.4896946801086
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.68 GB, 100% of ChatGPT.app, level 2, in /System/Volumes/Data/Applications/ChatGPT.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4735.670897691304,
+        "y": 676.1404059181837
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.55 GB, 100% of Visual Studio Code.app, level 2, in /System/Volumes/Data/Applications/Visual Studio Code.app",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680214339,
+        "x": 4734.56643467544,
+        "y": 678.0337710882372
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.53 GB, 100% of OneDrive.app, level 2, in /System/Volumes/Data/Applications/OneDrive.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680215476,
+        "x": 4731.473938231019,
+        "y": 680.1164727752963
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.52 GB, 100% of Google Chrome.app, level 2, in /System/Volumes/Data/Applications/Google Chrome.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4727.876544407917,
+        "y": 680.1480288614639
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.42 GB, 100% of Microsoft OneNote.app, level 2, in /System/Volumes/Data/Applications/Microsoft OneNote.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4725.920067065528,
+        "y": 679.1697901902695
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.22 GB, 100% of UTM.app, level 2, in /System/Volumes/Data/Applications/UTM.app",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680214339,
+        "x": 4724.720935791161,
+        "y": 677.5604297957238
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.17 GB, 100% of Microsoft Teams.app, level 2, in /System/Volumes/Data/Applications/Microsoft Teams.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4724.500043187988,
+        "y": 675.2568355054921
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 1.02 GB, 100% of VMware Fusion.app, level 2, in /System/Volumes/Data/Applications/VMware Fusion.app",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680215476,
+        "x": 4725.793842720858,
+        "y": 672.9216851290926
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 950.6 MB, 100% of Blender.app, level 2, in /System/Volumes/Data/Applications/Blender.app",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680215476,
+        "x": 4727.718763977079,
+        "y": 671.9118903717306
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Contents, folder, 918.3 MB, 100% of GeForceNOW.app, level 2, in /System/Volumes/Data/Applications/GeForceNOW.app",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680214339,
+        "x": 4729.549016974797,
+        "y": 671.8172221132279
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 1.03 GB, 35% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Word.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4730.969040852338,
+        "y": 669.2611791336556
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 877.8 MB, 30% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Word.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680215476,
+        "x": 4731.473938231019,
+        "y": 669.8291886846716
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SharedSupport, folder, 846.7 MB, 29% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Word.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4732.010391695867,
+        "y": 670.3971982356877
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 172.4 MB, 5.9% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Word.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4732.5152890745485,
+        "y": 671.028319959039
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 10.8 MB, 0.4% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Word.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4733.051742539397,
+        "y": 671.6594416823901
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 4.2 MB, 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Word.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4733.52508383191,
+        "y": 672.3221194919089
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 33 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4734.029981210591,
+        "y": 673.0479094737627
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 1.32 GB, 47% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Outlook.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4734.976663795618,
+        "y": 674.0261481449572
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SharedSupport, folder, 678.9 MB, 24% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Outlook.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4735.418449001964,
+        "y": 674.8150502991462
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 586.1 MB, 21% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Outlook.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4735.8602342083095,
+        "y": 675.6039524533352
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 212.3 MB, 7.5% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Outlook.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4736.270463328488,
+        "y": 676.4559667798593
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 17.8 MB, 0.6% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Outlook.app/Contents",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680214339,
+        "x": 4736.649136362499,
+        "y": 677.3079811063834
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Library, folder, 4.1 MB, 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Outlook.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4737.02780939651,
+        "y": 678.1915515190751
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 4 MB, 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Outlook.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4737.374926344352,
+        "y": 679.1066780179344
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 33 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4737.690487206029,
+        "y": 680.0218045167936
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 1.09 GB, 40% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Excel.app/Contents",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680214339,
+        "x": 4738.258496757045,
+        "y": 681.4102723081662
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 881.3 MB, 32% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Excel.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680215476,
+        "x": 4738.5109454463845,
+        "y": 682.3885109793607
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SharedSupport, folder, 566.4 MB, 21% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Excel.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4738.731838049558,
+        "y": 683.366749650555
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 202.7 MB, 7.4% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Excel.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4738.921174566563,
+        "y": 684.376544407917
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 7.4 MB, 0.3% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Excel.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.078954997401,
+        "y": 685.386339165279
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 1.1 MB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Excel.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.2051793420715,
+        "y": 686.3961339226408
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 37 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.299847600574,
+        "y": 687.4059286800027
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 963.2 MB, 39% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft PowerPoint.app/Contents",
+      "frame": {
+        "h": 0.7573460680214907,
+        "w": 0.7573460680214339,
+        "x": 4739.426071945244,
+        "y": 688.9521769022133
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 877.6 MB, 35% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft PowerPoint.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.426071945244,
+        "y": 689.9935277457428
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SharedSupport, folder, 500.2 MB, 20% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft PowerPoint.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.394515859077,
+        "y": 691.0348785892722
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 147.8 MB, 5.9% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft PowerPoint.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.362959772909,
+        "y": 692.0762294328017
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 4.6 MB, 0.2% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft PowerPoint.app/Contents",
+      "frame": {
+        "h": 0.7573460680215476,
+        "w": 0.7573460680214339,
+        "x": 4739.268291514406,
+        "y": 693.0860241901636
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 1.2 MB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft PowerPoint.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.142067169736,
+        "y": 694.0958189475256
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 33 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4739.015842825066,
+        "y": 695.137169791055
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 1.3 GB, 77% of Contents, level 3, in /System/Volumes/Data/Applications/ChatGPT.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4738.637169791055,
+        "y": 696.6203058409304
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 382.9 MB, 23% of Contents, level 3, in /System/Volumes/Data/Applications/ChatGPT.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4738.384721101715,
+        "y": 697.5985445121248
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 1.6 MB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/ChatGPT.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4738.132272412374,
+        "y": 698.5452270971516
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 6 grouped items, 209 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4737.848267636866,
+        "y": 699.4919096821784
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 1.03 GB, 66% of Contents, level 3, in /System/Volumes/Data/Applications/Visual Studio Code.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4737.185589827347,
+        "y": 700.8488213873835
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 522.2 MB, 34% of Contents, level 3, in /System/Volumes/Data/Applications/Visual Studio Code.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4736.8384728795045,
+        "y": 701.7323918000752
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 897 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Visual Studio Code.app/Contents",
+      "frame": {
+        "h": 0.7573460680215476,
+        "w": 0.7573460680214339,
+        "x": 4736.459799845494,
+        "y": 702.6159622127668
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 4 grouped items, 188 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4736.049570725315,
+        "y": 703.467976539291
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "OneDrive Sync Service.app, folder, 469.7 MB, 31% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4735.197556398791,
+        "y": 704.5724395551556
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 300.3 MB, 20% of Contents, level 3, in /System/Volumes/Data/Applications/OneDrive.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4734.724215106277,
+        "y": 705.329785623177
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Library, folder, 273.5 MB, 18% of Contents, level 3, in /System/Volumes/Data/Applications/OneDrive.app/Contents",
+      "frame": {
+        "h": 0.7573460680215476,
+        "w": 0.7573460680214339,
+        "x": 4734.282429899931,
+        "y": 706.0871316911985
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "OneDriveUpdaterDaemon.xpc, folder, 66.9 MB, 4.4% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4733.777532521251,
+        "y": 706.8129216730524
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "OneDrive Updater.app, folder, 65.9 MB, 4.3% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4733.27263514257,
+        "y": 707.4755994825712
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SyncReporter.app, folder, 65.8 MB, 4.3% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4732.767737763888,
+        "y": 708.1382772920899
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "OneDrive File Handler.app, folder, 65.7 MB, 4.3% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4732.262840385208,
+        "y": 708.7693990154412
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "StandaloneUpdater.app, folder, 53.9 MB, 3.5% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4731.757943006527,
+        "y": 709.3689646526248
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 53.6 MB, 3.5% of Contents, level 3, in /System/Volumes/Data/Applications/OneDrive.app/Contents",
+      "frame": {
+        "h": 0.7573460680215476,
+        "w": 0.7573460680214339,
+        "x": 4731.221489541678,
+        "y": 709.9369742036408
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "StandaloneUpdaterDaemon.xpc, folder, 52.5 MB, 3.4% of Contents, level 3",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4730.685036076829,
+        "y": 710.4734276684894
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 34.8 MB, 2.3% of Contents, level 3, in /System/Volumes/Data/Applications/OneDrive.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4730.180138698149,
+        "y": 710.9783250471704
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 21.4 MB, 1.4% of Contents, level 3, in /System/Volumes/Data/Applications/OneDrive.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4729.643685233301,
+        "y": 711.4516663396838
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SharedSupport, folder, 4.3 MB, 0.3% of Contents, level 3, in /System/Volumes/Data/Applications/OneDrive.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4729.107231768452,
+        "y": 711.8934515460296
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 492 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/OneDrive.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4728.6023343897705,
+        "y": 712.3036806662079
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 1.51 GB, 100% of Contents, level 3, in /System/Volumes/Data/Applications/Google Chrome.app/Contents",
+      "frame": {
+        "h": 0.7573460680214339,
+        "w": 0.7573460680214339,
+        "x": 4727.592539632409,
+        "y": 712.5245732693809
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Library, folder, 4.2 MB, 0.3% of Contents, level 3, in /System/Volumes/Data/Applications/Google Chrome.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4723.401621176849,
+        "y": 768.7055217284139
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 2.2 MB, 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Google Chrome.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4722.28431254665,
+        "y": 769.3340078329011
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 369 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Google Chrome.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4721.306667495225,
+        "y": 769.8926621480008
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 5 grouped items, 74 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4720.259190654413,
+        "y": 770.4513164631005
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 725.5 MB, 51% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft OneNote.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4718.373732340952,
+        "y": 770.2418210949381
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 446.1 MB, 31% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft OneNote.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4717.465919078915,
+        "y": 770.5909800418754
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SharedSupport, folder, 198.6 MB, 14% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft OneNote.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4716.627937606266,
+        "y": 770.8703071994253
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 51.2 MB, 3.6% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft OneNote.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4715.859787923004,
+        "y": 771.1496343569752
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 2.7 MB, 0.2% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft OneNote.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4715.091638239741,
+        "y": 771.3591297251376
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 569 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft OneNote.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4714.393320345866,
+        "y": 771.4987933039124
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 25 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4713.7648342413795,
+        "y": 771.6384568826874
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 859.8 MB, 71% of Contents, level 3, in /System/Volumes/Data/Applications/UTM.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4712.64752561118,
+        "y": 770.7306436206503
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 337.7 MB, 28% of Contents, level 3, in /System/Volumes/Data/Applications/UTM.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4712.2285348748555,
+        "y": 770.7306436206503
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 20.4 MB, 1.7% of Contents, level 3, in /System/Volumes/Data/Applications/UTM.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4711.80954413853,
+        "y": 770.8004754100378
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "XPCServices, folder, 479 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/UTM.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4711.530216980981,
+        "y": 770.7306436206503
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 4 grouped items, 135 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4711.250889823431,
+        "y": 770.7306436206503
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Helpers, folder, 909.7 MB, 78% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4710.971562665881,
+        "y": 769.5435032010635
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 156.5 MB, 13% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4710.901730876493,
+        "y": 769.473671411676
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 61.4 MB, 5.3% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4710.901730876493,
+        "y": 769.4038396222886
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "XPCServices, folder, 16.4 MB, 1.4% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4710.971562665881,
+        "y": 769.4038396222886
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 11.3 MB, 1.0% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4711.181058034043,
+        "y": 769.3340078329011
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Library, folder, 9.1 MB, 0.8% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4711.390553402206,
+        "y": 769.3340078329011
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 487 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4711.669880559755,
+        "y": 769.3340078329011
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "SharedSupport, folder, 328 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Microsoft Teams.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4712.019039506693,
+        "y": 769.3340078329011
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 5 grouped items, 184 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4712.438030243018,
+        "y": 769.3340078329011
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Library, folder, 826.1 MB, 81% of Contents, level 3, in /System/Volumes/Data/Applications/VMware Fusion.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4713.485507083829,
+        "y": 768.3563627814766
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 98.8 MB, 9.7% of Contents, level 3, in /System/Volumes/Data/Applications/VMware Fusion.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4714.04416139893,
+        "y": 768.4960263602516
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 84.3 MB, 8.2% of Contents, level 3, in /System/Volumes/Data/Applications/VMware Fusion.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4714.742479292804,
+        "y": 768.6356899390265
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 10.9 MB, 1.1% of Contents, level 3, in /System/Volumes/Data/Applications/VMware Fusion.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4715.4407971866785,
+        "y": 768.8451853071889
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Public, folder, 2 MB, 0.2% of Contents, level 3",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4716.2089468699405,
+        "y": 769.0546806753513
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 1.1 MB, 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/VMware Fusion.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4717.04692834259,
+        "y": 769.3340078329011
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 3 grouped items, 41 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4717.88490981524,
+        "y": 769.6831667798384
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 764.7 MB, 80% of Contents, level 3, in /System/Volumes/Data/Applications/Blender.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4719.770368128701,
+        "y": 769.4038396222886
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 182.9 MB, 19% of Contents, level 3, in /System/Volumes/Data/Applications/Blender.app/Contents",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.675962945299034,
+        "x": 4720.748013180126,
+        "y": 769.8926621480008
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "_CodeSignature, folder, 2.2 MB, 0.2% of Contents, level 3, in /System/Volumes/Data/Applications/Blender.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4721.795490020938,
+        "y": 770.4513164631005
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "PlugIns, folder, 758 KB, less than 0.1% of Contents, level 3, in /System/Volumes/Data/Applications/Blender.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4722.84296686175,
+        "y": 771.0798025675876
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 2 grouped items, 8 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 1.6759629452991476,
+        "w": 1.6759629452991476,
+        "x": 4723.960275491949,
+        "y": 771.7082886720748
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Frameworks, folder, 841.5 MB, 92% of Contents, level 3, in /System/Volumes/Data/Applications/GeForceNOW.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4726.194892752348,
+        "y": 772.1971111977871
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Resources, folder, 69.7 MB, 7.6% of Contents, level 3, in /System/Volumes/Data/Applications/GeForceNOW.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.6759629452991476,
+        "x": 4727.312201382547,
+        "y": 773.0350926704366
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "MacOS, folder, 6.9 MB, 0.8% of Contents, level 3, in /System/Volumes/Data/Applications/GeForceNOW.app/Contents",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4728.499341802134,
+        "y": 774.0127377218611
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Other items, 2 grouped items, 106 KB, less than 0.1% of Contents, level 3",
+      "frame": {
+        "h": 1.675962945299034,
+        "w": 1.675962945299034,
+        "x": 4729.616650432334,
+        "y": 774.9903827732855
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 26,
+        "w": 734,
+        "x": 4196,
+        "y": 816
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXStaticText",
+      "value": "Disc area shows indexed size (small items have a visible minimum); arcs show share of parent; rings show levels \u00b7 121 shown, 520 more inside (+N) \u00b7 not reclaimable storage"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 256.5,
+        "x": 5026.5,
+        "y": 822.5
+      },
+      "id": "inventory.structuredExplorer",
+      "role": "AXStaticText",
+      "value": "Click to select \u00b7 double-click to explore \u00b7 Esc goes up"
+    },
+    {
+      "description": "Resize storage map",
+      "frame": {
+        "h": 7,
+        "w": 1119,
+        "x": 4180,
+        "y": 847
+      },
+      "role": "AXUnknown"
+    },
+    {
+      "description": "Hide Navigator",
+      "frame": {
+        "h": 20,
+        "w": 123,
+        "x": 4196,
+        "y": 860
+      },
+      "id": "inventory.navigatorToggle",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 20,
+        "w": 87,
+        "x": 4329,
+        "y": 860
+      },
+      "role": "AXMenuButton",
+      "title": "List style"
+    },
+    {
+      "description": "Visualization",
+      "frame": {
+        "h": 20,
+        "w": 155,
+        "x": 5039,
+        "y": 860
+      },
+      "id": "inventory.visualization",
+      "role": "AXRadioGroup"
+    },
+    {
+      "description": "Atlas",
+      "frame": {
+        "h": 20,
+        "w": 77.5,
+        "x": 5039,
+        "y": 860
+      },
+      "role": "AXRadioButton",
+      "value": 0
+    },
+    {
+      "description": "Living Tree",
+      "frame": {
+        "h": 20,
+        "w": 77.5,
+        "x": 5116.5,
+        "y": 860
+      },
+      "role": "AXRadioButton",
+      "value": 1
+    },
+    {
+      "description": "Visualization",
+      "frame": {
+        "h": 18,
+        "w": 33,
+        "x": 5204,
+        "y": 861
+      },
+      "id": "square.grid.2x2",
+      "role": "AXCheckBox",
+      "value": 1
+    },
+    {
+      "description": "Inspector",
+      "frame": {
+        "h": 18,
+        "w": 36,
+        "x": 5247,
+        "y": 861
+      },
+      "id": "sidebar.right",
+      "role": "AXCheckBox",
+      "value": 1
+    },
+    {
+      "frame": {
+        "h": 158,
+        "w": 1119,
+        "x": 4180,
+        "y": 887
+      },
+      "role": "AXScrollArea"
+    },
+    {
+      "frame": {
+        "h": 158,
+        "w": 1119,
+        "x": 4180,
+        "y": 887
+      },
+      "id": "inventory.navigator",
+      "role": "AXOutline"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 897
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 897
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft Word.app",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 902
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 902
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 123,
+        "x": 4259,
+        "y": 903
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft Word.app"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 903.5
+      },
+      "role": "AXStaticText",
+      "value": "2.95 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 925
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 925
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft Outlook.app",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 930
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 930
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 139,
+        "x": 4259,
+        "y": 931
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft Outlook.app"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 931.5
+      },
+      "role": "AXStaticText",
+      "value": "2.82 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 953
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 953
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft Excel.app",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 958
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 958
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 123,
+        "x": 4259,
+        "y": 959
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft Excel.app"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 959.5
+      },
+      "role": "AXStaticText",
+      "value": "2.74 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 981
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 981
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft PowerPoint.app",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 986
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 986
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 160.5,
+        "x": 4259,
+        "y": 987
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft PowerPoint.app"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 987.5
+      },
+      "role": "AXStaticText",
+      "value": "2.49 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1009
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1009
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand ChatGPT.app",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 1014
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 1014
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 82,
+        "x": 4259,
+        "y": 1015
+      },
+      "role": "AXStaticText",
+      "value": "ChatGPT.app"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 1015.5
+      },
+      "role": "AXStaticText",
+      "value": "1.68 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1037
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1037
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Visual Studio Code.app",
+      "frame": {
+        "h": 18,
+        "w": 14,
+        "x": 4213,
+        "y": 1042
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 18,
+        "w": 18,
+        "x": 4234,
+        "y": 1042
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 145,
+        "x": 4259,
+        "y": 1043
+      },
+      "role": "AXStaticText",
+      "value": "Visual Studio Code.app"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 46.5,
+        "x": 5169.5,
+        "y": 1043.5
+      },
+      "role": "AXStaticText",
+      "value": "1.55 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1065
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1065
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand OneDrive.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "OneDrive.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "1.53 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1093
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1093
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Google Chrome.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Google Chrome.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "1.52 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1121
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1121
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft OneNote.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft OneNote.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "1.42 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1149
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1149
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand UTM.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "UTM.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "1.22 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1177
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1177
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft Teams.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft Teams.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "1.17 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1205
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1205
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand VMware Fusion.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "VMware Fusion.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "1.02 GB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1233
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1233
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Blender.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Blender.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "950.6 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1261
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1261
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand GeForceNOW.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "GeForceNOW.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "918.3 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1289
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1289
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand pgAdmin 4.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "pgAdmin 4.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "742 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1317
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1317
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Orca.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Orca.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "595.4 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1345
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1345
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Unity Hub.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Unity Hub.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "527.5 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1373
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1373
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Proliferate.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Proliferate.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "462.6 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1401
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1401
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Comfy Desktop.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Comfy Desktop.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "454.6 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1429
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1429
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Flash Studio.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Flash Studio.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "423.1 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1457
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1457
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Godot.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Godot.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "349.1 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1485
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1485
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Orca-Flashforge.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Orca-Flashforge.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "336.5 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1513
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1513
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Roblox.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Roblox.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "296.1 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1541
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1541
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand ProtonVPN.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "ProtonVPN.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "243.8 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1569
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1569
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand FreeVideo.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "FreeVideo.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "212.9 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1597
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1597
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand ChatGPT Classic.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "ChatGPT Classic.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "170.3 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1625
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1625
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Muse.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Muse.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "108.8 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1653
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1653
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand qbittorrent.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "qbittorrent.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "99.2 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1681
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1681
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Ghostty.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Ghostty.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "65 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1709
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1709
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft Defender Shim.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft Defender Shim.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "57.8 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1737
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1737
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand The Unarchiver.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "The Unarchiver.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "49.3 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1765
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1765
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Mac Mouse Fix.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Mac Mouse Fix.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "16.5 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1793
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1793
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Microsoft 365 Copilot Shim.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Microsoft 365 Copilot Shim.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "5.7 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1821
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1821
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Storage Monitor.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Storage Monitor.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "5.2 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1849
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1849
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Sticky Notepad.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Sticky Notepad.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "4.9 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1877
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1877
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Disk Inventory Xs.app",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Disk Inventory Xs.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "2.7 MB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1905
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1905
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".DS_Store"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "29 KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1933
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1933
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": ".localized"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1961
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1961
+      },
+      "role": "AXCell"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Safari.app"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1119,
+        "x": 4180,
+        "y": 1989
+      },
+      "role": "AXRow"
+    },
+    {
+      "frame": {
+        "h": 28,
+        "w": 1099,
+        "x": 4190,
+        "y": 1989
+      },
+      "role": "AXCell"
+    },
+    {
+      "description": "Expand Utilities",
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "id": "chevron.right",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Utilities"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 0,
+        "y": 1080
+      },
+      "role": "AXStaticText",
+      "value": "Zero KB"
+    },
+    {
+      "frame": {
+        "h": 1140,
+        "w": 1099,
+        "x": 4190,
+        "y": 887
+      },
+      "id": "ListColumn",
+      "role": "AXColumn"
+    },
+    {
+      "frame": {
+        "h": 160,
+        "w": 19,
+        "x": 5281,
+        "y": 886
+      },
+      "role": "AXScrollBar",
+      "value": 0
+    },
+    {
+      "frame": {
+        "h": 26,
+        "w": 6,
+        "x": 5290,
+        "y": 890
+      },
+      "role": "AXValueIndicator",
+      "value": 0
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 5282,
+        "y": 887
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 0,
+        "x": 5282,
+        "y": 887
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 126,
+        "w": 6,
+        "x": 5290,
+        "y": 916
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 0,
+        "w": 6,
+        "x": 5290,
+        "y": 890
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 652,
+        "w": 320,
+        "x": 5300,
+        "y": 393
+      },
+      "id": "inventory.inspector",
+      "role": "AXScrollArea"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 68,
+        "x": 5320,
+        "y": 413
+      },
+      "role": "AXStaticText",
+      "value": "Current folder"
+    },
+    {
+      "frame": {
+        "h": 32,
+        "w": 32,
+        "x": 5320,
+        "y": 436
+      },
+      "role": "AXImage"
+    },
+    {
+      "frame": {
+        "h": 19,
+        "w": 89,
+        "x": 5362,
+        "y": 436
+      },
+      "role": "AXStaticText",
+      "value": "Applications"
+    },
+    {
+      "frame": {
+        "h": 19,
+        "w": 89,
+        "x": 5362,
+        "y": 436
+      },
+      "role": "AXStaticText",
+      "value": "Applications"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 36,
+        "x": 5362,
+        "y": 458
+      },
+      "role": "AXStaticText",
+      "value": "Folder"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 171,
+        "x": 5320,
+        "y": 483
+      },
+      "role": "AXStaticText",
+      "value": "/System/Volumes/Data/Applications"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 171,
+        "x": 5320,
+        "y": 483
+      },
+      "role": "AXStaticText",
+      "value": "/System/Volumes/Data/Applications"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 60,
+        "x": 5320,
+        "y": 516
+      },
+      "role": "AXStaticText",
+      "value": "Indexed size"
+    },
+    {
+      "frame": {
+        "h": 20.5,
+        "w": 76,
+        "x": 5320,
+        "y": 534
+      },
+      "role": "AXStaticText",
+      "value": "29.21 GB"
+    },
+    {
+      "description": "Share of parent",
+      "frame": {
+        "h": 20,
+        "w": 280,
+        "x": 5320,
+        "y": 566.5
+      },
+      "role": "AXProgressIndicator",
+      "value": 0.06308337008939521
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 119,
+        "x": 5320,
+        "y": 592.5
+      },
+      "role": "AXStaticText",
+      "value": "6.3% of Startup Data"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 100.5,
+        "x": 5320,
+        "y": 612.5
+      },
+      "role": "AXStaticText",
+      "value": "Previously measured"
+    },
+    {
+      "description": "Finder",
+      "frame": {
+        "h": 15,
+        "w": 59,
+        "x": 5321.5,
+        "y": 646.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Copy path",
+      "frame": {
+        "h": 15,
+        "w": 12,
+        "x": 5394,
+        "y": 646.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 115,
+        "x": 5320,
+        "y": 682.5
+      },
+      "role": "AXStaticText",
+      "value": "Largest loaded items"
+    },
+    {
+      "description": "Microsoft Word.app, 2.95 GB",
+      "frame": {
+        "h": 13,
+        "w": 280,
+        "x": 5320,
+        "y": 705.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft Outlook.app, 2.82 GB",
+      "frame": {
+        "h": 13,
+        "w": 280,
+        "x": 5320,
+        "y": 727.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "description": "Microsoft Excel.app, 2.74 GB",
+      "frame": {
+        "h": 13,
+        "w": 280,
+        "x": 5320,
+        "y": 749.5
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 26,
+        "w": 264.5,
+        "x": 5320,
+        "y": 771.5
+      },
+      "role": "AXStaticText",
+      "value": "From the currently loaded folder page. Some sizes are from the last completed measurement."
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 84,
+        "x": 5320,
+        "y": 838.5
+      },
+      "role": "AXStaticText",
+      "value": "Cleanup review"
+    },
+    {
+      "frame": {
+        "h": 15,
+        "w": 264,
+        "x": 5320,
+        "y": 858.5
+      },
+      "role": "AXStaticText",
+      "value": "No automatic cleanup suggestion for this item."
+    },
+    {
+      "description": "Cleanup & safety",
+      "frame": {
+        "h": 24,
+        "w": 280,
+        "x": 5320,
+        "y": 893.5
+      },
+      "role": "AXButton",
+      "value": "Collapsed"
+    },
+    {
+      "description": "Storage details",
+      "frame": {
+        "h": 24,
+        "w": 280,
+        "x": 5320,
+        "y": 958.5
+      },
+      "role": "AXButton",
+      "value": "Collapsed"
+    },
+    {
+      "frame": {
+        "h": 13,
+        "w": 408.5,
+        "x": 4202,
+        "y": 1055
+      },
+      "role": "AXStaticText",
+      "value": "Indexed sizes can include shared storage and are not guaranteed recoverable space."
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "role": "AXToolbar"
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 181,
+        "x": 4809.5,
+        "y": 177
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 36,
+        "w": 177,
+        "x": 4813.5,
+        "y": 185
+      },
+      "id": "app.section",
+      "role": "AXRadioGroup"
+    },
+    {
+      "description": "Storage",
+      "frame": {
+        "h": 36,
+        "w": 88.5,
+        "x": 4813.5,
+        "y": 185
+      },
+      "role": "AXRadioButton",
+      "value": 1
+    },
+    {
+      "description": "Monitoring",
+      "frame": {
+        "h": 36,
+        "w": 88.5,
+        "x": 4902,
+        "y": 185
+      },
+      "role": "AXRadioButton",
+      "value": 0
+    },
+    {
+      "description": "Reload inventory",
+      "frame": {
+        "h": 52,
+        "w": 40,
+        "x": 5576,
+        "y": 177
+      },
+      "id": "inventory.reload",
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4198,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4244,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 14,
+        "x": 4245,
+        "y": 196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 14,
+        "w": 14,
+        "x": 4245,
+        "y": 196
+      },
+      "role": "AXGroup"
+    },
+    {
+      "frame": {
+        "h": 16,
+        "w": 16,
+        "x": 4221,
+        "y": 195
+      },
+      "role": "AXButton"
+    },
+    {
+      "frame": {
+        "h": 52,
+        "w": 537.5,
+        "x": 4272,
+        "y": 177
+      },
+      "role": "AXStaticText",
+      "value": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  ],
+  "identity": {
+    "bundle": "local.macbook.storage-monitor.viewer.dev",
+    "frame": {
+      "h": 900,
+      "w": 1440,
+      "x": 4180,
+      "y": 177
+    },
+    "pid": 39667,
+    "time": 1793313022.631182,
+    "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+  }
+}

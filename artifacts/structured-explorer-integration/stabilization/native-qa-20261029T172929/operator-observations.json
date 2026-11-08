@@ -1,0 +1,3357 @@
+[
+  {
+    "unix": 1793313386.3433468,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313386.207106,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313388.666048,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313388.514585,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313390.822561,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313390.6738548,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313392.996706,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313392.8393512,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313395.160643,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313395.009023,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313397.3252501,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313397.1785622,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313399.658357,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313399.492374,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313401.814296,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313401.673102,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313403.974562,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313403.8244681,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313406.1454122,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313405.989722,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313408.303626,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313408.157872,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313410.7742631,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313410.4923759,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313412.949485,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313412.7802129,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313415.122985,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313414.9660358,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313417.288862,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313417.137763,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313419.438897,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313419.2967749,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313421.773891,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313421.609432,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313423.943944,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313423.7892308,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313426.1126752,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313425.957943,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313428.284679,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313428.131134,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313430.4675121,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313430.313364,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313432.796799,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313432.651418,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313434.964567,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313434.8056889,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313437.133358,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313436.9764938,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313439.307111,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313439.148738,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313441.458076,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313441.316345,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313443.7956831,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313443.640112,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313446.04096,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313445.804792,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313448.245194,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313448.054575,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313450.390628,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313450.260149,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313452.522902,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313452.401145,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313454.855166,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313454.693444,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313457.013083,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313456.8652558,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313459.189027,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313459.030468,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313461.333614,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313461.198269,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313463.486041,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313463.34628,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313465.8307211,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313465.669446,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313467.973539,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313467.8379211,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313470.132789,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313469.988171,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313472.295861,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313472.150334,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313474.464941,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313474.310843,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313476.7962391,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313476.639833,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313478.957227,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313478.810662,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313481.0943658,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313480.965152,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313483.269187,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313483.113313,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313485.438245,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313485.28296,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313487.8357792,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313487.605523,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313489.99952,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313489.853595,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313492.137412,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313492.009505,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313494.3190699,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313494.1502218,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313496.473451,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313496.3293061,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313498.8011708,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313498.650645,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313500.941504,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313500.815706,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313503.0999522,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313502.9506521,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  },
+  {
+    "unix": 1793313505.2406762,
+    "summary": [
+      {
+        "frame": {
+          "h": 20.5,
+          "w": 101.5,
+          "x": 4202,
+          "y": 296.75
+        },
+        "id": "inventory.breadcrumbs",
+        "role": "AXStaticText",
+        "value": "Startup Data"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 145.5,
+          "x": 4202,
+          "y": 325
+        },
+        "id": "inventory.status",
+        "role": "AXStaticText",
+        "value": "Updating older measurements"
+      },
+      {
+        "frame": {
+          "h": 13,
+          "w": 29,
+          "x": 5136,
+          "y": 404.5
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXStaticText",
+        "value": "Zoom 100%"
+      },
+      {
+        "description": "Structured Explorer of Startup Data",
+        "frame": {
+          "h": 380,
+          "w": 1119,
+          "x": 4180,
+          "y": 430
+        },
+        "id": "inventory.structuredExplorer",
+        "role": "AXGroup"
+      }
+    ],
+    "identity": {
+      "bundle": "local.macbook.storage-monitor.viewer.dev",
+      "frame": {
+        "h": 900,
+        "w": 1440,
+        "x": 4180,
+        "y": 177
+      },
+      "pid": 39667,
+      "time": 1793313505.1063042,
+      "title": "Storage Monitor \u2014 QA: structured-explorer-native.sqlite3"
+    }
+  }
+]

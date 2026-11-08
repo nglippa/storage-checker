@@ -1,0 +1,45 @@
+{
+  "duration_seconds": 572.9416358470917,
+  "qa_pid": 63381,
+  "qa_bundle": "local.macbook.storage-monitor.viewer.dev",
+  "qa_process_closed": true,
+  "qa_preferences_restored_exactly": true,
+  "stop_reason": "requested completion",
+  "focus_safety_stop": false,
+  "native_window_id": 67406,
+  "navigation": [
+    {
+      "open_time": 241.7918,
+      "node": "115",
+      "first_tree_read_completion_delay_ms": 2176.7,
+      "read_work_ms": 40.4
+    },
+    {
+      "open_time": 288.2632,
+      "node": "15",
+      "first_tree_read_completion_delay_ms": 1522.3,
+      "read_work_ms": 195.5
+    },
+    {
+      "open_time": 291.9764,
+      "node": "1",
+      "first_tree_read_completion_delay_ms": 2723.3,
+      "read_work_ms": 74.4
+    }
+  ],
+  "minimum_window_requested": [
+    1000,
+    640
+  ],
+  "minimum_window_enforced": [
+    1000,
+    692
+  ],
+  "chart_hover_callout_observed": false,
+  "physical_devices_verified": false,
+  "voiceover_activated": false,
+  "code_changes": false,
+  "temporary_catalog_disposed": true,
+  "temporary_qa_request_queue_disposed": true,
+  "source_manifest_files_unchanged": 125
+}
