@@ -30,18 +30,20 @@ import Darwin
             return try LifecycleQAScope.load(root: root, expected: root)
         }
         let scope = try fixture(), layout = MonitorInstallLayout(home: scope.home, qa: scope)
-        try test(Set(scope.labels).isDisjoint(with: Set([label, baselineLabel, inventoryLabel])), "QA UUID labels never overlap production")
+        try test(scope.labels.count == 1 && Set(scope.labels).isDisjoint(with: Set([label, baselineLabel, inventoryLabel])), "the QA scope has one UUID label (the supervisor) that never overlaps a production label")
+        try test(layout.legacyLabels.isEmpty && layout.agents.count == 1, "the QA layout registers exactly one scoped agent and no legacy labels")
         try test(refuses { _ = try LifecycleQAScope.load(root: scope.root, expected: scope.root + "-other") }, "private location cannot bypass exact baked-root match")
         try test(refuses { _ = try LifecycleQAScope.load(root: scope.root + "/.", expected: scope.root + "/.") }, "lexical root alias rejected")
         try test(refuses { try LifecycleQAScope.validateEnvironment(["HOME": "/private/tmp/fake-home"]) }, "fake HOME is not a scope")
         try test(refuses { try LifecycleQAScope.validateEnvironment(["DYLD_INSERT_LIBRARIES": "fake"]) }, "loader override rejected")
         try test(refuses { try LifecycleQAScope.validateEnvironment(["STORAGE_MONITOR_UNRESTRICTED": "1"]) }, "environment-only unrestricted override rejected")
         try test(refuses { try scope.validateCurrentImage(installerOnly: true) }, "unadmitted process image cannot run installer")
-        for (index, agent) in layout.agents.enumerated() {
-            let command = ["check", "initialize-baseline", "inventory-work"][index]
-            try test(agent.plist["ProgramArguments"] as? [String] == scope.workerArguments(command: command), "\(command) plist contains exact scope, root and data")
-            try test(agent.label == scope.labels[index] && agent.url.path.hasPrefix(scope.root + "/"), "\(command) label and plist stay private")
+        for agent in layout.agents {
+            try test(agent.plist["ProgramArguments"] as? [String] == scope.workerArguments(command: "supervise"), "supervise plist contains exact scope, root and data")
+            try test(agent.label == scope.labels[0] && agent.url.path.hasPrefix(scope.root + "/") && agent.plist["KeepAlive"] as? Bool == true, "supervisor label and plist stay private")
         }
+        try test(["check", "initialize-baseline", "inventory-work"].allSatisfy { scope.workerArguments(command: $0).contains(scope.root) && scope.workerArguments(command: $0).contains(scope.data.path) },
+                 "the supervisor's child commands carry the exact scope, fixture root and data directory")
         var calls = [[String]]()
         let control: LaunchControl = { args, _ in calls.append(args) }
         _ = try install(layout: layout, source: scope.bundle("V1"), control: control)
@@ -49,10 +51,10 @@ import Darwin
         let db = try Database(scope.database)
         try db.write("INSERT INTO readings(timestamp,container,free,used,volumes) VALUES(1,'fixture-sentinel',2,3,'[]')")
         var setup = MonitoringSetupStatus.evaluate(home: scope.home, bundledHelper: scope.bundle("Installer"), launchd: .init(loaded: Set(scope.labels), disabled: []), labels: scope.labels)
-        try test(setup.state == .needsUpdate && setup.jobLabels == scope.labels && setup.helperExecutable?.path == scope.installer.path, "existing status engine detects V1/V2 fixture update and stable installer")
-        let wake = scheduledInventoryWake(directory: scope.data, layout: layout)
-        try test(wake == ["kickstart", "gui/\(getuid())/\(scope.labels[2])"], "periodic inventory wake uses only scoped label")
-        try test(scheduledInventoryWake(directory: defaultData, layout: layout) == nil, "QA installation never wakes worker for production data")
+        try test(setup.state == .needsUpdate && setup.jobLabels == MonitoringSetupStatus.roleLabels(for: scope.labels[0]) && setup.helperExecutable?.path == scope.installer.path, "existing status engine detects V1/V2 fixture update and stable installer")
+        try test(wakeSupervisor(.inventory, directory: scope.data, layout: layout) && fm.fileExists(atPath: SupervisorWakes.file(data: scope.data, role: .inventory).path)
+                 && !fm.fileExists(atPath: SupervisorWakes.file(data: defaultData, role: .inventory).path), "periodic inventory wake is a request file inside the scoped data directory")
+        try test(!wakeSupervisor(.inventory, directory: defaultData, layout: layout), "QA installation never wakes worker for production data")
         let safe = layout.guardedControl(control)
         try test(refuses { try safe(["bootout", "gui/\(getuid())/\(label)"], true) }, "control rejects production label")
         try test(refuses { try safe(["kickstart", "gui/\(getuid())/local.macbook.storage-monitor.inventory-qa"], false) }, "control rejects legacy QA label")
@@ -72,9 +74,9 @@ import Darwin
         setup = MonitoringSetupStatus.evaluate(home: scope.home, bundledHelper: scope.bundle("Installer"), launchd: .init(loaded: Set(scope.labels), disabled: []), labels: scope.labels)
         try test(setup.state == .on, "same status engine reports current fixture version installed")
         var health = MonitoringHealthEvidence()
-        let failure = LaunchdState(loaded: Set(scope.labels), disabled: [], jobs: [scope.labels[2]: .init(pid: nil, lastExitStatus: 79)])
-        setup.launchd = failure; health.observe(failure, at: Date(), labels: scope.labels)
-        try test(MonitoringHealthPresentation(setup: setup, lastSuccess: nil, evidence: health, now: Date()).state == .failed, "health reads scoped worker labels")
+        let failure = LaunchdState(loaded: Set(scope.labels), disabled: [], jobs: [MonitoringSetupStatus.roleLabels(for: scope.labels[0])[2]: .init(pid: nil, lastExitStatus: 79)])
+        setup.launchd = failure; health.observe(failure, at: Date(), labels: setup.jobLabels)
+        try test(MonitoringHealthPresentation(setup: setup, lastSuccess: nil, evidence: health, now: Date()).state == .failed, "health reads the scoped supervisor workers")
         LifecycleQAScope.active = scope
         let externalBase = URL(fileURLWithPath: parent + "/external-refused")
         let external = ExternalVolumeControl(baseDirectory: externalBase)

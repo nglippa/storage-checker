@@ -98,10 +98,10 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
     let includedSizesNote = InventoryNodePresentation.sharedFreshnessText("Includes earlier sizes")
     try test(includedSizesNote?.contains("earlier sizes") == true && includedSizesNote?.contains("need rechecking") == true && includedSizesNote?.contains("while changes are rechecked") == false, "shared mixed-age explanation describes needed work without implying active indexing")
 
-    let main = MonitoringSetupStatus.labels[0], worker = MonitoringSetupStatus.labels[2]
+    let main = MonitoringSetupStatus.roleLabels[0], worker = MonitoringSetupStatus.roleLabels[2]
     func setup(_ state: MonitoringSetupStatus.State = .on, exit: Int = 0, pid: Int? = nil, workerExit: Int = 0, launchdKnown: Bool = true) -> MonitoringSetupStatus {
         var result = MonitoringSetupStatus(state: state, summary: "fixture", installedVersion: nil, bundledVersion: nil, helperExecutable: nil, installedApp: URL(fileURLWithPath: "/private/tmp/fixture-monitor"))
-        result.launchd = launchdKnown ? LaunchdState(loaded: Set(MonitoringSetupStatus.labels), disabled: [], jobs: [main: .init(pid: pid, lastExitStatus: exit), worker: .init(pid: nil, lastExitStatus: workerExit)]) : nil
+        result.launchd = launchdKnown ? LaunchdState(loaded: Set(MonitoringSetupStatus.roleLabels + MonitoringSetupStatus.labels), disabled: [], jobs: [main: .init(pid: pid, lastExitStatus: exit), worker: .init(pid: nil, lastExitStatus: workerExit)]) : nil
         return result
     }
     try test(setup(.off).inventoryUpdatesEnabled == false && setup(.on).inventoryUpdatesEnabled == true && setup(.needsUpdate).inventoryUpdatesEnabled == true, "reliable setup distinguishes monitoring off from enabled inventory scheduling")
@@ -143,7 +143,7 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
              && health(setup(), wake: now.addingTimeInterval(4500), at: now.addingTimeInterval(5101)).state == .stale, "wake has a bounded waiting state without falsely declaring old data healthy")
     try test(health(setup(workerExit: 75), success: nil).state == .resuming && health(setup(workerExit: 78)).state == .failed, "resumable inventory exit 75 differs from a fatal inventory exit 78")
     var baselineResuming = setup()
-    baselineResuming.launchd?.jobs[MonitoringSetupStatus.labels[1]] = .init(pid: nil, lastExitStatus: 75)
+    baselineResuming.launchd?.jobs[MonitoringSetupStatus.roleLabels[1]] = .init(pid: nil, lastExitStatus: 75)
     try test(health(baselineResuming, success: nil).state == .resuming && health(baselineResuming).state == .healthy, "baseline exit 75 is resumable work rather than a monitoring failure")
     func workerEvidence(_ offset: TimeInterval, _ payload: String) -> String { ISO8601DateFormatter().string(from: now.addingTimeInterval(offset)) + " inventory " + payload + "\n" }
     let failedWorker = InventoryWorkerEvidence.parse(workerEvidence(-60, "{\"outcome\":\"failed\"}"), now: now)

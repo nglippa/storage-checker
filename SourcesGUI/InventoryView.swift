@@ -409,11 +409,11 @@ struct DiskInventoryView: View {
     @ObservedObject private var qaWorker = NativeQAWorker.shared
     private var workerAvailable: Bool {
         if let scope = LifecycleQAScope.active {
-            return (try? scope.admit(command: "inventory-request")) != nil && FileManager.default.fileExists(atPath: scope.agentURL(scope.labels[2]).path)
+            return (try? scope.admit(command: "inventory-request")) != nil && FileManager.default.fileExists(atPath: scope.agentURL(scope.labels[0]).path)
         }
         if history.target.uuid != nil { return history.target.canRequest && history.externalSupportReady }
         let data = URL(fileURLWithPath: configuration.database).deletingLastPathComponent()
-        let path = configuration.isQA ? data.appendingPathComponent("inventory-worker.plist").path : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/local.macbook.storage-monitor.inventory.plist").path
+        let path = configuration.isQA ? data.appendingPathComponent("inventory-worker.plist").path : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/local.macbook.storage-monitor.plist").path
         if NativeQARuntime.active != nil { return qaWorker.failure == nil }
         return FileManager.default.fileExists(atPath: path)
     }
@@ -434,7 +434,7 @@ struct DiskInventoryView: View {
         }
         let configured = history.monitoring.map { $0.state == .on || $0.state == .needsUpdate }
         let tasks = history.monitoring?.launchd
-        let job = tasks?.jobs[(history.monitoring?.jobLabels ?? MonitoringSetupStatus.labels)[2]]
+        let job = tasks?.jobs[(history.monitoring?.jobLabels ?? MonitoringSetupStatus.roleLabels)[2]]
         let failure: String?
         if tasks?.reliable == true, let job, job.pid == nil, let exit = job.lastExitStatus, exit != 0 && exit != 75 {
             failure = "The background indexer reported an error before folder results became available."

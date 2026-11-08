@@ -10,7 +10,7 @@ import SQLite3
     guard arguments.count > 1, arguments.filter({ $0 == LifecycleQAScope.flag }).count == 1,
           let rootIndex = arguments.firstIndex(of: LifecycleQAScope.flag), rootIndex + 1 < arguments.count else { try LifecycleQAScope.refuse("explicit scope is required") }
     let scope = try LifecycleQAScope.load(root: arguments[rootIndex + 1]), command = arguments[1]
-    let workers = ["check", "initialize-baseline", "inventory-work"]
+    let workers = ["supervise", "check", "initialize-baseline", "inventory-work"]
     guard workers.contains(command) || ["install", "uninstall", "status", "lifecycle-qa-inspect"].contains(command) else { try LifecycleQAScope.refuse("unsupported lifecycle command") }
     try scope.admit(command: command)
     try scope.validateCurrentImage(installerOnly: !workers.contains(command))
@@ -19,6 +19,7 @@ import SQLite3
         guard Array(arguments.dropFirst()) == Array(scope.workerArguments(command: command).dropFirst()) else { try LifecycleQAScope.refuse("worker root/data/options must exactly match the generated plist") }
         try scope.validateFixtures()
         switch command {
+        case "supervise": try await runSupervisor(directory: scope.data, qa: scope)
         case "check": try check(scope.data, qa: scope)
         case "initialize-baseline":
             let result = initializeBaseline(dbPath: scope.database, directory: scope.data,

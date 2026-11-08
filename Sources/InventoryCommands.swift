@@ -3,23 +3,12 @@ import CoreServices
 import Darwin
 import SQLite3
 
-let inventoryLabel = "local.macbook.storage-monitor.inventory"
-let inventoryAgentURL = home.appendingPathComponent("Library/LaunchAgents/\(inventoryLabel).plist")
-
-/// Scheduling (STORAGE-MONITOR-INSTALL-READINESS.md): launchd starts the worker at load/login, when the
-/// viewer writes a request, and again after a non-zero exit (75: work remains). Exit 0 leaves it idle
-/// until the scheduled capacity check kickstarts it (every :00/:30, coalesced after sleep). The slice
+/// Scheduling (STORAGE-MONITOR-INSTALL-READINESS.md): the supervisor (Supervisor.swift) starts the worker at
+/// load/login, when the viewer writes a request, and again after a non-zero exit (75: work remains). Exit 0
+/// leaves it idle until the scheduled capacity check wakes it (every :00/:30, coalesced after sleep). The slice
 /// matches the verified QA configuration; a 20 s slice could end before a changing directory reaches its
 /// retry limit, so it would never be deferred and the worker would relaunch every minute.
-let inventoryAgentBudget = 1_200
-func inventoryAgentPlist(_ executable: String, _ data: String) -> [String: Any] {
-    ["Label": inventoryLabel, "AssociatedBundleIdentifiers": agentAssociatedBundleIdentifiers, "ProgramArguments": [executable, "inventory-work", "--budget", String(inventoryAgentBudget), "--data-dir", data],
-     "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false], "ThrottleInterval": 60,
-     "WatchPaths": [URL(fileURLWithPath: data).appendingPathComponent("inventory-requests").path],
-     "ProcessType": "Background", "LowPriorityIO": true, "Nice": 15, "Umask": 63,
-     "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null",
-     "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
-}
+let inventoryAgentBudget = SupervisorRole.inventoryBudget
 
 // Same FSEvents implementation/history as coverage, with a separately acknowledged cursor:
 // inventory may be interrupted for much longer than a capacity check. A monitor cursor cannot

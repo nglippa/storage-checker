@@ -162,7 +162,7 @@ struct ViewerConfiguration {
                         return MonitoringSetupStatus.evaluate(home: scope.home, bundledHelper: scope.bundle("Installer"), launchd: LaunchdState.current(), labels: scope.labels)
                     } catch {
                         var status = MonitoringSetupStatus(state: .incomplete, summary: "Disposable lifecycle scope needs attention: \(error)", installedVersion: nil, bundledVersion: nil, helperExecutable: nil, installedApp: scope.app)
-                        status.jobLabels = scope.labels; return status
+                        status.jobLabels = MonitoringSetupStatus.roleLabels(for: scope.labels[0]); status.supervisorLabel = scope.labels[0]; return status
                     }
                 }
                 if configuration.isQA {
@@ -608,7 +608,7 @@ private struct AppearanceSettings: View {
             Button("Cancel", role: .cancel) { pending = nil }
         } message: {
             if let scope = LifecycleQAScope.active {
-                Text(pending == .disable ? "Remove this disposable session's three background tasks. Its private fixture history is kept." : "Install the disposable helper and register three session-specific tasks. They scan only \(scope.fixtures). Production monitoring is untouched. Private plists do not establish login persistence. Notifications are suppressed.")
+                Text(pending == .disable ? "Remove this disposable session's background task. Its private fixture history is kept." : "Install the disposable helper and register three session-specific tasks. They scan only \(scope.fixtures). Production monitoring is untouched. Private plists do not establish login persistence. Notifications are suppressed.")
             } else { Text(pending == .disable ? MonitoringSetupStatus.disableConfirmation : MonitoringSetupStatus.consent) }
         }
     }

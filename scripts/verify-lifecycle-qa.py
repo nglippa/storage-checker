@@ -51,7 +51,7 @@ def main():
     check(inspect.returncode == 0, "actual stable helper admits exact scope without production fallback")
     data = json.loads(inspect.stdout)
     labels = data["labels"]
-    check(len(labels) == 3 and all(".lifecycle-qa." in label for label in labels), "exact three unique QA labels")
+    check(len(labels) == 1 and all(".lifecycle-qa." in label for label in labels), "exactly one unique QA label (the supervisor)")
     for plist in data["generated_plists"]:
         argv = plist["ProgramArguments"]
         check(argv[argv.index("--root") + 1] == str(root / "fixtures") and argv[argv.index("--data-dir") + 1].startswith(str(root) + "/"), "generated " + argv[1] + " explicitly fixture rooted")
@@ -83,7 +83,7 @@ def main():
     try:
         wait_for(lambda: (root / "guard.jsonl").exists() and '"armed"' in (root / "guard.jsonl").read_text(), "independent guard armed before services")
         install("V1")
-        check(all(run(["/bin/launchctl", "print", target(label)]).returncode == 0 for label in labels), "real launchd loads all three private plists")
+        check(all(run(["/bin/launchctl", "print", target(label)]).returncode == 0 for label in labels), "real launchd loads the private supervisor plist")
         wait_for(lambda: rows("SELECT value FROM state WHERE key='lifecycle_qa_last_check_role'") == [("V1",)], "RunAtLoad V1 check commits actual capacity reading")
         wait_for(lambda: rows("SELECT root_path FROM inventory_generations") == [(str(root / "fixtures"),)] and rows("SELECT count(*) FROM inventory_nodes")[0][0] >= 5, "real inventory worker indexes only explicit fixtures")
         wait_for(lambda: "initialize-baseline terminal" in (root / "home/Library/Application Support/MacBook Storage Monitor/monitor.log").read_text(), "real baseline initializer finishes fixture-only work")
@@ -110,11 +110,11 @@ def main():
         recovered = install("V2")
         check("Reverted an interrupted update" in recovered.stdout, "same installer recovers real interrupted transaction")
         check(hashlib.sha256(installed.read_bytes()).hexdigest() == readiness["images"]["V2"]["sha256"], "in-place update installs distinct real V2 image")
-        missing = root / "home/Library/LaunchAgents" / (labels[2] + ".plist")
-        check(run(["/bin/launchctl", "bootout", target(labels[2])]).returncode == 0, "test removes only its own inventory registration")
+        missing = root / "home/Library/LaunchAgents" / (labels[0] + ".plist")
+        check(run(["/bin/launchctl", "bootout", target(labels[0])]).returncode == 0, "test removes only its own supervisor registration")
         missing.unlink()
         install("V2")
-        check(missing.exists() and run(["/bin/launchctl", "print", target(labels[2])]).returncode == 0, "repair restores own missing plist and actual registration")
+        check(missing.exists() and run(["/bin/launchctl", "print", target(labels[0])]).returncode == 0, "repair restores own missing plist and actual registration")
         disabled = run(command("uninstall"))
         check(disabled.returncode == 0, "real disable completes")
         check(all(run(["/bin/launchctl", "print", target(label)]).returncode != 0 for label in labels), "disable removes all own real services")

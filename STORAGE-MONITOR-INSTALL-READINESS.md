@@ -8,25 +8,29 @@ Every scheduling path from install to steady-state maintenance is accounted for.
 
 ## 1. Scheduling architecture, as audited before any change
 
-The production install writes three per-user LaunchAgents (`MonitorInstallLayout.agents`, `Sources/StorageMonitor.swift`). QA does **not** match production: the QA worker has no periodic trigger.
+Since 2.4.2 the production install writes **one** per-user LaunchAgent (`MonitorInstallLayout.agents`, `Sources/StorageMonitor.swift`), `local.macbook.storage-monitor`, which runs `StorageMonitor supervise --data-dir <data>`. Versions up to 2.4.1 wrote three agents; because the build is ad-hoc signed (no Team ID), macOS ignores `AssociatedBundleIdentifiers` and showed three "Background Items Added" notifications. Install and update now boot out and delete the legacy `.baseline` and `.inventory` agents, and Disable removes all of them. The agent is `RunAtLoad`, `KeepAlive true` (the supervisor is resident), throttle 60 s, with no `StartCalendarInterval`, `StartOnMount` or `WatchPaths`. QA registers one scoped supervisor agent that runs the QA worker arguments.
 
-| Label | Program | Trigger |
+The supervisor (`Sources/Supervisor.swift`; decisions in `SourcesShared/SupervisorModel.swift`) starts the same executable's existing commands as child processes, one process per role at a time, roles concurrently:
+
+| Role | Command | Starts |
 |---|---|---|
-| `local.macbook.storage-monitor` | `check` | `RunAtLoad`, `StartCalendarInterval` :00 and :30 |
-| `local.macbook.storage-monitor.baseline` | `initialize-baseline` | `RunAtLoad`, `KeepAlive {SuccessfulExit: false}`, throttle 300 s |
-| `local.macbook.storage-monitor.inventory` | `inventory-work` | `RunAtLoad`, `KeepAlive {SuccessfulExit: false}`, throttle 60 s, `WatchPaths` = `inventory-requests/` |
+| check | `check` | at launch; once per wall-clock :00/:30 slot (evaluated on a 60 s tick, so a slot missed during sleep runs once on wake); on a new entry in `/Volumes`; when `external-volumes/registry.json` changes |
+| baseline | `initialize-baseline` (nice 15) | at launch; after a non-zero exit (75 = resumable) no sooner than 300 s after its last start; when woken |
+| inventory | `inventory-work --budget 1200` (nice 15) | at launch; after a non-zero exit no sooner than 60 s after its last start; when anything changes in `inventory-requests/`; when woken |
+
+A wake is an empty file `supervisor-wakes/<role>` in the data directory (written by a check, only when the agent is installed for that data directory). The supervisor removes it when it starts the role; a wake of a running role is discarded (no-op). The supervisor records each role's PID, last start and last exit in `supervisor-status.json` (0600), which Settings reads; on SIGTERM it forwards SIGTERM to its children and exits.
 
 | Question | Finding (before changes) |
 |---|---|
 | What triggers the initial inventory? | Bootstrapping the agent at install (`RunAtLoad`) starts it. `runInventory` creates the generation if none exists. Each unfinished slice exits 75, and launchd relaunches it after 60 s. |
-| What triggers incremental maintenance? | Every scheduled `check` ends with `launchctl kickstart gui/<uid>/…inventory` (no `-k`). The worker also starts when the viewer writes to `inventory-requests/`, and at login. |
+| What triggers incremental maintenance? | Every scheduled `check` ends by writing a wake request for the supervisor, which starts the idle inventory worker (formerly `launchctl kickstart` without `-k`). The worker also starts when the viewer writes to `inventory-requests/`, and at login. |
 | Does a successful exit leave maintenance scheduled? | **Yes, in production.** Exit 0 is not relaunched by `KeepAlive`, but the next :00/:30 check wakes the worker. (QA has no such check, which is why QA runs needed manual starts.) |
 | Is a deferred directory eventually retried? | Yes. Deferral was run-local only, so the next wake retries it. **However**, see gap G2. |
 | Sleep and wake | Calendar intervals missed during sleep run once on wake, and that check wakes the worker. A worker suspended mid-run continues after wake. |
 | How long can the Mac be inactive before FSEvents history is unusable? | Apple's header (`FSEvents.h`, `FSEventsCopyUUIDForDevice`) documents a persistent per-volume database. A *discarded* database gets a new UUID, which the code detects. It documents no retention period and no signal for partial trimming. The code imposes its own 6 h wall-clock limit (`maxReplayAge`). **Gap G1.** |
 | Does an expired cursor cause a safe reconciliation? | Yes. Expiry queues one full-volume gap invalidation, the existing tests show it drains, and the catalog then matches disk. It is safe, but on 2.9 M entries it is expensive. |
 | Does a reboot preserve pending maintenance? | Yes. Jobs, invalidations, reconciliation frontier and cursor are durable in SQLite. `RunAtLoad` at login restarts the worker. LaunchAgents run only while the user is logged in. |
-| Can runs overlap? | No. launchd runs one instance per label, and `kickstart` without `-k` never restarts a running job. `inventory-command.lock` and `inventory.lock` (non-blocking `flock`) refuse a second worker, which reports `busy`. |
+| Can runs overlap? | No. The supervisor never starts a second instance of a role, and a wake of a running role is discarded. `inventory-command.lock` and `inventory.lock` (non-blocking `flock`) refuse a second worker, which reports `busy`. |
 
 ### Gaps found
 
@@ -79,8 +83,8 @@ New coverage. All tests run on isolated `/private/tmp` fixtures with real FSEven
 
 - **Idle exit, then scheduled maintenance:**
   - the exit policy as launchd applies it: 75 for unfinished or busy runs; 0 for complete, partial, stale, paused and deferred-only runs;
-  - after an idle exit the scheduled check produces `kickstart` without `-k`;
-  - the agent plist has `KeepAlive SuccessfulExit=false`, `WatchPaths`, no interval of its own, and `--budget 1200`.
+  - after an idle exit the scheduled check writes a supervisor wake file, which a running role discards;
+  - the supervisor restarts inventory/baseline only after a non-zero exit and its 60 s/300 s throttle, passes `--budget 1200`, and the agent plist has `KeepAlive true` and no schedule of its own.
 - **Deferred directory retried in a later run:** with the folder still changing, the second run retries it exactly 3 more times and defers it again. Once quiet, the next run lists it and the catalog matches disk.
 - **Sleep, wake and reboot:**
   - 9 h asleep with 10 min awake → `applied`, nothing full-volume queued;
@@ -98,8 +102,8 @@ New coverage. All tests run on isolated `/private/tmp` fixtures with real FSEven
 | Item | Status |
 |---|---|
 | DMG build process | `scripts/build-dmg.sh` builds a universal app, signs it (ad-hoc by default, or `STORAGE_MONITOR_SIGN_IDENTITY` with hardened runtime), and finishes with `scripts/verify-dmg.sh` (mounted `-nobrowse`, runs the bundled self-test). **The existing `build/dist/Storage-Monitor-1.0.0.dmg` (Oct 23 02:03) is stale.** It predates candidate 3 and these changes and must not be used for the test. |
-| First-launch consent | There is no automatic first-launch prompt. Monitoring stays off until the person chooses **Settings → Enable Background Monitoring…**, whose alert lists all three tasks, including "Disk inventory indexing at low priority. The first pass over a large disk can take hours." Until then the inventory view says "Background indexing has not been installed." Enabling starts the first pass immediately (`RunAtLoad`). |
-| LaunchAgent installation and removal | Transactional install, verified against an isolated home: three agents, each enabled, bootstrapped and confirmed with `print`. `uninstall` boots out and removes all three and keeps history and the helper. Real launchd registration: **NOT VERIFIED.** |
+| First-launch consent | There is no automatic first-launch prompt. Monitoring stays off until the person chooses **Settings → Enable Background Monitoring…**, whose alert describes the one background task and its three jobs, including "Disk inventory indexing at low priority. The first pass over a large disk can take hours." Until then the inventory view says "Background indexing has not been installed." Enabling starts the first pass immediately (`RunAtLoad`). |
+| LaunchAgent installation and removal | Transactional install, verified against an isolated home: one agent, enabled, bootstrapped and confirmed with `print`; an upgrade from three agents boots out and removes the legacy ones (and a failed upgrade restores them). `uninstall` boots out and removes the agent and any legacy agents and keeps history and the helper. The supervisor's scheduling, wake files, mount and registry triggers are verified with stand-in child processes; whether the supervisor runs under real launchd and BTM shows one notification is **NOT VERIFIED**. Real launchd registration: **NOT VERIFIED.** |
 | Upgrade preserves databases | Verified in isolation: an APFS-clone snapshot; history row counts preserved; additive migration (this change adds two defaulted columns, so the update keeps one `history.pre-update-*.sqlite3`). |
 | Interrupted upgrade recovery | Verified in isolation: fault injection at each of the 6 phases restores the previous helper and agents; a killed update leaves a journal that recovery reverts; after registration the update completes and is never rolled back. |
 | Uninstall | Disable removes the agents only; app removal and data deletion are manual and documented (`PACKAGING.md`). |
@@ -133,9 +137,9 @@ New coverage. All tests run on isolated `/private/tmp` fixtures with real FSEven
    - `memory_pressure | tail -1`
    - `pmset -g log | tail -5`
 4. **Install:**
-   - Drag the app to /Applications, open it, then **Settings → Enable Background Monitoring…**. Confirm the alert text lists the three tasks.
-   - Then run `launchctl print gui/$(id -u)/local.macbook.storage-monitor.inventory | grep -A8 arguments`. The arguments must include `--budget 1200`.
-   - `ls ~/Library/LaunchAgents | grep storage` must list exactly three plists.
+   - Drag the app to /Applications, open it, then **Settings → Enable Background Monitoring…**. Confirm the alert text describes one background task. macOS should show a single Background Items Added notification.
+   - Then run `launchctl print gui/$(id -u)/local.macbook.storage-monitor | grep -A8 arguments`. The arguments must be `supervise --data-dir …`; `cat "~/Library/Application Support/MacBook Storage Monitor/supervisor-status.json"` shows the three roles.
+   - `ls ~/Library/LaunchAgents | grep storage` must list exactly one plist.
 5. **Initial inventory, without Full Disk Access first.** Every 30 minutes, record:
    - `tail -3 "~/Library/Application Support/MacBook Storage Monitor/monitor.log"` (lines `inventory {…}` and `inventory events {…}`);
    - `ps -o pid,rss,%cpu,etime -p $(pgrep -f inventory-work)`;
@@ -160,7 +164,7 @@ New coverage. All tests run on isolated `/private/tmp` fixtures with real FSEven
     - Build 1.0.2 (build 3), then **Settings → Update Background Monitor…**.
     - Compare `SELECT COUNT(*) FROM inventory_nodes` and `readings` on `cp -c` copies taken before and after.
     - Expect no full rescan, and at most one `history.pre-update-*.sqlite3`.
-11. **Uninstall:** **Settings → Disable…**. All three plists must be gone, `launchctl print …inventory` must fail, and history must be retained. Then follow PACKAGING.md → Uninstalling.
+11. **Uninstall:** **Settings → Disable…**. The plist must be gone, `launchctl print gui/$(id -u)/local.macbook.storage-monitor` must fail, and history must be retained. Then follow PACKAGING.md → Uninstalling.
 
 **Stop the test** on any of:
 

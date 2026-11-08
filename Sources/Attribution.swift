@@ -1031,8 +1031,8 @@ func baselineInitializationSelfTest(_ test: (Bool, String) throws -> Void) throw
     let restored = try Database(backupDir.appendingPathComponent(made.last!).path)
     try test(kept.count == 3 && (try restored.rows("SELECT count(*) AS n FROM readings").first?["n"]) == "1", "install backup is verified and the 3 newest are kept")
 
-    // Launch agent: one-shot, background, self-terminating; the scheduled agent is unchanged.
-    let agent = baselineAgentPlist("/x/StorageMonitor", "/x/data")
-    try test(agent["StartCalendarInterval"] == nil && (agent["KeepAlive"] as? [String: Bool])?["SuccessfulExit"] == false && agent["LowPriorityIO"] as? Bool == true && (agent["ProgramArguments"] as? [String])?[1] == "initialize-baseline", "initializer agent runs at load, exits when done, background I/O priority")
-    try test((agentPlist("/x/StorageMonitor", "/x/data")["StartCalendarInterval"] as? [[String: Int]]) == [["Minute": 0], ["Minute": 30]], "scheduled monitoring agent unchanged (:00/:30)")
+    // The baseline initializer is a supervisor role: it exits when done (0 = terminal, 75 = resume) and is restarted by the supervisor.
+    try test(SupervisorRole.baseline.arguments(data: "/x/data") == ["initialize-baseline", "--data-dir", "/x/data"] && SupervisorRole.baseline.restartThrottle == 300 && SupervisorRole.baseline.niceness == 15,
+             "baseline initializer runs as a supervisor role: terminal exit stays idle, a non-zero exit restarts after 300 s at low priority")
+    try test((agentPlist("/x/StorageMonitor", "/x/data")["ProgramArguments"] as? [String])?[1] == "supervise" && agentPlist("/x/StorageMonitor", "/x/data")["LowPriorityIO"] as? Bool == true, "the single monitoring agent runs the supervisor in the background")
 }

@@ -219,21 +219,19 @@ let agentURL = home.appendingPathComponent("Library/LaunchAgents/\(label).plist"
 /// Team ID for Background Task Management to group by: without this key each agent is a separate background
 /// item, and a first install shows three "Background Items Added" notifications instead of one.
 let agentAssociatedBundleIdentifiers = ["local.macbook.storage-monitor.viewer", "local.macbook.storage-monitor"]
+/// The one LaunchAgent: a resident supervisor (Sources/Supervisor.swift) that runs the capacity check, the
+/// folder baseline and the inventory worker as child processes with the schedule the former three agents had
+/// (check at load, every :00/:30 with catch-up after sleep, on mount and when the external-volume registry
+/// changes; baseline and inventory at load, after a non-zero exit and when woken). One agent means one
+/// "Background Items Added" notification instead of three.
 func agentPlist(_ executable: String, _ data: String) -> [String: Any] {
-    ["Label": label, "AssociatedBundleIdentifiers": agentAssociatedBundleIdentifiers, "ProgramArguments": [executable, "check", "--data-dir", data], "RunAtLoad": true, "StartOnMount": true,
-     "WatchPaths": [URL(fileURLWithPath: data).appendingPathComponent("external-volumes/registry.json").path],
-     "StartCalendarInterval": [["Minute": 0], ["Minute": 30]], "ProcessType": "Background", "LowPriorityIO": true, "Nice": 10, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
+    ["Label": label, "AssociatedBundleIdentifiers": agentAssociatedBundleIdentifiers, "ProgramArguments": [executable, "supervise", "--data-dir", data], "RunAtLoad": true, "KeepAlive": true, "ThrottleInterval": 60,
+     "ProcessType": "Background", "LowPriorityIO": true, "Nice": 10, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
 }
-// One-time baseline initializer. It runs at load (install/login), exits 0 once coverage
-// reaches a terminal state and is then idle; a non-zero exit (time limit, busy) lets
-// launchd resume it after the throttle interval. The scheduled check wakes it when
-// coverage is incomplete. It never records readings or sends notifications.
+/// Labels of the separate agents that versions before 2.4.2 installed. Install and uninstall remove them.
 let baselineLabel = "local.macbook.storage-monitor.baseline"
-let baselineAgentURL = home.appendingPathComponent("Library/LaunchAgents/\(baselineLabel).plist")
-func baselineAgentPlist(_ executable: String, _ data: String) -> [String: Any] {
-    ["Label": baselineLabel, "AssociatedBundleIdentifiers": agentAssociatedBundleIdentifiers, "ProgramArguments": [executable, "initialize-baseline", "--data-dir", data], "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false], "ThrottleInterval": 300,
-     "ProcessType": "Background", "LowPriorityIO": true, "Nice": 15, "Umask": 63, "StandardOutPath": "/dev/null", "StandardErrorPath": "/dev/null", "EnvironmentVariables": ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin"]]
-}
+let inventoryLabel = "local.macbook.storage-monitor.inventory"
+let legacyAgentLabels = [baselineLabel, inventoryLabel]
 func launchctl(_ args: [String], acceptable: Bool = false) throws -> CommandResult {
     let r = try run("/bin/launchctl", args, timeout: 15); if !acceptable { try required(r.status == 0, "launchctl \(args.first ?? "") failed: \(r.text)") }; return r
 }
@@ -273,35 +271,38 @@ struct MonitorInstallLayout {
     init(home: URL, qa: LifecycleQAScope? = nil) { self.home = home; self.qa = qa }
     static let current = MonitorInstallLayout(home: fm.homeDirectoryForCurrentUser)
     static var active: MonitorInstallLayout { LifecycleQAScope.active.map { MonitorInstallLayout(home: $0.home, qa: $0) } ?? .current }
-    var labels: [String] { qa?.labels ?? [label, baselineLabel, inventoryLabel] }
+    var labels: [String] { qa?.labels ?? [label] }
+    /// Agents earlier versions installed beside the supervisor; removed on install, update and uninstall.
+    var legacyLabels: [String] { qa == nil ? legacyAgentLabels : [] }
     var data: URL { home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor") }
     var app: URL { home.appendingPathComponent("Applications/MacBook Storage Monitor.app") }
     var executable: String { app.appendingPathComponent("Contents/MacOS/StorageMonitor").path }
     func agent(_ name: String) -> URL { home.appendingPathComponent("Library/LaunchAgents/\(name).plist") }
+    var legacyAgents: [(label: String, url: URL)] { legacyLabels.map { ($0, agent($0)) } }
     var agents: [(label: String, url: URL, plist: [String: Any])] {
         if let qa {
-            return zip(qa.labels, [agentPlist(executable, data.path), baselineAgentPlist(executable, data.path), inventoryAgentPlist(executable, data.path)]).enumerated().map { index, pair in
-                var plist = pair.1
-                plist["Label"] = pair.0
-                plist["ProgramArguments"] = qa.workerArguments(command: ["check", "initialize-baseline", "inventory-work"][index])
-                plist["StandardOutPath"] = qa.logs + "/agent-\(index).log"
-                plist["StandardErrorPath"] = qa.logs + "/agent-\(index)-errors.log"
-                plist["EnvironmentVariables"] = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TMPDIR": qa.temporary + "/", "SQLITE_TMPDIR": qa.temporary]
-                return (pair.0, agent(pair.0), plist)
-            }
+            var plist = agentPlist(executable, data.path)
+            plist["Label"] = qa.labels[0]
+            plist["ProgramArguments"] = qa.workerArguments(command: "supervise")
+            plist["StandardOutPath"] = qa.logs + "/agent-0.log"
+            plist["StandardErrorPath"] = qa.logs + "/agent-0-errors.log"
+            plist["EnvironmentVariables"] = ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "TMPDIR": qa.temporary + "/", "SQLITE_TMPDIR": qa.temporary]
+            return [(qa.labels[0], agent(qa.labels[0]), plist)]
         }
-        return [(label, agent(label), agentPlist(executable, data.path)),
-         (baselineLabel, agent(baselineLabel), baselineAgentPlist(executable, data.path)),
-         (inventoryLabel, agent(inventoryLabel), inventoryAgentPlist(executable, data.path))]
+        return [(label, agent(label), agentPlist(executable, data.path))]
     }
 }
-/// The inventory worker's periodic wake, issued after each scheduled check (:00/:30; launchd runs a
-/// missed calendar check once on wake). nil unless background monitoring is installed for this data
-/// directory, so disabling it stops maintenance. `kickstart` without `-k` never restarts a running
-/// worker, so wakes cannot overlap a run.
-func scheduledInventoryWake(directory: URL, layout: MonitorInstallLayout = .active) -> [String]? {
-    guard directory.standardizedFileURL == layout.data.standardizedFileURL, fm.fileExists(atPath: layout.agent(layout.labels[2]).path) else { return nil }
-    return ["kickstart", "gui/\(getuid())/\(layout.labels[2])"]
+/// Background monitoring counts as installed for a data directory when its supervisor agent file exists there.
+func monitoringInstalled(directory: URL, layout: MonitorInstallLayout = .active) -> Bool {
+    directory.standardizedFileURL == layout.data.standardizedFileURL && fm.fileExists(atPath: layout.agent(layout.labels[0]).path)
+}
+/// Asks the supervisor to start the baseline or inventory role (a wake of a running role is a no-op).
+/// Replaces `launchctl kickstart` of the former separate agents. False unless monitoring is installed for
+/// this data directory, so disabling it stops maintenance.
+@discardableResult
+func wakeSupervisor(_ role: SupervisorRole, directory: URL, layout: MonitorInstallLayout = .active) -> Bool {
+    guard monitoringInstalled(directory: directory, layout: layout) else { return false }
+    return (try? SupervisorWakes.request(data: layout.data, role: role)) != nil
 }
 typealias LaunchControl = (_ arguments: [String], _ acceptable: Bool) throws -> Void
 let systemLaunchControl: LaunchControl = { arguments, acceptable in _ = try launchctl(arguments, acceptable: acceptable) }
@@ -354,6 +355,9 @@ func install(layout: MonitorInstallLayout = .current, source: URL = Bundle.main.
         }
         try privateDirectory(InventoryRequests.directory(database: layout.history.path))
         for duplicate in layout.duplicateAgents { try fm.removeItem(at: duplicate) }
+        // The separate baseline and inventory agents of earlier versions are already booted out (stopAgents); their
+        // files go now, so only the supervisor is registered. A rollback restores them from the journal's copies.
+        for legacy in layout.legacyAgents where fm.fileExists(atPath: legacy.url.path) { try fm.removeItem(at: legacy.url) }
         for agent in layout.agents {
             let data = try PropertyListSerialization.data(fromPropertyList: agent.plist, format: .xml, options: 0)
             try data.write(to: agent.url, options: .atomic); _ = chmod(agent.url.path, 0o600)
@@ -387,8 +391,9 @@ func uninstall(layout: MonitorInstallLayout = .current, control: @escaping Launc
     try layout.validateQABoundary()
     let control = layout.guardedControl(control)
     var notes = try recoverInterruptedInstall(layout: layout, control: control, restart: layout.qa == nil)
-    for agent in layout.agents { try control(["bootout", "gui/\(getuid())/\(agent.label)"], true) }
-    for url in layout.agents.map(\.url) + layout.duplicateAgents where fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+    for label in layout.labels + layout.legacyLabels { try control(["bootout", "gui/\(getuid())/\(label)"], true) }
+    for url in layout.agents.map(\.url) + layout.legacyAgents.map(\.url) + layout.duplicateAgents where fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+    try? fm.removeItem(at: SupervisorStatus.file(data: layout.data)); try? fm.removeItem(at: SupervisorWakes.directory(data: layout.data))
     notes.append("Background monitoring disabled; LaunchAgents removed. App and history retained: \(layout.data.path)")
     return notes
 }
@@ -419,8 +424,9 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
                 if (try? ExternalVolumeRegistry(baseDirectory: directory).read().volumes.values.contains(where: \.enabled)) == true {
                     try ExternalVolumeControl(baseDirectory: directory).signal()
                 }
-                if !internalFinished, (try? ExternalVolumeRegistry(baseDirectory: directory).read().volumes.values.contains(where: \.enabled)) == true,
-                   let wake = scheduledInventoryWake(directory: directory) { _ = try? run("/bin/launchctl", wake, timeout: 2) }
+                if !internalFinished, (try? ExternalVolumeRegistry(baseDirectory: directory).read().volumes.values.contains(where: \.enabled)) == true {
+                    wakeSupervisor(.inventory, directory: directory)
+                }
             } catch { log(directory, "external capacity check stopped: \(error)") }
         }
     }
@@ -473,9 +479,7 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         }
         // Incomplete coverage: wake the background initializer instead of stretching this check.
         let needsInitializer = region.region != nil ? coverageNeedsWork(db, at: current.timestamp) : (decodeLifecycle(db).map { ["not_initialized", "initializing"].contains($0.state) } ?? false)
-        if needsInitializer, directory.standardizedFileURL == defaultData.standardizedFileURL, fm.fileExists(atPath: baselineAgentURL.path) {
-            _ = try? launchctl(["kickstart", "gui/\(getuid())/\(baselineLabel)"], acceptable: true)
-        }
+        if needsInitializer { wakeSupervisor(.baseline, directory: directory) }
         do { try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [readingId, current.timestamp, json(evidence)]) }
         catch { log(directory, "attribution not stored: \(error)") }
         let folders = evidence["folders"] as? [String: Any] ?? [:]
@@ -495,13 +499,7 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         if directory.standardizedFileURL == defaultData.standardizedFileURL, Bundle.main.bundleIdentifier == "local.macbook.storage-monitor" {
             try? db.state("notification_authorization", notificationStatus().1)
         }
-        if let wake = scheduledInventoryWake(directory: directory) {
-            if let qa { try MonitorInstallLayout(home: qa.home, qa: qa).guardedControl(systemLaunchControl)(wake, true) }
-            else { _ = try? run("/bin/launchctl", wake, timeout: 2) }
-        }
-        if let qa, needsInitializer, fm.fileExists(atPath: qa.agentURL(qa.labels[1]).path) {
-            try MonitorInstallLayout(home: qa.home, qa: qa).guardedControl(systemLaunchControl)(["kickstart", "gui/\(getuid())/\(qa.labels[1])"], true)
-        }
+        wakeSupervisor(.inventory, directory: directory)
         internalFinished = true
     } catch { log(directory, "ERROR \(error)"); throw error }
 }
@@ -604,12 +602,10 @@ func selfTest() throws {
     let plist = agentPlist("/Users/test/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor", "/Users/test/Library/Application Support/MacBook Storage Monitor")
     let serialized = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
     let parsed = try PropertyListSerialization.propertyList(from: serialized, format: nil) as! [String: Any]
-    try test(parsed["StartInterval"] == nil && parsed["RunAtLoad"] as? Bool == true, "single calendar schedule and login startup")
-    try test((parsed["StartCalendarInterval"] as? [[String:Int]]) == [["Minute":0],["Minute":30]], "calendar wake catch-up")
-    try test((parsed["ProgramArguments"] as? [String])?.count == 4, "LaunchAgent absolute executable/data arguments with spaces")
-    for agent in [plist, baselineAgentPlist("/x", "/x"), inventoryAgentPlist("/x", "/x")] {
-        try test(agent["AssociatedBundleIdentifiers"] as? [String] == agentAssociatedBundleIdentifiers, "every LaunchAgent is attributed to the app (one Background Items notification)")
-    }
+    try test(parsed["StartInterval"] == nil && parsed["StartCalendarInterval"] == nil && parsed["WatchPaths"] == nil && parsed["RunAtLoad"] as? Bool == true && parsed["KeepAlive"] as? Bool == true,
+             "one resident supervisor agent starts at login; the :00/:30 schedule and wakes belong to the supervisor, not launchd")
+    try test((parsed["ProgramArguments"] as? [String])?.count == 4 && (parsed["ProgramArguments"] as? [String])?[1] == "supervise", "LaunchAgent absolute executable/data arguments with spaces run the supervisor")
+    try test(plist["AssociatedBundleIdentifiers"] as? [String] == agentAssociatedBundleIdentifiers, "the LaunchAgent is attributed to the app (one Background Items notification)")
     let lockPath = folder.appendingPathComponent("lock").path
     let a = open(lockPath,O_RDWR|O_CREAT,0o600), b = open(lockPath,O_RDWR,0o600)
     defer { close(a); close(b) }; _ = flock(a,LOCK_EX|LOCK_NB)
@@ -680,6 +676,7 @@ func selfTest() throws {
     try coverageSelfTest(test)
     try inventorySelfTest(test)
     try installSelfTest(test)
+    try supervisorSelfTest(test)
     print("\(count) tests passed")
 }
 
@@ -714,6 +711,7 @@ func logBackgroundFailure(_ directory: URL, command: String, error: Error) {
         try externalVolumeCommand(value, args: args, directory: directory)
     case let value where value.hasPrefix("inventory-"):
         try await inventoryCommand(value, args: args, directory: directory)
+    case "supervise": try await runSupervisor(directory: directory)
     case "check": try check(directory, retryNotifications: args.contains("--retry-notifications"))
     case "diagnose": try check(directory, forceDiagnostics: true)
     case "status", "history", "alerts", "diagnostics", "attribution": try show(directory,command,limit)
@@ -802,7 +800,7 @@ func logBackgroundFailure(_ directory: URL, command: String, error: Error) {
         let evidence = collectIntervalEvidence(db: db, readingId: id, readingTime: now, previous: prior.map { (id: $0.readingId, time: $0.timestamp) }, marker: currentEventMarker(), roots: defaultMonitoredRoots() + configuredRoots(directory))
         try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [id, now, json(evidence)])
         print(json(evidence))
-    default: print("MacBook Storage Monitor\nCommands: install | uninstall | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | coverage-status [--units [state]] | authorize | notification-status | test-notification | self-test\nInventory: inventory-status | inventory-children [node-id] | inventory-largest files|directories|all | inventory-search prefix | inventory-request [--path /absolute/path] | inventory-cancel | inventory-resume | inventory-initialize | inventory-update | inventory-work\nInventory query options: --limit 1..256 --offset N --under node-id\nInventory worker options: --budget seconds --batch 1..256; --root /absolute/path requires isolated data\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
+    default: print("MacBook Storage Monitor\nCommands: install | uninstall | supervise | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | coverage-status [--units [state]] | authorize | notification-status | test-notification | self-test\nInventory: inventory-status | inventory-children [node-id] | inventory-largest files|directories|all | inventory-search prefix | inventory-request [--path /absolute/path] | inventory-cancel | inventory-resume | inventory-initialize | inventory-update | inventory-work\nInventory query options: --limit 1..256 --offset N --under node-id\nInventory worker options: --budget seconds --batch 1..256; --root /absolute/path requires isolated data\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
     }
 }
 #if !INVENTORY_TESTS

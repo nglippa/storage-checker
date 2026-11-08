@@ -132,7 +132,7 @@ struct InstallTransaction {
         try layout.validateQABoundary()
         try privateDirectory(layout.transaction)
         var saved = [String: String]()
-        for (index, url) in (layout.agents.map(\.url) + layout.duplicateAgents).enumerated() where fm.fileExists(atPath: url.path) {
+        for (index, url) in (layout.agents.map(\.url) + layout.legacyAgents.map(\.url) + layout.duplicateAgents).enumerated() where fm.fileExists(atPath: url.path) {
             let name = "agent-\(index).plist"
             try fm.copyItem(at: url, to: layout.transaction.appendingPathComponent(name)); saved[name] = url.path
         }
@@ -149,7 +149,8 @@ struct InstallTransaction {
         _ = chmod(layout.journal.path, 0o600)
     }
 
-    func stopAgents() throws { for agent in layout.agents { try control(["bootout", "\(domain)/\(agent.label)"], true) } }
+    /// The supervisor and, if an earlier version installed them, the separate baseline and inventory agents.
+    func stopAgents() throws { for label in layout.labels + layout.legacyLabels { try control(["bootout", "\(domain)/\(label)"], true) } }
 
     /// Idempotent: finishing an already partly committed transaction is safe.
     func commit() throws -> [String] {
@@ -216,11 +217,12 @@ struct InstallTransaction {
         try fm.removeItem(at: layout.transaction)
         // Only agents the person had enabled before are registered again. Files are already restored,
         // so a launchd refusal here is reported for Repair rather than undoing the restoration.
-        for agent in layout.agents where restart && !((layout.qa?.expired) ?? false) && saved.contains(agent.url.path) {
+        let restorable = layout.agents.map { ($0.label, $0.url) } + layout.legacyAgents.map { ($0.label, $0.url) }
+        for (agentLabel, agentFile) in restorable where restart && !((layout.qa?.expired) ?? false) && saved.contains(agentFile.path) {
             do {
-                try control(["enable", "\(domain)/\(agent.label)"], false)
-                try control(["bootstrap", domain, agent.url.path], false)
-            } catch { notes.append("Could not restart \(agent.label) (\(error)); choose Repair in Settings → Background Monitoring.") }
+                try control(["enable", "\(domain)/\(agentLabel)"], false)
+                try control(["bootstrap", domain, agentFile.path], false)
+            } catch { notes.append("Could not restart \(agentLabel) (\(error)); choose Repair in Settings → Background Monitoring.") }
         }
         return notes
     }

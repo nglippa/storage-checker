@@ -51,10 +51,8 @@ public struct LifecycleQAScope: Sendable {
     public var app: URL { home.appendingPathComponent("Applications/MacBook Storage Monitor.app") }
     public var executable: String { app.appendingPathComponent("Contents/MacOS/StorageMonitor").path }
     public var agentsDirectory: URL { home.appendingPathComponent("Library/LaunchAgents") }
-    public var labels: [String] {
-        let base = "local.macbook.storage-monitor.lifecycle-qa." + profile.session
-        return [base, base + ".baseline", base + ".inventory"]
-    }
+    /// One scoped LaunchAgent: the supervisor, which runs the check, baseline and inventory workers as children.
+    public var labels: [String] { ["local.macbook.storage-monitor.lifecycle-qa." + profile.session] }
     public var expired: Bool { Date().timeIntervalSince1970 >= profile.expiresAt }
     public func bundle(_ role: String) -> URL { URL(fileURLWithPath: root + "/Bundles/" + role + ".app") }
     public var installer: URL { bundle("Installer").appendingPathComponent("Contents/MacOS/StorageMonitor") }
@@ -174,8 +172,8 @@ public struct LifecycleQAScope: Sendable {
         guard (path as NSString).deletingLastPathComponent == agentsDirectory.path || (path as NSString).deletingLastPathComponent == data.appendingPathComponent("install-transaction").path else { try Self.refuse("agent path escaped private installation") }
         let bytes = try Self.regularData(path)
         guard let plist = try PropertyListSerialization.propertyList(from: bytes, format: nil) as? [String: Any],
-              let label = plist["Label"] as? String, let index = labels.firstIndex(of: label),
-              plist["ProgramArguments"] as? [String] == workerArguments(command: ["check", "initialize-baseline", "inventory-work"][index]),
+              let label = plist["Label"] as? String, labels.contains(label),
+              plist["ProgramArguments"] as? [String] == workerArguments(command: "supervise"),
               expected.contains(where: { NSDictionary(dictionary: plist).isEqual(to: $0) }) else { try Self.refuse("saved agent differs from complete generated fixture plist") }
     }
     public func validateSavedAgent(name: String, original: String, expected: [[String: Any]]) throws {

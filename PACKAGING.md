@@ -92,7 +92,7 @@ Monitoring is never enabled silently. In **Storage Monitor → Settings → Back
   3. snapshots history as an APFS clone (constant time and space; a full copy only off APFS);
   4. moves the previous helper aside and copies the new one to `~/Applications/MacBook Storage Monitor.app`;
   5. applies the new code's schema migration while nothing else can write;
-  6. writes three per-user LaunchAgents, removes duplicate agent files for the same labels, and enables, bootstraps and confirms each in `gui/<uid>`;
+  6. writes one per-user LaunchAgent (the supervisor, `local.macbook.storage-monitor`), removes the legacy `.baseline` and `.inventory` agents of versions before 2.4.2 and duplicate agent files for the same label, and enables, bootstraps and confirms it in `gui/<uid>`;
   7. commits: the previous helper is removed, and the snapshot is discarded unless the migration changed the schema (then one `history.pre-update-*.sqlite3` is kept).
 
   See **Updating** for failure and interruption handling.
@@ -101,18 +101,18 @@ Monitoring is never enabled silently. In **Storage Monitor → Settings → Back
 
   | Label | Job |
   |---|---|
-  | `local.macbook.storage-monitor` | Capacity check at login and at :00/:30 |
-  | `local.macbook.storage-monitor.baseline` | One-time folder baseline |
-  | `local.macbook.storage-monitor.inventory` | Disk inventory worker, low priority |
+  | `local.macbook.storage-monitor` | The supervisor (`supervise`), one resident agent that runs: the capacity check at login, at :00/:30, on mount and when the external-volume registry changes; the one-time folder baseline; and the disk inventory worker at low priority. Their state is in `supervisor-status.json`. |
 
-  The agents point to the stable copy in `~/Applications`, never to `/Applications` or the DMG, so moving or updating the desktop app cannot break them.
+  Earlier versions (up to 2.4.1) installed three agents, which made macOS show three "Background Items Added" notifications for the ad-hoc signed build. Update replaces them with the one agent above; Settings offers **Update** while legacy agents remain.
+
+  The agent points to the stable copy in `~/Applications`, never to `/Applications` or the DMG, so moving or updating the desktop app cannot break them.
 - **Status** combines the LaunchAgent files with what launchd itself reports (`launchctl list` and `print-disabled`, read-only):
   - off (no agent files and nothing loaded);
-  - on (every agent file present, pointing at the installed copy, and loaded by launchd);
-  - **update** (the installed monitor's version differs from the app's);
+  - on (the agent file present, running `supervise` from the installed copy, and loaded by launchd);
+  - **update** (the installed monitor's version differs from the app's, or legacy baseline/inventory agents remain);
   - **needs repair**, with **Repair**: missing agents; an agent pointing at a missing program (such as an ejected image) or at a different copy of the monitor; a duplicate agent file for one of these labels; an agent macOS has disabled or not loaded; a job still loaded without its file; or an interrupted update.
   - If launchd cannot be queried, Settings says so rather than implying the tasks run.
-- **Disable…** confirms, then runs `uninstall`: it boots out and removes all three agents and keeps history and the installed helper.
+- **Disable…** confirms, then runs `uninstall`: it boots out and removes the agent (and any legacy agents) and keeps history and the installed helper.
 - **Allow Low-Space Notifications…** runs `authorize`, which asks macOS for notification permission for the background monitor.
 - **Failures** show the monitor's own message (for example a `launchctl bootstrap` error) and say that the previous installation was restored. History is never lost by a failure.
 - Install and uninstall run to completion; the app imposes no time limit on them. Only **Allow Low-Space Notifications…** waits a bounded 130 s for an answer to the macOS prompt.
@@ -169,7 +169,7 @@ Failure and interruption:
 
 ## Uninstalling
 
-1. Settings → **Disable…**. This removes all three LaunchAgents and stops background work.
+1. Settings → **Disable…**. This removes the LaunchAgent (and any legacy ones) and stops background work.
 2. Quit, then move `/Applications/Storage Monitor.app` and `~/Applications/MacBook Storage Monitor.app` to the Trash.
 3. Optional, and **irreversible**: delete `~/Library/Application Support/MacBook Storage Monitor` (history, install backups, inventory catalog).
 4. Optional: remove Storage Monitor from Full Disk Access and Notifications in System Settings.

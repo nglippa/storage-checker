@@ -39,20 +39,19 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
     let notes = try install(layout: layout, source: try helper("1.0.0")) { arguments, _ in calls.append(arguments) }
     let plists = layout.agents.map { NSDictionary(contentsOf: $0.url) as? [String: Any] ?? [:] }
     let programs = plists.map { $0["ProgramArguments"] as? [String] ?? [] }
-    try test(agentFiles() == [baselineLabel, label, inventoryLabel].map { $0 + ".plist" }.sorted(), "install writes exactly the three per-user LaunchAgents")
-    try test(programs.allSatisfy { $0.first == layout.executable && $0.suffix(2) == ["--data-dir", layout.data.path] },
-             "every agent runs the stable installed copy in ~/Applications with the user's data directory")
-    try test(plists.allSatisfy { !String(describing: $0).contains("/Volumes/") }, "agents never reference the disk image or the app's install location")
-    try test(plists.allSatisfy { $0["RunAtLoad"] as? Bool == true && $0["ProcessType"] as? String == "Background" }, "agents start at login with background priority")
-    let inventoryAgent = plists[2], inventoryProgram = programs[2]
-    try test(inventoryProgram.dropFirst().prefix(3) == ["inventory-work", "--budget", String(inventoryAgentBudget)] && (inventoryAgent["KeepAlive"] as? [String: Bool]) == ["SuccessfulExit": false]
-             && (inventoryAgent["WatchPaths"] as? [String]) == [layout.data.appendingPathComponent("inventory-requests").path] && inventoryAgent["StartInterval"] == nil && inventoryAgent["StartCalendarInterval"] == nil,
-             "inventory agent: verified \(inventoryAgentBudget) s slices, relaunched only after a non-zero exit, woken by viewer requests; no polling interval of its own")
+    try test(agentFiles() == [label + ".plist"] && plists.count == 1, "install writes exactly one per-user LaunchAgent (one Background Items notification)")
+    try test(programs == [[layout.executable, "supervise", "--data-dir", layout.data.path]],
+             "the agent runs the supervisor from the stable installed copy in ~/Applications with the user's data directory")
+    try test(plists.allSatisfy { !String(describing: $0).contains("/Volumes/") }, "the agent never references the disk image or the app's install location")
+    try test(plists.allSatisfy { $0["RunAtLoad"] as? Bool == true && $0["ProcessType"] as? String == "Background" && $0["KeepAlive"] as? Bool == true && $0["ThrottleInterval"] as? Int == 60 && $0["Nice"] as? Int == 10 && $0["LowPriorityIO"] as? Bool == true },
+             "the agent starts at login, stays resident with background priority and a 60 s restart throttle")
+    try test(plists[0]["AssociatedBundleIdentifiers"] as? [String] == agentAssociatedBundleIdentifiers && plists[0]["StartCalendarInterval"] == nil && plists[0]["WatchPaths"] == nil && plists[0]["StartOnMount"] == nil && plists[0]["StartInterval"] == nil,
+             "the agent is attributed to the app and carries no launchd schedule: the supervisor owns :00/:30, mount, registry and inventory wakes")
     try test(fm.isExecutableFile(atPath: layout.executable) && installedVersion() == "1.0.0", "the bundled helper is copied to ~/Applications with its executable")
     let domain = "gui/\(getuid())"
-    try test(Array(calls.prefix(3)).allSatisfy { $0.first == "bootout" } && calls.dropFirst(3).map(\.first!) == Array(repeating: ["enable", "bootstrap", "print"], count: 3).flatMap { $0 }
-             && calls.filter { $0.first == "bootstrap" }.allSatisfy { $0.count == 3 && $0[1] == domain },
-             "existing agents are booted out before the executable is replaced, then each is enabled, bootstrapped and confirmed loaded in the user's GUI domain")
+    try test(Array(calls.prefix(3)).allSatisfy { $0.first == "bootout" } && Set(calls.prefix(3).map { $0[1] }) == Set([label, baselineLabel, inventoryLabel].map { "\(domain)/\($0)" })
+             && calls.dropFirst(3).map(\.first!) == ["enable", "bootstrap", "print"] && calls.filter { $0.first == "bootstrap" }.allSatisfy { $0.count == 3 && $0[1] == domain },
+             "the supervisor and any legacy agents are booted out before the executable is replaced, then the one agent is enabled, bootstrapped and confirmed loaded in the user's GUI domain")
     func dataFiles() -> [String] { ((try? fm.contentsOfDirectory(atPath: layout.data.path)) ?? []).sorted() }
     try test(notes.contains { $0.contains("migrated the history schema") } && dataFiles().filter { $0.hasPrefix("history.pre-update-") }.count == 1 && !dataFiles().contains("install-transaction"),
              "a first install whose migration changes the schema keeps exactly one pre-update snapshot and no transaction leftovers")
@@ -61,7 +60,7 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
     calls.removeAll()
     _ = try install(layout: layout, source: try helper("1.1.0")) { arguments, _ in calls.append(arguments) }
     let leftovers = ((try? fm.contentsOfDirectory(atPath: layout.app.deletingLastPathComponent().path)) ?? []).filter { $0.contains("staging") }
-    try test(installedVersion() == "1.1.0" && agentFiles().count == 3 && leftovers.isEmpty && calls.filter { $0.first == "bootstrap" }.count == 3,
+    try test(installedVersion() == "1.1.0" && agentFiles().count == 1 && leftovers.isEmpty && calls.filter { $0.first == "bootstrap" }.count == 1,
              "updating replaces the installed helper in place with no duplicate agents or staging leftovers")
     let preserved = try Database(history).rows("SELECT container FROM readings WHERE id=9").first?["container"]
     try test(preserved == "keep", "installation and update preserve monitoring history")
@@ -85,7 +84,7 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
         ((try? fm.contentsOfDirectory(atPath: layout.app.deletingLastPathComponent().path)) ?? []).filter { $0.contains("staging") || $0.contains("previous") }
             + (fm.fileExists(atPath: layout.transaction.path) ? ["install-transaction"] : [])
     }
-    try test(installedVersion() == "1.1.1" && agentFiles().count == 3 && strayFiles().isEmpty, "after the failed update the previous helper and its agents are back in place, with no leftovers")
+    try test(installedVersion() == "1.1.1" && agentFiles().count == 1 && strayFiles().isEmpty, "after the failed update the previous helper and its agents are back in place, with no leftovers")
 
     // A failure at every phase rolls back to the exact previous installation.
     for phase in InstallJournal.Phase.allCases where phase != .begun {
@@ -93,9 +92,9 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
         var message = ""
         do { _ = try install(layout: layout, source: try helper("1.3.0"), control: { arguments, _ in registered.append(arguments) }, fault: { if $0 == phase { throw Failure("injected at \(phase.rawValue)") } }) }
         catch { message = String(describing: error) }
-        let reRegistered = registered.reversed().prefix(6).filter { $0.first == "bootstrap" }.count
-        try test(message.contains("injected at \(phase.rawValue)") && message.contains("restored") && installedVersion() == "1.1.1" && agentFiles().count == 3 && strayFiles().isEmpty
-                 && reRegistered == 3 && (try Database(history).rows("SELECT container FROM readings WHERE id=9").first?["container"]) == "keep",
+        let reRegistered = registered.reversed().prefix(2).filter { $0.first == "bootstrap" }.count
+        try test(message.contains("injected at \(phase.rawValue)") && message.contains("restored") && installedVersion() == "1.1.1" && agentFiles().count == 1 && strayFiles().isEmpty
+                 && reRegistered == 1 && (try Database(history).rows("SELECT container FROM readings WHERE id=9").first?["container"]) == "keep",
                  "a failure after '\(phase.rawValue)' restores the previous helper, re-registers its agents and keeps history")
     }
 
@@ -107,7 +106,7 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
     try test(fm.fileExists(atPath: layout.journal.path) && installedVersion() == "1.4.0" && (try schemaFingerprint(history)) != beforeKill,
              "a killed update leaves its durable journal, the new helper and a migrated schema")
     let reverted = try recoverInterruptedInstall(layout: layout) { _, _ in }
-    try test(reverted.first == "Reverted an interrupted update." && installedVersion() == "1.1.1" && (try schemaFingerprint(history)) == beforeKill && agentFiles().count == 3 && strayFiles().isEmpty
+    try test(reverted.first == "Reverted an interrupted update." && installedVersion() == "1.1.1" && (try schemaFingerprint(history)) == beforeKill && agentFiles().count == 1 && strayFiles().isEmpty
              && (try Database(history).rows("SELECT container FROM readings WHERE id=9").first?["container"]) == "keep",
              "recovery restores the previous helper, its agents and the pre-migration database from the snapshot")
     do { _ = try install(layout: layout, source: try helper("1.5.0"), control: { _, _ in }, fault: { if $0 == .registered { throw Failure("killed") } }, rollbackOnFailure: false) } catch {}
@@ -120,6 +119,7 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
         try Database(history).exec("DROP INDEX IF EXISTS inventory_nodes_name")
         var bootstraps = 0
         let agentWrites: LaunchControl = { arguments, _ in
+            if arguments.first == "print" { throw Failure("launchctl bootstrap failed: Input/output error") }   // the started supervisor is not confirmed loaded
             guard arguments.first == "bootstrap" else { return }
             bootstraps += 1
             if bootstraps == 1 { try Database(history).write("INSERT INTO readings(id,timestamp,container,free,used,volumes) VALUES (\(kill ? 21 : 20),2,'written-by-started-agent',2,3,'[]')") }
@@ -162,7 +162,7 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
     try PropertyListSerialization.data(fromPropertyList: ["Label": "local.macbook.storage-monitor.inventory-qa", "ProgramArguments": ["/tmp/qa"]], format: .xml, options: 0).write(to: unrelated)
     try test(layout.duplicateAgents == [stale], "a differently named agent carrying this monitor's label is detected as a duplicate; other labels are not")
     _ = try install(layout: layout, source: try helper("1.5.0")) { _, _ in }
-    try test(!fm.fileExists(atPath: stale.path) && fm.fileExists(atPath: unrelated.path) && agentFiles().count == 4, "install removes duplicate agents and leaves unrelated agents alone")
+    try test(!fm.fileExists(atPath: stale.path) && fm.fileExists(atPath: unrelated.path) && agentFiles().count == 2, "install removes duplicate agents and leaves unrelated agents alone")
     try fm.removeItem(at: unrelated)
     var missing = ""
     do { _ = try install(layout: layout, source: try helper("2.0.0", executable: false)) { _, _ in } } catch { missing = String(describing: error) }
@@ -171,16 +171,50 @@ func installSelfTest(_ test: (Bool, String) throws -> Void) throws {
     do { _ = try install(layout: layout, source: root.appendingPathComponent("StorageMonitor")) { _, _ in } } catch { notBundle = String(describing: error) }
     try test(!notBundle.isEmpty, "installation from a bare executable outside an app bundle is refused")
 
-    // Scheduled maintenance: each check wakes an idle worker without restarting a running one.
-    try test(scheduledInventoryWake(directory: layout.data, layout: layout) == ["kickstart", "gui/\(getuid())/\(inventoryLabel)"],
-             "after an idle exit the next scheduled check wakes the inventory worker (kickstart without -k cannot restart or overlap a running worker)")
-    try test(scheduledInventoryWake(directory: root.appendingPathComponent("other-data"), layout: layout) == nil, "checks against another data directory never wake the installed worker")
+    // Scheduled maintenance: a check asks the supervisor (never launchd) to wake an idle worker.
+    let wakeFile = SupervisorWakes.file(data: layout.data, role: .inventory)
+    try test(wakeSupervisor(.inventory, directory: layout.data, layout: layout) && fm.fileExists(atPath: wakeFile.path),
+             "after an idle exit the next scheduled check writes a wake request the supervisor watches (a wake of a running worker is a no-op there, so it cannot overlap)")
+    try test(wakeSupervisor(.baseline, directory: layout.data, layout: layout) && fm.fileExists(atPath: SupervisorWakes.file(data: layout.data, role: .baseline).path), "the baseline initializer is woken the same way")
+    try test(!wakeSupervisor(.inventory, directory: root.appendingPathComponent("other-data"), layout: layout), "checks against another data directory never wake the installed worker")
 
-    // Disabling removes every agent and keeps the app copy and history.
+    // Upgrading a 2.4.1 installation (three agents) leaves exactly one agent and no loaded legacy job.
+    func legacyPlist(_ legacyLabel: String, _ command: [String]) -> [String: Any] {
+        ["Label": legacyLabel, "ProgramArguments": [layout.executable] + command + ["--data-dir", layout.data.path], "RunAtLoad": true, "KeepAlive": ["SuccessfulExit": false]]
+    }
+    func writeLegacyThree() throws {
+        for (legacyLabel, command) in [(label, ["check"]), (baselineLabel, ["initialize-baseline"]), (inventoryLabel, ["inventory-work", "--budget", "1200"])] {
+            try PropertyListSerialization.data(fromPropertyList: legacyPlist(legacyLabel, command), format: .xml, options: 0).write(to: layout.agent(legacyLabel))
+        }
+    }
+    try writeLegacyThree()
+    calls.removeAll()
+    _ = try install(layout: layout, source: try helper("1.5.0")) { arguments, _ in calls.append(arguments) }
+    let upgraded = (NSDictionary(contentsOf: layout.agent(label)) as? [String: Any])?["ProgramArguments"] as? [String]
+    try test(agentFiles() == [label + ".plist"] && upgraded?.dropFirst().first == "supervise" && !fm.fileExists(atPath: layout.agent(baselineLabel).path) && !fm.fileExists(atPath: layout.agent(inventoryLabel).path),
+             "upgrading from three agents removes the legacy baseline and inventory plists and rewrites the main agent to run the supervisor")
+    try test(calls.filter { $0.first == "bootout" }.map { $0[1] }.contains("\(domain)/\(baselineLabel)") && calls.filter { $0.first == "bootout" }.map { $0[1] }.contains("\(domain)/\(inventoryLabel)")
+             && calls.filter { $0.first == "bootstrap" }.count == 1 && calls.filter { $0.first == "bootstrap" }.allSatisfy { $0[2] == layout.agent(label).path },
+             "upgrading boots out the legacy jobs and registers only the supervisor")
+    // A failed upgrade restores all three legacy agents and re-registers them.
+    try writeLegacyThree()
+    var failedUpgrade = [[String]]()
+    do { _ = try install(layout: layout, source: try helper("1.5.0"), control: { arguments, _ in failedUpgrade.append(arguments); if arguments.first == "print" { throw Failure("launchctl print failed") } }) } catch {}
+    try test(agentFiles().count == 3 && (NSDictionary(contentsOf: layout.agent(label)) as? [String: Any])?["ProgramArguments"] as? [String] == [layout.executable, "check", "--data-dir", layout.data.path]
+             && failedUpgrade.filter { $0.first == "bootstrap" }.suffix(3).map { $0[2] }.sorted() == [label, baselineLabel, inventoryLabel].map { layout.agent($0).path }.sorted(),
+             "a failed upgrade restores the three legacy agents and registers them again")
+    _ = try install(layout: layout, source: try helper("1.5.0")) { _, _ in }
+    try test(agentFiles() == [label + ".plist"], "retrying the upgrade leaves one agent")
+    try writeLegacyThree()
+    try PropertyListSerialization.data(fromPropertyList: ["x": 1], format: .xml, options: 0).write(to: SupervisorStatus.file(data: layout.data))
+
+    // Disabling removes every agent (including legacy ones) and keeps the app copy and history.
     calls.removeAll()
     _ = try uninstall(layout: layout) { arguments, _ in calls.append(arguments) }
-    try test(agentFiles().isEmpty && calls.count == 3 && calls.allSatisfy { $0.first == "bootout" }, "disabling boots out and removes all three agents")
-    try test(scheduledInventoryWake(directory: layout.data, layout: layout) == nil, "with background monitoring disabled no check wakes the inventory worker")
+    try test(agentFiles().isEmpty && calls.count == 3 && calls.allSatisfy { $0.first == "bootout" } && Set(calls.map { $0[1] }) == Set([label, baselineLabel, inventoryLabel].map { "\(domain)/\($0)" }),
+             "disabling boots out and removes the supervisor agent and any legacy agents")
+    try test(!fm.fileExists(atPath: SupervisorStatus.file(data: layout.data).path) && !fm.fileExists(atPath: SupervisorWakes.directory(data: layout.data).path), "disabling clears the supervisor's derived status and wake files")
+    try test(!wakeSupervisor(.inventory, directory: layout.data, layout: layout), "with background monitoring disabled no check wakes the inventory worker")
     try test(fm.fileExists(atPath: history) && fm.fileExists(atPath: layout.app.path), "disabling retains history and the installed helper")
     _ = try uninstall(layout: layout) { _, _ in }
     try test(agentFiles().isEmpty, "disabling twice is harmless")

@@ -40,7 +40,15 @@ enum NotificationPermission: Equatable {
 
 struct MonitoringSetupStatus: Equatable {
     enum State: Equatable { case off, on, needsUpdate, incomplete }
-    static let labels = ["local.macbook.storage-monitor", "local.macbook.storage-monitor.baseline", "local.macbook.storage-monitor.inventory"]
+    /// The one LaunchAgent (since 2.4.2): a supervisor that runs the capacity check, folder baseline and inventory indexer.
+    static let labels = ["local.macbook.storage-monitor"]
+    /// Separate agents installed by versions before 2.4.2. Their presence means the monitor needs an Update.
+    static let legacyLabels = ["local.macbook.storage-monitor.baseline", "local.macbook.storage-monitor.inventory"]
+    /// Keys under which `LaunchdState.jobs` carries the supervisor's three workers (capacity check, folder baseline,
+    /// inventory indexer), taken from its status file. They are not launchd labels.
+    static func roleLabels(for supervisor: String) -> [String] { ["#check", "#baseline", "#inventory"].map { supervisor + $0 } }
+    static let roleLabels = roleLabels(for: labels[0])
+    static func dataDirectory(home: URL) -> URL { home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor") }
     let state: State
     let summary: String
     let installedVersion: String?
@@ -50,7 +58,10 @@ struct MonitoringSetupStatus: Equatable {
     let installedApp: URL
     var notifications: NotificationPermission = .unknown
     var launchd: LaunchdState?
-    var jobLabels: [String] = MonitoringSetupStatus.labels
+    /// Worker keys in `launchd.jobs`: capacity check, folder baseline, inventory indexer.
+    var jobLabels: [String] = MonitoringSetupStatus.roleLabels
+    /// The LaunchAgent that hosts the workers.
+    var supervisorLabel: String = MonitoringSetupStatus.labels[0]
 
     /// A retained catalog queue is not proof of running work. Unknown service output stays unknown.
     var inventoryUpdatesEnabled: Bool? {
@@ -68,39 +79,65 @@ struct MonitoringSetupStatus: Equatable {
 
     static func bundledHelper(in bundle: URL) -> URL { bundle.appendingPathComponent("Contents/Helpers/MacBook Storage Monitor.app") }
 
+    /// The supervisor's worker state (from supervisor-status.json) as launchd-style jobs under `roleLabels`, beside
+    /// launchd's own report for the supervisor agent. A status file written by an earlier supervisor process
+    /// (different PID than the one launchd reports) carries no running workers.
+    static func withWorkerJobs(_ launchd: LaunchdState?, home: URL, supervisor: String) -> LaunchdState? {
+        guard var state = launchd else { return nil }
+        guard state.reliable, state.loaded.contains(supervisor) else { return state }
+        let status = SupervisorStatus.read(data: dataDirectory(home: home))
+        let livePid = state.jobs[supervisor]?.pid
+        let current = status.flatMap { s in livePid.map { Int(s.supervisorPid) == $0 } } ?? false
+        for (role, key) in zip(SupervisorRole.allCases, roleLabels(for: supervisor)) {
+            state.loaded.insert(key)
+            if state.disabled.contains(supervisor) { state.disabled.insert(key) }
+            let worker = status?[role]
+            let pid = current && SupervisorStatus.isAlive(worker?.pid) ? worker?.pid.map(Int.init) : nil
+            state.jobs[key] = LaunchdState.Job(pid: pid, lastExitStatus: worker?.lastExit.map(Int.init))
+        }
+        return state
+    }
+
     static func evaluate(home: URL, bundledHelper: URL?, launchd: LaunchdState? = nil, labels: [String] = MonitoringSetupStatus.labels) -> MonitoringSetupStatus {
         let agents = labels.map { home.appendingPathComponent("Library/LaunchAgents/\($0).plist") }
         let present = agents.filter { FileManager.default.fileExists(atPath: $0.path) }
+        let legacyLabels = labels == MonitoringSetupStatus.labels ? MonitoringSetupStatus.legacyLabels : []
+        let legacyPresent = legacyLabels.filter { FileManager.default.fileExists(atPath: home.appendingPathComponent("Library/LaunchAgents/\($0).plist").path) }
         let installedApp = home.appendingPathComponent("Applications/MacBook Storage Monitor.app")
         let installedVersion = version(of: installedApp), bundledVersion = bundledHelper.flatMap(version(of:))
         let bundledExecutable = bundledHelper.map { $0.appendingPathComponent("Contents/MacOS/StorageMonitor") }.flatMap { FileManager.default.isExecutableFile(atPath: $0.path) ? $0 : nil }
         let installedExecutable = installedApp.appendingPathComponent("Contents/MacOS/StorageMonitor")
         let helper = bundledExecutable ?? (FileManager.default.isExecutableFile(atPath: installedExecutable.path) ? installedExecutable : nil)
-        let targets = present.compactMap { (NSDictionary(contentsOf: $0) as? [String: Any])?["ProgramArguments"] as? [String] }.compactMap(\.first)
+        let programs = present.compactMap { (NSDictionary(contentsOf: $0) as? [String: Any])?["ProgramArguments"] as? [String] }
+        let targets = programs.compactMap(\.first)
         let interrupted = FileManager.default.fileExists(atPath: home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor/install-transaction/journal.json").path)
         let duplicates = duplicateAgents(home: home, labels: labels)
         let reported = launchd.flatMap { $0.reliable ? $0 : nil }
         let loaded = reported.map { Set(labels).intersection($0.loaded) } ?? []
+        let legacyLoaded = reported.map { Set(legacyLabels).intersection($0.loaded) } ?? []
         let notLoaded = reported == nil ? [] : labels.filter { label in present.contains { $0.lastPathComponent == "\(label).plist" } && !loaded.contains(label) }
         let disabled = reported.map { labels.filter($0.disabled.contains) } ?? []
         let state: State, summary: String
         if interrupted {
             state = .incomplete; summary = "An update of the background monitor was interrupted. Repair finishes or reverts it; your history is kept."
-        } else if present.isEmpty && loaded.isEmpty && duplicates.isEmpty {
+        } else if present.isEmpty && loaded.isEmpty && duplicates.isEmpty && legacyPresent.isEmpty && legacyLoaded.isEmpty {
             state = .off; summary = "Background monitoring is off."
         } else if present.isEmpty {
-            state = .incomplete; summary = "A background task is still registered with macOS without its configuration (\((Array(loaded) + duplicates.map(\.lastPathComponent)).sorted().joined(separator: ", "))). Repair or disable it."
-        } else if present.count < agents.count || targets.count < present.count || !targets.allSatisfy({ FileManager.default.isExecutableFile(atPath: $0) }) {
+            state = .incomplete; summary = "A background task is still registered with macOS without its configuration (\((Array(loaded) + Array(legacyLoaded) + legacyPresent + duplicates.map(\.lastPathComponent)).sorted().joined(separator: ", "))). Repair or disable it."
+        } else if targets.count < present.count || !targets.allSatisfy({ FileManager.default.isExecutableFile(atPath: $0) }) {
             state = .incomplete
-            summary = "Background monitoring is partly set up (\(present.count) of \(agents.count) background tasks, or a task points to a missing program). Repair or disable it."
+            summary = "Background monitoring is partly set up (its background task points to a missing program). Repair or disable it."
         } else if !duplicates.isEmpty {
             state = .incomplete; summary = "A duplicate background task (\(duplicates.map(\.lastPathComponent).joined(separator: ", "))) runs this monitor from another file. Repair removes it."
         } else if targets.contains(where: { $0 != installedExecutable.path }) {
             state = .incomplete; summary = "A background task runs a different copy of the monitor than the one in ~/Applications. Repair points it at the installed copy."
+        } else if !legacyPresent.isEmpty || !legacyLoaded.isEmpty || programs.contains(where: { $0.dropFirst().first != "supervise" }) {
+            state = .needsUpdate
+            summary = "Update the background monitor: it still runs as separate background tasks from an earlier version. Update replaces them with one."
         } else if !disabled.isEmpty {
-            state = .incomplete; summary = "macOS has turned off \(disabled.count) of this monitor's background tasks (System Settings → General → Login Items). Repair turns them back on."
+            state = .incomplete; summary = "macOS has turned off this monitor's background task (System Settings → General → Login Items). Repair turns it back on."
         } else if !notLoaded.isEmpty {
-            state = .incomplete; summary = "\(notLoaded.count) of \(agents.count) background tasks are configured but not loaded by macOS, so they will not run. Repair registers them again."
+            state = .incomplete; summary = "The background task is configured but not loaded by macOS, so it will not run. Repair registers it again."
         } else if labels == MonitoringSetupStatus.labels && (bundledHelper.map(supportsExternalVolumes) == true || supportsExternalVolumes(installedApp)) && !externalVolumesReady(home: home) {
             state = .needsUpdate
             summary = "Update the background monitor to enable external-drive discovery and automatic resume. Its capability or wake configuration is out of date."
@@ -112,8 +149,9 @@ struct MonitoringSetupStatus: Equatable {
             summary = "Background monitoring is configured for your account. It checks free space at login and every 30 minutes while you are logged in; sleep can delay checks." + (reported == nil ? " (macOS did not report whether its tasks are loaded.)" : "")
         }
         var status = MonitoringSetupStatus(state: state, summary: summary, installedVersion: installedVersion, bundledVersion: bundledVersion, helperExecutable: helper, installedApp: installedApp)
-        status.launchd = launchd
-        status.jobLabels = labels
+        status.launchd = withWorkerJobs(launchd, home: home, supervisor: labels[0])
+        status.supervisorLabel = labels[0]
+        status.jobLabels = roleLabels(for: labels[0])
         status.notifications = .recorded(home: home)
         return status
     }
@@ -129,22 +167,15 @@ struct MonitoringSetupStatus: Equatable {
         let agents = labels.compactMap { NSDictionary(contentsOf: home.appendingPathComponent("Library/LaunchAgents/\($0).plist")) as? [String: Any] }
         guard agents.count == labels.count else { return false }
         if let launchd, !Set(labels).isSubset(of: launchd.loaded) || !Set(labels).isDisjoint(with: launchd.disabled) { return false }
-        let data = home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor").path
-        for (index, agent) in agents.enumerated() {
-            guard agent["Label"] as? String == labels[index], agent["RunAtLoad"] as? Bool == true,
-                  let arguments = agent["ProgramArguments"] as? [String], arguments.count >= 2,
-                  arguments[0] == executable.path, arguments[1] == ["check", "initialize-baseline", "inventory-work"][index],
-                  let i = arguments.firstIndex(of: "--data-dir"), i + 1 < arguments.count, arguments[i + 1] == data else { return false }
-            if index == 2 {
-                guard (agent["WatchPaths"] as? [String])?.contains(data + "/inventory-requests") == true,
-                      (agent["KeepAlive"] as? [String: Any])?["SuccessfulExit"] as? Bool == false,
-                      let i = arguments.firstIndex(of: "--budget"), i + 1 < arguments.count,
-                      let budget = Double(arguments[i + 1]), budget >= 1200, budget <= 3600 else { return false }
-            }
-        }
-        guard let capacity = agents.first, capacity["StartOnMount"] as? Bool == true else { return false }
-        let registry = home.appendingPathComponent("Library/Application Support/MacBook Storage Monitor/external-volumes/registry.json").path
-        return (capacity["WatchPaths"] as? [String])?.contains(registry) == true
+        // No legacy per-role agent may remain: the supervisor owns the schedule, the mount and registry wakes and the inventory wake.
+        let folder = home.appendingPathComponent("Library/LaunchAgents")
+        if legacyLabels.contains(where: { FileManager.default.fileExists(atPath: folder.appendingPathComponent("\($0).plist").path) }) { return false }
+        let data = dataDirectory(home: home).path
+        guard let agent = agents.first, agent["Label"] as? String == labels[0], agent["RunAtLoad"] as? Bool == true, agent["KeepAlive"] as? Bool == true,
+              let arguments = agent["ProgramArguments"] as? [String], arguments.count >= 2,
+              arguments[0] == executable.path, arguments[1] == "supervise",
+              let i = arguments.firstIndex(of: "--data-dir"), i + 1 < arguments.count, arguments[i + 1] == data else { return false }
+        return true
     }
 
     static func duplicateAgents(home: URL, labels: [String] = MonitoringSetupStatus.labels) -> [URL] {
@@ -162,7 +193,7 @@ struct MonitoringSetupStatus: Equatable {
     static let consent = """
         Storage Monitor is the viewer. MacBook Storage Monitor is its background helper, which records readings, indexes folders, and sends notifications. macOS permission prompts name that helper.
 
-        Storage Monitor will copy its background monitor to ~/Applications and add three background tasks for your user account only (no administrator password):
+        Storage Monitor will copy its background monitor to ~/Applications and add one background task for your user account only (no administrator password). It does three things:
 
         • A free-space check at login and every 30 minutes. It notifies you about low space only if macOS allows notifications for MacBook Storage Monitor: permission given to an earlier version carries over, and otherwise Allow Low-Space Notifications… shows the macOS prompt.
         • A one-time folder baseline used to explain changes.
@@ -251,7 +282,7 @@ struct LaunchdState: Equatable {
 struct MonitoringHealthEvidence {
     private(set) var failures: [String: Date] = [:]
     private var exits: [String: Int] = [:]
-    mutating func observe(_ launchd: LaunchdState?, at now: Date, labels: [String] = MonitoringSetupStatus.labels) {
+    mutating func observe(_ launchd: LaunchdState?, at now: Date, labels: [String] = MonitoringSetupStatus.roleLabels) {
         guard let launchd, launchd.reliable else { return }
         for label in labels {
             guard let job = launchd.jobs[label], let exit = job.lastExitStatus else { continue }
@@ -360,14 +391,15 @@ struct MonitoringHealthPresentation: Equatable {
     init(setup: MonitoringSetupStatus?, lastSuccess: Date?, evidence: MonitoringHealthEvidence = .init(), lastAttempt: Date? = nil, lastWake: Date? = nil, inventory: InventoryWorkerEvidence? = nil, now: Date) {
         self.lastSuccess = lastSuccess; self.lastAttempt = lastAttempt
         let jobs = setup?.launchd?.jobs ?? [:]
-        let labels = setup?.jobLabels ?? MonitoringSetupStatus.labels
+        let labels = setup?.jobLabels ?? MonitoringSetupStatus.roleLabels
         let main = labels[0], baseline = labels[1], worker = labels[2]
+        let supervisor = setup?.supervisorLabel ?? MonitoringSetupStatus.labels[0]
         jobDetails = labels.map { label in
             let name = label == main ? "Capacity checks" : (label == worker ? "Inventory indexer" : "Folder baseline")
             guard let job = jobs[label] else { return name + ": execution details unknown" }
             return name + ": " + (job.pid.map { "running (PID \($0))" } ?? "not running now") + "; last exit " + (job.lastExitStatus.map(String.init) ?? "unknown")
-        }
-        let failed = labels.filter { label in
+        } + [jobs[supervisor].map { "Background agent: " + ($0.pid.map { "running (PID \($0))" } ?? "not running now") + "; last exit " + ($0.lastExitStatus.map(String.init) ?? "unknown") } ?? "Background agent: execution details unknown"]
+        let failed = (labels + [supervisor]).filter { label in
             guard let job = jobs[label], job.pid == nil, let exit = job.lastExitStatus, exit != 0 else { return false }
             if (label == worker || label == baseline) && exit == 75 { return false } // Saved work resumes in the next worker slice.
             if label == main, let observed = evidence.failures[label], let lastSuccess, lastSuccess > observed { return false }

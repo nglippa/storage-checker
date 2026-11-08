@@ -100,19 +100,16 @@ private actor DelayedHistory {
         try plist(["CFBundleShortVersionString": "1", "CFBundleVersion": "1", "StorageMonitorExternalVolumeSupport": 1], app.appendingPathComponent("Contents/Info.plist"))
         let registryPath = fakeHome.appendingPathComponent("Library/Application Support/MacBook Storage Monitor/external-volumes/registry.json").path
         let helperData = fakeHome.appendingPathComponent("Library/Application Support/MacBook Storage Monitor").path
-        for (index, label) in MonitoringSetupStatus.labels.enumerated() {
-            let command = ["check", "initialize-baseline", "inventory-work"][index]
-            let watches = index == 2 ? [helperData + "/inventory-requests"] : [registryPath]
-            try plist(["Label": label, "ProgramArguments": [executable.path, command, "--budget", "1200", "--data-dir", helperData], "RunAtLoad": true,
-                "StartOnMount": true, "WatchPaths": watches, "KeepAlive": ["SuccessfulExit": false]], agents.appendingPathComponent(label + ".plist"))
-        }
-        precondition(MonitoringSetupStatus.externalVolumesReady(home: fakeHome), "helper capability requires compatible wake configuration")
+        let supervisor = MonitoringSetupStatus.labels[0]
+        try plist(["Label": supervisor, "ProgramArguments": [executable.path, "supervise", "--data-dir", helperData], "RunAtLoad": true, "KeepAlive": true], agents.appendingPathComponent(supervisor + ".plist"))
+        precondition(MonitoringSetupStatus.externalVolumesReady(home: fakeHome), "helper capability requires the supervisor agent")
         let loaded = LaunchdState(loaded: Set(MonitoringSetupStatus.labels), disabled: [])
-        let disabled = LaunchdState(loaded: Set(MonitoringSetupStatus.labels), disabled: [MonitoringSetupStatus.labels[2]])
+        let disabled = LaunchdState(loaded: Set(MonitoringSetupStatus.labels), disabled: [supervisor])
         precondition(MonitoringSetupStatus.externalVolumesReady(home: fakeHome, launchd: loaded) && !MonitoringSetupStatus.externalVolumesReady(home: fakeHome, launchd: disabled), "operational readiness respects cached macOS disabled state")
-        try plist(["Label": MonitoringSetupStatus.labels[2], "ProgramArguments": [executable.path, "inventory-work", "--budget", "1200", "--data-dir", helperData]], agents.appendingPathComponent(MonitoringSetupStatus.labels[2] + ".plist"))
-        precondition(!MonitoringSetupStatus.externalVolumesReady(home: fakeHome), "missing inventory wake/continuation configuration cannot advertise readiness")
-        try plist(["Label": MonitoringSetupStatus.labels[0], "ProgramArguments": [executable.path]], agents.appendingPathComponent(MonitoringSetupStatus.labels[0] + ".plist"))
+        try plist(["Label": MonitoringSetupStatus.legacyLabels[1], "ProgramArguments": [executable.path, "inventory-work", "--budget", "1200", "--data-dir", helperData]], agents.appendingPathComponent(MonitoringSetupStatus.legacyLabels[1] + ".plist"))
+        precondition(!MonitoringSetupStatus.externalVolumesReady(home: fakeHome), "a leftover legacy inventory agent cannot advertise readiness")
+        try FileManager.default.removeItem(at: agents.appendingPathComponent(MonitoringSetupStatus.legacyLabels[1] + ".plist"))
+        try plist(["Label": supervisor, "ProgramArguments": [executable.path, "check", "--data-dir", helperData], "RunAtLoad": true, "StartOnMount": true, "WatchPaths": [registryPath]], agents.appendingPathComponent(supervisor + ".plist"))
         precondition(!MonitoringSetupStatus.externalVolumesReady(home: fakeHome), "old wake configuration cannot advertise automatic resume")
         precondition(MonitoringSetupStatus.evaluate(home: fakeHome, bundledHelper: app).state == .needsUpdate, "same-version helper still requests update when external capability configuration is missing")
         print("13 external ViewerStore/helper integration tests passed")

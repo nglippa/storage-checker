@@ -20,7 +20,7 @@ def labels(profile):
     session = profile["session"]
     assert str(uuid.UUID(session)) == session
     base = "local.macbook.storage-monitor.lifecycle-qa." + session
-    return [base, base + ".baseline", base + ".inventory"]
+    return [base]
 def helper_pinned(helper, digest, device):
     try:
         info = helper.lstat()
