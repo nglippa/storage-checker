@@ -7,6 +7,12 @@ see [the release record](../../STORAGE-MONITOR-3.0.1-RELEASE.md) and
 [interactive swap validation](SWAP-COUNTER-FOLLOWUP.md). Native lifecycle
 acceptance remains blocked independently of this patch's publication.
 
+Post-publication platform evidence: the user-run, no-entitlement native probe
+returned `EPERM` as UID 0 on its verified disposable APFS image. No snapshot was
+created or deleted. The image was detached after identity revalidation. This
+closes the root-only test gap without establishing a working capability route;
+see the [capability investigation](../../APFS-LOCAL-CAPABILITY-INVESTIGATION.md).
+
 The implementation is substantial and executable, but this is not a claim that
 Storage Monitor can already manage real snapshots on this Mac. A properly
 provisioned, Apple-entitled helper has not been established, registered or tested.

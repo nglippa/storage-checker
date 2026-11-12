@@ -44,7 +44,7 @@ Two app-like variants were also prepared locally with the same native probe:
 | --- | --- |
 | Plain ad-hoc caller, UID 501, no snapshot entitlement | Verified disposable target; native create returned `EPERM` (errno 1); no deletion attempted |
 | Ad-hoc caller claiming `com.apple.developer.vfs.snapshot`, no provisioning profile | Terminated with SIGKILL before main; no native API result |
-| Plain caller as administrator/root | Pending user-run administrator test; no result established |
+| Plain caller as administrator/root (user-run Terminal test) | UID 0; verified disposable target; no developer snapshot entitlement; native create returned `EPERM` (errno 1); no deletion attempted |
 
 The system AMFI log explicitly attributes the second termination to an ad-hoc
 signature containing restricted entitlements (`AppleMobileFileIntegrityError`,
@@ -54,9 +54,23 @@ It does not establish a universal requirement for paid membership or notarizatio
 The initial management-suite denial tests stopped at the application's preflight;
 they did **not** establish the kernel's behavior. These direct probes address that
 evidence gap. No native creation or deletion succeeded in the completed probes.
-The disposable image is retained mounted while the requested administrator test
-is pending. Raw logs and its generated target identity remain local temporary
-evidence rather than public repository artifacts.
+The user supplied the root-only result after 3.0.1 publication:
+
+```json
+{"variant":"plain","uid":0,"target_verified":true,"developer_snapshot_entitlement":false,"create_errno":1,"delete_attempted":false,"delete_errno":-1}
+```
+
+The C wrapper returns `errno` directly from `fs_snapshot_create`; the probe does
+not apply the production helper's privilege preflight. Thus root alone failed
+through this native route on this verified disposable volume and target OS. The
+result is consistent with the public source's separate entitlement check; errno
+alone does not identify every restriction or prove the behavior of every other
+volume or interface. A local root helper by itself is not a demonstrated solution.
+
+After recording the result and rechecking the mounted UUID/device identity, the
+disposable image was detached successfully. Probe files, the user-provided result
+and raw logs remain local temporary evidence. No test snapshot was created or
+deleted; no user-drive snapshot was mutated.
 
 ## Documented utility alternatives checked
 
@@ -88,8 +102,8 @@ not universal APFS filesystem requirements. Startup Data is currently excluded
 by the product's role-bearing-volume policy; no Data-volume mutation test proves
 that the OS itself forbids it.
 
-Remaining acceptance: root-only plain probe; a supported accepted capability
-route if required; successful disposable-volume create/readback/protect/compare/
+Remaining acceptance: a supported capability/authorization route accepted by the
+target OS; successful disposable-volume create/readback/protect/compare/
 unmount/preview/delete/readback; real authorization and installed-helper security
 testing. No internal/external user-drive mutation is authorized by these probes.
 

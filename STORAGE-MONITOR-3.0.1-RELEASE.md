@@ -25,8 +25,11 @@ The 3.0.0 read-only snapshot intelligence and lifecycle engine are preserved.
 
 **Privileged snapshot creation, deletion, mounting and automatic lifecycle policies
 remain unavailable in this ad-hoc package.** Neither this release nor Full Disk
-Access establishes the missing native capability. The root-only disposable probe
-still awaits user-provided output; no successful native lifecycle is claimed.
+Access establishes the missing native capability. At publication, the root-only
+disposable probe still awaited user-provided output. The subsequent user-run test
+verified UID 0 and the disposable target, but native creation returned `EPERM`
+(errno 1), with no deletion attempted. Root alone did not enable this API route;
+no successful native lifecycle is claimed.
 System/startup Data and other role-bearing volumes remain observation-only under
 the current product policy. Time Machine settings and foreign snapshots are not
 modified. No vendor snapshot engine was incorporated.
