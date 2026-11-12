@@ -881,7 +881,7 @@ import SQLite3
         let vmEvent = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 47 * decimalGB, [volume("d", "Data", 100 * decimalGB), volume("v", "VM", 5 * decimalGB), volume("u", "Update", decimalGB)]))
         let vmPlain = EventPlainSummary.make(vmEvent, CauseAnalyzer.analyze(vmEvent))
         try test(vmPlain.whatHappened.hasPrefix("Your Mac lost 3.00 GB of physical free storage between"), "plain summary: states the measured physical loss with its interval")
-        try test(vmPlain.explanation?.contains("It holds swap: memory moved onto disk") == true && vmPlain.explanation?.contains("Separate swap counters") == true, "plain summary: distinguishes VM volume allocation from swap usage")
+        try test(vmPlain.explanation?.contains("It holds swap: memory moved onto disk") == true && vmPlain.explanation?.contains("not recorded at both ends") == true, "plain summary: distinguishes VM volume allocation from swap usage")
         try test(vmPlain.certainty == .measured && vmPlain.certaintyText.contains("Which app caused it was not recorded"), "plain summary: an exactly reconciled volume change is measured, and the app stays unknown")
         try test(vmPlain.actions.contains { $0.contains("Quitting apps") }, "plain summary: virtual memory growth offers the memory action")
         let gapPlain = EventPlainSummary.make(storageEvent(mixedBefore, gapAfter), gap)

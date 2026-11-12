@@ -27,6 +27,60 @@ struct StorageSignal: Identifiable, Sendable {
     let detail: String
 }
 
+/// Per-reading system counters, paired only across the same validated capacity interval.
+/// These are observations near the readings, not atomic APFS block accounting.
+struct SwapIntervalCounters: Sendable {
+    struct Pair: Sendable {
+        let before: Int64
+        let after: Int64
+        var delta: Int64 { after - before }
+        init?(_ before: Int64?, _ after: Int64?) {
+            guard let before, let after, before >= 0, after >= 0 else { return nil }
+            self.before = before; self.after = after
+        }
+        func text(_ label: String) -> String { "\(label): \(capacity(before)) → \(capacity(after)) (\(signedChange(delta)))" }
+    }
+    let allocation: Pair?
+    let used: Pair?
+    static func matching(_ event: StorageEvent) -> Self? {
+        guard event.observationContinuous, let current = event.observation, let previous = event.previousObservation,
+              let reading = event.measurement, let prior = event.previousMeasurement,
+              current.container == reading.container, previous.container == prior.container,
+              abs(current.observedAt - reading.timestamp.timeIntervalSince1970) < 0.001,
+              abs(previous.observedAt - prior.timestamp.timeIntervalSince1970) < 0.001,
+              previous.finishedAt <= current.observedAt else { return nil }
+        let allocation = Pair(previous.swapAllocatedBytes, current.swapAllocatedBytes)
+        let used = Pair(previous.swapUsedBytes, current.swapUsedBytes)
+        guard allocation != nil || used != nil else { return nil }
+        return Self(allocation: allocation, used: used)
+    }
+    var summary: String {
+        var parts = [String]()
+        if let allocation { parts.append(allocation.text("Swap allocation") + ".") }
+        else { parts.append("Swap-allocation counters were not recorded at both ends of this interval.") }
+        if let used { parts.append(used.text("Swap used") + ".") }
+        else { parts.append("Swap usage before/after is unavailable.") }
+        return parts.joined(separator: " ") + " Source: sysctl vm.swapusage, collected near these capacity readings. Allocated swap space and swap used are different counters."
+    }
+    func closelyMatches(_ vmDelta: Int64) -> Bool {
+        guard let delta = allocation?.delta, delta != 0, vmDelta != 0, (delta > 0) == (vmDelta > 0) else { return false }
+        return abs(Double(vmDelta) - Double(delta)) <= max(1_048_576, abs(Double(vmDelta)) * 0.05)
+    }
+    func explanation(vmDelta: Int64) -> String {
+        let relation: String
+        if closelyMatches(vmDelta) {
+            relation = "Swap allocation closely matched the VM-volume change. These can describe overlapping storage and are not added together; the responsible application remains unknown."
+        } else if allocation?.delta == 0 {
+            relation = "Swap allocation did not change; usage can change within already allocated swap space. These counters do not explain the VM-volume allocation change."
+        } else if allocation != nil {
+            relation = "Swap allocation and VM-volume allocation did not closely match; the remaining mechanism is unresolved."
+        } else {
+            relation = "Usage alone does not establish how much VM-volume allocation was swap."
+        }
+        return summary + " " + relation
+    }
+}
+
 /// These signals explain observations. They never allocate a second set of bytes to the
 /// physical container: snapshots, swap, folders and APFS allocation can describe the same blocks.
 enum StorageIntelligence {
@@ -54,17 +108,16 @@ enum StorageIntelligence {
         if appeared.contains(where: { $0.snapshot.name.hasPrefix("com.apple.os.update") }) || disappeared.contains(where: { $0.snapshot.name.hasPrefix("com.apple.os.update") }) {
             add("update-snapshot", .plausible, "macOS update snapshot activity", "An identity with Apple's OS-update naming prefix changed. This is a name-based clue, not confirmation that an update caused the capacity change.")
         }
-        if event.observationContinuous, let previous = event.previousObservation,
-           let now = observation.swapAllocatedBytes, let before = previous.swapAllocatedBytes {
-            let delta = now - before
-            add("swap", .measured, "Swap allocation \(signedChange(delta))", "sysctl vm.swapusage: \(capacity(before)) → \(capacity(now)) allocated; current usage \(observation.swapUsedBytes.map { capacity($0) } ?? "unknown"). Allocation and usage are different measurements.")
+        if let counters = SwapIntervalCounters.matching(event) {
+            let title = counters.allocation.map { "Swap allocation \(signedChange($0.delta))" }
+                ?? counters.used.map { "Swap usage \(signedChange($0.delta))" } ?? "Swap counters"
+            add("swap", .measured, title, counters.summary)
             let vmDelta = CauseAnalyzer.breakdown(event).volumes.filter { $0.role == "VM" }.reduce(Int64(0)) { $0 + $1.delta }
-            if delta != 0, vmDelta != 0, (delta > 0) == (vmDelta > 0),
-               abs(Double(vmDelta) - Double(delta)) <= max(1_048_576, abs(Double(vmDelta)) * 0.05) {
+            if counters.closelyMatches(vmDelta) {
                 add("vm-correlation", .strongCorrelation, "VM allocation and swap moved together", "The VM-role volume changed by \(signedChange(vmDelta)) near the swap-allocation change. They may describe the same storage and are not added together. The responsible application and memory-pressure cause were not recorded.")
             }
-        } else if let allocated = observation.swapAllocatedBytes {
-            add("swap", .measured, "Swap allocation baseline", "\(capacity(allocated)) allocated via sysctl; no continuous previous system observation to compare.")
+        } else if observation.swapAllocatedBytes != nil || observation.swapUsedBytes != nil {
+            add("swap", .measured, "Swap counters baseline", "sysctl vm.swapusage: \(observation.swapAllocatedBytes.map { capacity($0) } ?? "unknown") allocated; \(observation.swapUsedBytes.map { capacity($0) } ?? "unknown") used. No valid per-reading pair for this interval; no delta is inferred.")
         }
         if let interval = CauseAnalyzer.interval(event) {
             let created = interval.groups.reduce(0) { $0 + $1.created }, removed = interval.groups.reduce(0) { $0 + $1.removed }
@@ -99,6 +152,9 @@ enum StorageIntelligence {
         if observation.inventories.isEmpty { lines.append("No APFS snapshot inventories recorded for this scope.") }
         for current in observation.capacities {
             lines.append("\n\(current.path) · \(current.volumeUUID) at \(EventPanelText.stamp(Date(timeIntervalSince1970: current.observedAt)))\nFoundation available: \(current.availableBytes.map(exactBytes) ?? "Unknown")\nAvailable for important usage: \(current.importantAvailableBytes.map(exactBytes) ?? "Unknown")\nAvailable for opportunistic usage: \(current.opportunisticAvailableBytes.map(exactBytes) ?? "Unknown")\n\(current.detail)")
+        }
+        if observation.swapAllocatedBytes != nil || observation.swapUsedBytes != nil {
+            lines.append("\nSwap counters (sysctl vm.swapusage):\nAllocated swap: \(observation.swapAllocatedBytes.map(exactBytes) ?? "Unknown")\nSwap used: \(observation.swapUsedBytes.map(exactBytes) ?? "Unknown")\nCollected within this observation window, near the capacity reading; not an atomic APFS measurement.")
         }
         if let counters = observation.vmCounters { lines.append("\nVM counters (Mach; memory pages/counters, not APFS disk bytes):\n" + counters.keys.sorted().map { "\($0): \(counters[$0]!)" }.joined(separator: "\n")) }
         return lines.joined(separator: "\n")
@@ -360,7 +416,10 @@ enum CauseAnalyzer {
         var causes = [LikelyCause]()
         for volume in breakdown.drivingVolumes.prefix(maxCauses) {
             var support = [String]()
-            if volume.role == "VM" { support += swapSupport(matched) }
+            if volume.role == "VM" {
+                if let counters = SwapIntervalCounters.matching(event) { support.append(counters.explanation(vmDelta: volume.delta)) }
+                else { support += swapSupport(matched) }
+            }
             if volume.role == "Data" { support += folderSupport(event) + directorySupport(matched, loss: loss) }
             let amount = changeMagnitude(volume.delta)
             causes.append(LikelyCause(rank: causes.count + 1, title: title(volume, growth: loss), delta: volume.delta, evidenceClass: .confirmed,
@@ -647,13 +706,18 @@ struct EventPlainSummary: Equatable, Sendable {
         }
     }
 
+    private static func swapExplanation(_ event: StorageEvent, vmDelta: Int64) -> String {
+        if let counters = SwapIntervalCounters.matching(event) { return counters.explanation(vmDelta: vmDelta) }
+        return "Per-reading swap counters were not recorded at both ends of this interval, so its swap-allocation change cannot be reconstructed. Separate diagnostic measurements, if present, retain their own intervals."
+    }
+
     private static func describe(_ cause: LikelyCause, event: StorageEvent) -> String {
         let amount = changeMagnitude(cause.delta)
         switch cause.title {
         case "Virtual memory growth":
-            return "The virtual memory volume allocated \(amount) more disk space. It holds swap: memory moved onto disk. Separate swap counters are needed to establish how closely swap allocation changed."
+            return "The virtual memory volume allocated \(amount) more disk space. It holds swap: memory moved onto disk. " + swapExplanation(event, vmDelta: cause.delta)
         case "Virtual memory reduction":
-            return "The virtual memory volume released \(amount) of allocated space. Swap usage and allocation are separate supporting measurements."
+            return "The virtual memory volume released \(amount) of allocated space. " + swapExplanation(event, vmDelta: cause.delta)
         case "Data volume growth":
             let folder = CauseAnalyzer.drivingFolders(event).first
             return "The Data volume allocated \(amount) more space. Files, snapshots and filesystem metadata can contribute." + (folder.map { " The largest measured folder growth was in \(($0.path as NSString).abbreviatingWithTildeInPath) (\(signedChange($0.allocatedDelta)))." } ?? " Which folders grew was not recorded.")

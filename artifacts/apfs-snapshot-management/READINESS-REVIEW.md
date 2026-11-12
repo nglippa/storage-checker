@@ -2,6 +2,11 @@
 
 Date: 2026-11-12. Status: **3.0.0 package authorized — full native lifecycle acceptance BLOCKED.**
 
+3.0.1 follow-up: swap explanations/filtering and platform evidence are updated;
+see [the release record](../../STORAGE-MONITOR-3.0.1-RELEASE.md) and
+[interactive swap validation](SWAP-COUNTER-FOLLOWUP.md). Native lifecycle
+acceptance remains blocked independently of this patch's publication.
+
 The implementation is substantial and executable, but this is not a claim that
 Storage Monitor can already manage real snapshots on this Mac. A properly
 provisioned, Apple-entitled helper has not been established, registered or tested.
@@ -119,9 +124,13 @@ privileged boundary. Findings were checked against source before fixes:
 
 ## Required before full acceptance or release
 
-1. Apple must confirm/authorize the required snapshot entitlement for this
-   product. Validate a matching Developer ID/profile/notarized helper; do not
-   replace it with a private entitlement, root shell or Time Machine workaround.
+1. Establish a supported capability/authorization route accepted by the target
+   kernel and code-signing policy. Validate the implementation's helper identity
+   and any required profile; distribution signing/notarization are separate
+   checks, not universal prerequisites for local APFS calls. See the
+   [direct local capability investigation](../../APFS-LOCAL-CAPABILITY-INVESTIGATION.md).
+   Do not replace these checks with a private entitlement, root shell or Time
+   Machine workaround.
 2. Explicitly authorize a separate helper installation/registration test. Exercise
    code-signing rejection, valid/denied/cancelled administrator rights, multiple
    users and replay/connection failure against the real XPC daemon.

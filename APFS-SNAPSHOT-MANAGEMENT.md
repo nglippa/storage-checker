@@ -15,7 +15,12 @@ snapshot manager.
 
 The installed `fs_snapshot_create(2)` manual and the public SDK
 `usr/include/sys/snapshot.h` describe creation, deletion and read-only mounting.
-They require superuser privileges and an additional entitlement. The installed
+The manual describes root and additional entitlement requirements; public kernel
+source distinguishes entitlement checks from root/device-write authorization.
+Neither is the same as paid membership, Developer ID signing or notarization.
+The follow-up [local capability investigation](APFS-LOCAL-CAPABILITY-INVESTIGATION.md)
+records actual direct-call and AMFI results, source limitations and the pending
+root-only probe. The installed
 `diskutil apfs` supports listing and deleting snapshots, but exposes no general
 creation verb. `tmutil localsnapshot` is not used: Time Machine does not provide
 the requested per-volume ownership domain or arbitrary management policy.
@@ -57,6 +62,8 @@ Roleless case-sensitive/encrypted volumes are subject to the same checks, but
 native lifecycle success on them is not verified. The GUI reports unsupported
 volumes rather than pretending their snapshot counts are zero. Existing history
 continues to support its prior observational scope.
+Excluding role-bearing volumes, including startup Data, is a conservative product
+policy; it does not establish that macOS forbids every third-party Data snapshot.
 
 ## Ownership and deletion safeguards
 

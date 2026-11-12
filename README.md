@@ -4,11 +4,16 @@
 
 A local, native universal macOS utility that checks the internal APFS container and chosen external drives at login and every half hour (`:00` and `:30`). No Terminal window needs to stay open. launchd coalesces calendar checks missed during sleep into a check after waking. Monitoring starts after the user logs in; a logged-out user does not have an active LaunchAgent.
 
-## Version 3.0.0
+## Version 3.0.1
 
-[Download Storage Monitor 3.0.0](https://github.com/nglippa/storage-checker/releases/tag/v3.0.0) · [Release record](STORAGE-MONITOR-3.0.0-RELEASE.md)
+[Download Storage Monitor 3.0.1](https://github.com/nglippa/storage-checker/releases/tag/v3.0.1) · [Release record](STORAGE-MONITOR-3.0.1-RELEASE.md)
 
-This release adds read-only APFS snapshot inventories and historical comparisons,
+This patch shows recorded swap allocation and usage separately in VM explanations
+and copied evidence, includes usage-only changes in the Swap Changes filter, and
+keeps unavailable historical counters unknown. Light/dark native GUI and keyboard
+checks passed on disposable histories; spoken VoiceOver remains unverified.
+
+The 3.0 series adds read-only APFS snapshot inventories and historical comparisons,
 Snapshot Changes filtering/search, clearer physical-free versus macOS-availability
 reporting, and stronger isolation of optional evidence from capacity recording.
 The new **Snapshots** section contains lifecycle-management controls and a
@@ -49,6 +54,14 @@ The historical viewer opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`,
 
 **Live capacity.** The overview leads with physical free space from an in-process `statfs()` on the Data volume. Recorded APFS capacity uses diskutil `CapacityFree` and `CapacityCeiling`; sequential readings and quota views can differ. Foundation ordinary, important-use and opportunistic availability are kept separate. Their difference from physical free space is not exact purgeable or reclaimable storage. The viewer reads it when it opens, when it becomes active, every 60 seconds while its window is visible and the app is active, and on ⌘R; overlapping requests are dropped. The status line shows when it last updated, and a reading older than 3 minutes, or one whose refresh failed, is marked *Stale*. Live readings are never stored, never evaluated for alerts, never notify, and never start the collector; the viewer does not link the notifications framework. The last background reading appears on its own line. Any difference from it is shown only when the live Data volume UUID belongs to the recorded container, and it is labelled an observation comparison, not a recorded event. Events, the inspector and the chart ("Recorded physical free capacity") use recorded readings only.
 
+**Swap counters.** New startup-capacity readings record `vm.swapusage` allocated
+and used bytes. When a valid continuous pair is available, VM explanations and
+copied evidence show both before/after values and signed changes. The Swap Changes
+filter includes usage changes within unchanged allocated space. Matching VM and
+swap allocation is a correlation between potentially overlapping storage, not an
+additional byte total or proof of the responsible app. Older or interrupted
+intervals without a valid pair remain unknown; current counters are not backdated.
+
 **Appearance.** View → Appearance, or Storage Monitor → Settings (⌘,), offers System, Light and Dark. The choice is saved in the viewer's own preferences and applies only to Storage Monitor. System follows macOS, including later changes. The macOS appearance setting is never changed. The QA launch option `--appearance light|dark` overrides the choice for that launch without saving it.
 
 For a distributable, drag-to-Applications disk image with the background monitor bundled inside the app, see [PACKAGING.md](PACKAGING.md) (`scripts/build-dmg.sh`).
@@ -68,6 +81,7 @@ GUI test commands:
 
 ```sh
 scripts/test-gui.sh
+scripts/test-swap-counters.sh  # interval-paired swap explanations, usage and allocation
 scripts/build-gui-ax-tests.sh   # then: build/GUIAXTests PID /abs/fixture.sqlite3 [--inspector-only]
 ```
 

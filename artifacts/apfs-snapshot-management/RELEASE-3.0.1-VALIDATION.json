@@ -1,0 +1,115 @@
+{
+  "version": "3.0.1",
+  "build": 23,
+  "recorded_at_utc": "2026-11-12T21:00:03.788650+00:00",
+  "source_base_commit": "132a9ce31e18d3e9e1da94c2a76e1ae0c166b93a",
+  "source_branch": "master",
+  "release_tag": "v3.0.1",
+  "build_command": "STORAGE_MONITOR_SDK_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk scripts/build-dmg.sh",
+  "artifact": {
+    "name": "Storage-Monitor-3.0.1.dmg",
+    "bytes": 19725346,
+    "sha256": "80362b6a5da48773e7612e8f343d8c2edc14c4a0ab13c42baad2d7b21b8db8e9"
+  },
+  "bundles": {
+    "viewer": {
+      "identifier": "local.macbook.storage-monitor.viewer",
+      "version": "3.0.1",
+      "build": "23",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "binary_sha256": "4991258e29c8e1646a9aafc52e90ca43925bb7cf869a806d0f4970fbf21aa464"
+    },
+    "monitor": {
+      "identifier": "local.macbook.storage-monitor",
+      "version": "3.0.1",
+      "build": "23",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "binary_sha256": "5d9b83a5801f6c70add1a22e8e38ef3a9005de75c67b8ca96fe0cdc361d5ef75"
+    },
+    "snapshot_service": {
+      "identifier": "local.macbook.storage-monitor.snapshot-service",
+      "version": "3.0.1",
+      "build": "23",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "binary_sha256": "7a311b954a0f98a5d1cd1b7ee582c5608f821138a89ad7503ca9d6879a5bcb49"
+    }
+  },
+  "checks": {
+    "package": {
+      "exit_code": 0,
+      "log_sha256": "c5d43e5d8be4ec73878b6a7e65ea904011e69cc8d19c428d1e940ea7bcbfc084",
+      "checks": 40,
+      "bundled_monitor_checks": 282
+    },
+    "viewer": {
+      "exit_code": 0,
+      "log_sha256": "dfbdf3cde33be7367fed27625033327122038b7afa5d624bd932170bb60bf509",
+      "checks": 1163
+    },
+    "swap": {
+      "exit_code": 0,
+      "log_sha256": "49411287d076f7b07fcfcb5579e73fc1d0ff47bdecebc35321958aaa74b16910",
+      "checks": 32
+    }
+  },
+  "initial_viewer_run": {
+    "exit_code": 133,
+    "reason": "Version assertion still expected 3.0.0; updated for 3.0.1 and monotonic build above 22, then reran full suite successfully."
+  },
+  "interactive_gui": {
+    "data": "three disposable synthetic histories",
+    "appearance": [
+      "dark",
+      "light"
+    ],
+    "verified": [
+      "growth and usage-only counter presentation",
+      "legacy missing counters",
+      "Swap Changes filter",
+      "copied evidence",
+      "Cmd-F and Tab/Down event navigation",
+      "accessible labels and states"
+    ],
+    "spoken_voiceover": "NOT VERIFIED; app-bound shortcut did not enable it",
+    "qa_windows_closed": true
+  },
+  "prior_integration_baseline": {
+    "checks": 52,
+    "scope": "collector and persistence unchanged by this patch; see SWAP-COUNTER-FOLLOWUP.md"
+  },
+  "signing": "ad-hoc; not Developer ID signed or notarized; Gatekeeper assessment rejected as expected",
+  "privileged_snapshot_management": "unavailable; no accepted entitlement/profile; no helper registered",
+  "full_native_management_success_criterion_met": false,
+  "remaining_acceptance": [
+    "root-only direct probe output and supported capability route",
+    "successful native snapshot lifecycle on disposable APFS volumes",
+    "installed-helper XPC and administrator authorization",
+    "real scheduling across sleep/restart and physical SSD removal",
+    "spoken VoiceOver navigation and announcements",
+    "Intel execution and installed 3.0.1 upgrade"
+  ],
+  "production_local_state_modified": false,
+  "private_host_evidence_included": false,
+  "source_sha256": {
+    "SourcesGUI/DiagnosticAnalysis.swift": "3ea5cd57b54654c75e4e6633eadab91e82f934b262aa6798e4d4a913e1266ee3",
+    "SourcesGUI/Models.swift": "b87ff09733d132a453a0b8ce9519efbc15b24c350e2fbcb60e088572a68b9389",
+    "scripts/version.env": "c75a1f7f4034d855d4e5db3db35c9aa15a02f957586752963817c20b0a842a5c",
+    "scripts/build-dmg.sh": "0bae1480c825dd9736bb4a86d8e7024ab41c526e9eccb18e9ba63a33ebcc8d4e",
+    "scripts/verify-dmg.sh": "2778d798b4f883411b9fa75d1646bde051e2174e666aa0924356730d7f6df83b",
+    "scripts/test-swap-counters.sh": "192d4558278733436e97404408efcfa6f4dedb46c291618d6886c4fe21098fd1",
+    "tests/SwapCounterPresentationTests.swift": "04434aea7ecfde465b91c7f61bac5cf8973b5a7b67ce9ed2dbfdbf2648875847",
+    "tests/GUIModelTests.swift": "2115a15ea339aefad883f5c363f47541f3e2af91a60d4e8448e8d288bf8594ec",
+    "tests/ViewerIdentityTests.swift": "3fe0927e5924644122b26a8962c629a81e984e3b35a200287f5d0e8bfc6cf83c",
+    "tests/APFSSnapshotPlatformProbe.c": "78d265b1605b5b11f60a83d8080089aebdfb2d38ddda4293ed711084ea008262",
+    "scripts/prepare-apfs-platform-probe.sh": "5b26bdc2d834af01e3aca79fa7f1d158fe125765bb05abe12a37e83cdbaafe90"
+  }
+}

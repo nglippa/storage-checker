@@ -440,7 +440,18 @@ struct StorageEvent: Identifiable, Sendable {
     var previousObservation: StorageObservation? = nil
     var isRecordedScan: Bool { measurement != nil }
     var hasDiagnostics: Bool { !diagnostics.isEmpty }
-    var hasSwapChange: Bool { comparisons.contains { $0.current.source == .swap && ($0.delta ?? 0) != 0 } || (observationContinuous && observation?.swapAllocatedBytes != nil && previousObservation?.swapAllocatedBytes != nil && observation?.swapAllocatedBytes != previousObservation?.swapAllocatedBytes) }
+    var hasSwapChange: Bool {
+        if comparisons.contains(where: { $0.current.source == .swap && ($0.delta ?? 0) != 0 }) { return true }
+        guard observationContinuous, let current = observation, let previous = previousObservation,
+              let reading = measurement, let prior = previousMeasurement,
+              current.container == reading.container, previous.container == prior.container,
+              abs(current.observedAt - reading.timestamp.timeIntervalSince1970) < 0.001,
+              abs(previous.observedAt - prior.timestamp.timeIntervalSince1970) < 0.001,
+              previous.finishedAt <= current.observedAt else { return false }
+        let allocationChanged = current.swapAllocatedBytes != nil && previous.swapAllocatedBytes != nil && current.swapAllocatedBytes != previous.swapAllocatedBytes
+        let usageChanged = current.swapUsedBytes != nil && previous.swapUsedBytes != nil && current.swapUsedBytes != previous.swapUsedBytes
+        return allocationChanged || usageChanged
+    }
     var snapshotComparison: SnapshotComparison {
         SnapshotComparison.compare(previous: previousObservation?.inventories, current: observation?.inventories ?? [], continuous: observationContinuous)
     }
