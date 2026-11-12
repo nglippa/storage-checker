@@ -1,0 +1,136 @@
+{
+  "version": "3.0.0",
+  "build": 22,
+  "recorded_at_utc": "2026-11-12T09:05:43.310888+00:00",
+  "source_base_commit": "307f31808e38cd1ab1b5b6e15014a090e5d86e49",
+  "source_branch": "master",
+  "release_tag": "v3.0.0",
+  "build_command": "SOURCE_DATE_EPOCH=1794473796 STORAGE_MONITOR_SDK_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk scripts/build-dmg.sh",
+  "artifact": {
+    "name": "Storage-Monitor-3.0.0.dmg",
+    "bytes": 19702333,
+    "sha256": "28fb30bc7da431404a1261addcbb6951f075d772e393183b6371d6d7d7e8d268"
+  },
+  "bundles": {
+    "viewer": {
+      "identifier": "local.macbook.storage-monitor.viewer",
+      "version": "3.0.0",
+      "build": "22",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "binary_sha256": "6cbbe59cb7c7967d66e195751b44134fbac09c7b79302d54732c77fd4fc9c6a5"
+    },
+    "monitor": {
+      "identifier": "local.macbook.storage-monitor",
+      "version": "3.0.0",
+      "build": "22",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "binary_sha256": "df23ed652761aa8bd0acec34f33d97fb8d42e0eeaad2cf4660aa3fe3326da4e4"
+    },
+    "snapshot_service": {
+      "identifier": "local.macbook.storage-monitor.snapshot-service",
+      "version": "3.0.0",
+      "build": "22",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "binary_sha256": "b8a90cda42c22117537f656886a813cb11aaa41903dd04eb30334206a6d2278c"
+    }
+  },
+  "checks": {
+    "package": {
+      "exit_code": 0,
+      "log_sha256": "94f81ae36479158e56d2b8a77859b5a80ad5aa5b34165440e869414939bb29c7",
+      "pass_lines": 40,
+      "verifier_passed": true,
+      "bundled_monitor_checks": 282
+    },
+    "viewer": {
+      "exit_code": 0,
+      "log_sha256": "b902e1ee30f80ae7188d66bebdc66a53ee65f8b3d35e560dad38e1be665c3d59",
+      "pass_lines": 1165,
+      "checks": 1163
+    },
+    "lifecycle": {
+      "exit_code": 0,
+      "log_sha256": "bd557e6ccbd105d3be6bdb190f97683ce994974a0ef83c96466a84258f424ce9",
+      "pass_lines": 2
+    },
+    "snapshot_model": {
+      "exit_code": 0,
+      "log_sha256": "8d7e649eaecc322e1bbe48142d38b182d07f40c565f2943b1d18e0f82bb6b7d5",
+      "pass_lines": 0
+    },
+    "snapshot_integration": {
+      "exit_code": 0,
+      "log_sha256": "823020141e304054cd6d6c389ac78178f3349fa84d690b5987e22cbda7966afb",
+      "pass_lines": 52,
+      "checks": 52
+    }
+  },
+  "signing": "ad-hoc; not Developer ID signed or notarized; Gatekeeper rejects downloaded unnotarized app as expected",
+  "privileged_snapshot_management": "unavailable: no accepted entitlement or provisioning profile; no helper registered",
+  "full_native_management_success_criterion_met": false,
+  "remaining_acceptance": [
+    "Provisioned helper and valid/invalid XPC/admin authorization",
+    "Successful native snapshot creation/deletion/read-only mounting on disposable APFS volumes",
+    "Real launchd scheduling/sleep/restart and physical SSD disconnect/reconnect",
+    "Spoken VoiceOver/navigation announcements",
+    "Intel execution and real installed 3.0.0 upgrade"
+  ],
+  "production_local_state_modified": false,
+  "private_host_evidence_included": false,
+  "source_sha256": {
+    "Sources/ExternalVolumeMonitoring.swift": "90e181aca78c7f209163727db7be320db827714d60724340bf98923435c5f630",
+    "Sources/SnapshotObservation.swift": "3dde01a80f5123568e0eb2198d849fc26c9f3ff368cf5e33a611165817b51d57",
+    "Sources/StorageMonitor.swift": "28619251bf8bf0ecad114f0eafc3afb8dc9a8864223ba64451924f4d7169d0e7",
+    "SourcesGUI/DiagnosticAnalysis.swift": "75a314d631b7016201357a4fa9ddbea20c8deb76928451cd7a79404447a489d2",
+    "SourcesGUI/EventDetailView.swift": "c0943ab7041c63249e3078f4afd8913c7ca720774a5b5235d448426cbd0d5a08",
+    "SourcesGUI/EventPanelText.swift": "9db2db8dfc58fa4507cf757f508d0f6a20bfa29eba83f690559c427d3e6334a6",
+    "SourcesGUI/HistoryReader.swift": "ab2963bd6e5d9e6d053f8f094e73db03511e7df9c33ddb2fafabfb26fcc89464",
+    "SourcesGUI/HistoryView.swift": "f3851ca2e1efc78dbb3629380b817f5f7d56c427d62f476789ef9e96646a28e8",
+    "SourcesGUI/InventoryView.swift": "7e818e9a82dec375f5e192f9e55b26ccfcf6fe816efdb50d914f34c809e1ccf2",
+    "SourcesGUI/LiveCapacity.swift": "bb3a950a0d448ccb6659a82a93f6ff3562ebbd41cf118ded7143d276c1282218",
+    "SourcesGUI/Models.swift": "ebe3b05ea9d74d8683889bc5e7a04764bebed5fcb6c5cba3112647d2db7f7a39",
+    "SourcesGUI/MonitoringSetup.swift": "deeb1cb5720e6c37808415530ecd129369de1c68d79a3cb37a746e13950f343a",
+    "SourcesGUI/OverviewView.swift": "158f34043fc99d6599af631ee3aaa6ad60bb54c280222910e4dada3885ef6f01",
+    "SourcesGUI/SnapshotManagementModel.swift": "209ac0bd15e4330acd7f28b16941e0dd5e1ab719f1d04733ca8647d20d34821a",
+    "SourcesGUI/SnapshotManagementView.swift": "b138406197a6d8fc10f499ea173871beec3eb87337a712ca9cdabea3ecda8a03",
+    "SourcesGUI/StorageMonitorApp.swift": "b8f4cc6fbd0c271fe89755b23fb513f256722987340f3827ad8e7c5bc290d495",
+    "SourcesShared/APFSSnapshotIntelligence.swift": "3c1c4950a0be24178d1ea774132660141c3163d71d44d50e6d65ec2252e42466",
+    "SourcesShared/SnapshotLifecycle.swift": "a3ce1cb9b9076f3667bb41856eb34a623dd02f51b836e546335ad287776e06df",
+    "SourcesShared/SnapshotLifecycleComparison.swift": "63e8112cb50c311d9b0005aabd5f51b5e69fb0b1d05481ea1e69a1a047b57fbf",
+    "SourcesShared/SnapshotLifecycleEngine.swift": "1f647fd068d84cea0036fbe4ae4c8eeae5c70b4d213f95a709bbd3b91bf76f88",
+    "SourcesShared/SnapshotLifecycleIPC.swift": "934224d2b571ea98858f77ad05943938c82e8bc37ee155f0a7a17509c0fd05d6",
+    "SourcesShared/SnapshotLifecyclePlatform.swift": "9007e1ec1711f673176187f9014e947a307158bd37c7407cb7cfaf13e4724893",
+    "SourcesShared/SnapshotLifecycleSecurity.swift": "df21e5b5183858135a7c166554bfc7bdab61616384c805c2df98a78cd97cec7f",
+    "SourcesSnapshotService/SnapshotNative.c": "440a42374014080b19548ff59d701a259a07b4fa39f710d0d663bde2d6d98fb6",
+    "SourcesSnapshotService/SnapshotNative.h": "1dea55c376c35022a37bcc2fd9d74dbbdc97ce5deeaf6ddac2df9ee19b5808b6",
+    "SourcesSnapshotService/SnapshotNativeBackend.swift": "1033eb2ce373c58af4a3a65ba58f533bec61a6ed3265893e8cdc32e552dbc61c",
+    "SourcesSnapshotService/SnapshotServiceMain.swift": "a1198ee82cc0289bc798884db41f506d3425d717df5c07616358fc7ce97363ed",
+    "scripts/build-apfs-readiness-probe.sh": "04314de7e7331bb9a4ceee6f0d92d722355b96b8af0bcb487bc4c62863683d44",
+    "scripts/build-dmg.sh": "0bae1480c825dd9736bb4a86d8e7024ab41c526e9eccb18e9ba63a33ebcc8d4e",
+    "scripts/build-gui.sh": "98481d377ca593c42c719b3a88c53e68fa2dd5d63082c441819f189d92a8b889",
+    "scripts/build-snapshot-service.sh": "edd2a18952ef3e87a0784f209287d89ea2349217614e65e3c3f85fab1d4f56d9",
+    "scripts/test-snapshot-integration.sh": "14b9e3580e02cc78e725b0dd4cbbc1511576a3a317e126c269d0519d71ae2ece",
+    "scripts/test-snapshot-management.sh": "a30c22a9f0c2a31bccce0fc8f3e0f4f6876248ef1e38b37a0dff935d3ea728e6",
+    "scripts/test-snapshot-model.sh": "0f3ba7476b92b3ba7906ac8fed7384d47df26ff1bbb5cc25270d5049b79bbcca",
+    "scripts/test-snapshot-native-disposable.sh": "b3f155097e4c82445637ba982975bd15d63fee777c0c89b28e1029e9c96f6f27",
+    "scripts/verify-dmg.sh": "2778d798b4f883411b9fa75d1646bde051e2174e666aa0924356730d7f6df83b",
+    "scripts/version.env": "4f80a6e2dd90a9625bb98f23fa9d723ecb6c57cc7c18d49228924f715dba1fd1",
+    "tests/APFSSnapshotIntegrationTests.swift": "aa2b419469161ba7517d1936d11e38e19e5fc0c9111d69ea80d1791adbbf2134",
+    "tests/APFSSnapshotModelTests.swift": "3be32fa52178aa03e92742dff3c07cdd5fdc2ab2d0dab20dc4cdd56a0c4c4978",
+    "tests/CapacityChartGeometryTests.swift": "e12face9d0428a0e89860a118b7286fbae8bbc89ba9d3e675c794ab9e465761f",
+    "tests/GUIModelTests.swift": "356affbd8b4e0b5d5a20062dba7eccef2553b0d478832931c2e9682e534131b9",
+    "tests/SnapshotLifecycleEngineTests.swift": "0dc3300199f83850c1021679d76222f61a37533c6e224a03384c461d05d00553",
+    "tests/SnapshotManagementTests.swift": "c561b9b30612218b2967ee1fc548777896a124d220dd995ea2edb0141094605b",
+    "tests/SnapshotNativeDisposableTests.swift": "178f17a63ff0a2972346f963723a191cfaeae9e79015545c07be21de74eef141",
+    "tests/ViewerIdentityTests.swift": "818a2325ab8ab70d01b6027689680dbc4f002be7b7fc9264b8a4d17f18464ed6"
+  }
+}

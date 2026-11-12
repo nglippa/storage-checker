@@ -68,15 +68,15 @@ func number(_ value: Any?) -> Int64? { (value as? NSNumber)?.int64Value }
 struct Reading {
     let timestamp: Double; let container: String; let free: Int64; let used: Int64; let volumes: String
 }
-func measure() throws -> Reading {
-    let root = try plistCommand(["info", "-plist", "/"])
+func measure(path: String = "/", requireInternal: Bool = true) throws -> Reading {
+    let root = try plistCommand(["info", "-plist", path])
     guard let reference = root["APFSContainerReference"] as? String else { throw Failure("Root filesystem is not an identifiable APFS container") }
     let list = try plistCommand(["apfs", "list", "-plist"])
     guard let containers = list["Containers"] as? [[String: Any]], let container = containers.first(where: { $0["ContainerReference"] as? String == reference }),
           let free = number(container["CapacityFree"]), let ceiling = number(container["CapacityCeiling"]), free >= 0, ceiling > 0, free <= ceiling,
           let uuid = container["APFSContainerUUID"] as? String,
           let stores = container["PhysicalStores"] as? [[String: Any]], !stores.isEmpty else { throw Failure("Incomplete APFS container capacity data") }
-    for store in stores {
+    for store in stores where requireInternal {
         guard let device = store["DeviceIdentifier"] as? String else { throw Failure("Unidentified APFS physical store") }
         let info = try plistCommand(["info", "-plist", device])
         try required(info["Internal"] as? Bool == true, "Root APFS container is not entirely on internal storage")
@@ -95,6 +95,8 @@ final class Database {
         try exec("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA auto_vacuum=INCREMENTAL; CREATE TABLE IF NOT EXISTS readings (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, container TEXT NOT NULL, free INTEGER NOT NULL, used INTEGER NOT NULL, volumes TEXT NOT NULL); CREATE INDEX IF NOT EXISTS readings_time ON readings(timestamp); CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, severity TEXT NOT NULL, reasons TEXT NOT NULL, free INTEGER NOT NULL, delta INTEGER, notification TEXT NOT NULL); CREATE TABLE IF NOT EXISTS diagnostics (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, snapshot TEXT NOT NULL); CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS interval_evidence (reading_id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, evidence TEXT NOT NULL); " +
             // Comprehensive coverage (additive; see Coverage.swift). Current state, not history: no retention.
             "CREATE TABLE IF NOT EXISTS coverage_units (id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, parent INTEGER, depth INTEGER NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, reason TEXT, inode INTEGER, logical INTEGER NOT NULL DEFAULT 0, allocated INTEGER NOT NULL DEFAULT 0, files INTEGER NOT NULL DEFAULT 0, entries INTEGER NOT NULL DEFAULT 0, complete INTEGER NOT NULL DEFAULT 0, measured_at REAL, valid_event INTEGER, valid_at REAL, valid_reading INTEGER, first_valid_reading INTEGER, listing_reading INTEGER, discovered_at REAL NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, last_attempt REAL, needs_split INTEGER NOT NULL DEFAULT 0, agg_logical INTEGER NOT NULL DEFAULT 0, agg_allocated INTEGER NOT NULL DEFAULT 0, agg_files INTEGER NOT NULL DEFAULT 0, agg_complete INTEGER NOT NULL DEFAULT 0, agg_holes INTEGER NOT NULL DEFAULT 0); CREATE INDEX IF NOT EXISTS coverage_units_parent ON coverage_units(parent); CREATE TABLE IF NOT EXISTS coverage_epochs (id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, reading_id INTEGER, scope TEXT NOT NULL, detail TEXT NOT NULL);")
+        // Additive migration: old readings and diagnostics remain byte-for-byte compatible.
+        try exec("CREATE TABLE IF NOT EXISTS storage_observations (reading_id INTEGER PRIMARY KEY, timestamp REAL NOT NULL, observation TEXT NOT NULL)")
         _ = chmod(path, 0o600)
     }
     deinit { sqlite3_close(db) }
@@ -119,12 +121,20 @@ final class Database {
     }
     func state(_ key: String) throws -> String { try rows("SELECT value FROM state WHERE key=?", [key]).first?["value"] ?? "" }
     func state(_ key: String, _ value: String) throws { try write("INSERT OR REPLACE INTO state VALUES (?,?)", [key, value]) }
-    func retain(_ now: Double) throws {
+    var transactionActive: Bool { sqlite3_get_autocommit(db) == 0 }
+    func retainStorageObservations() throws {
+        try exec("DELETE FROM storage_observations WHERE reading_id NOT IN (SELECT id FROM readings) OR NOT EXISTS (SELECT 1 FROM readings r WHERE r.id=storage_observations.reading_id AND r.timestamp=storage_observations.timestamp)")
+        // Dense snapshot sets can repeat every check. Bound only this additive evidence to
+        // 32 MiB; dropped observations become explicit comparison gaps in the viewer.
+        try exec("DELETE FROM storage_observations WHERE reading_id IN (SELECT reading_id FROM (SELECT reading_id, SUM(length(CAST(observation AS BLOB))) OVER (ORDER BY timestamp DESC,reading_id DESC) AS bytes FROM storage_observations) WHERE bytes > 33554432)")
+    }
+    func retain(_ now: Double, includeObservations: Bool = true) throws {
         for table in ["readings", "alerts", "diagnostics"] { try write("DELETE FROM \(table) WHERE timestamp < ?", [now - retention]) }
         // Also bound pathological repeated manual runs and diagnostics independently of age.
         for (table, count) in [("readings", 10000), ("alerts", 5000), ("diagnostics", 120)] { try exec("DELETE FROM \(table) WHERE id NOT IN (SELECT id FROM \(table) ORDER BY timestamp DESC,id DESC LIMIT \(count))") }
         // Attribution rows live and die with their reading.
         try exec("DELETE FROM interval_evidence WHERE reading_id NOT IN (SELECT id FROM readings)")
+        if includeObservations { try retainStorageObservations() }
         try exec("PRAGMA incremental_vacuum(256)")
     }
 }
@@ -406,6 +416,25 @@ func log(_ directory: URL, _ message: String) {
     if !fm.fileExists(atPath: url.path) { fm.createFile(atPath: url.path, contents: nil, attributes: [.posixPermissions: 0o600]) }
     if let file = try? FileHandle(forWritingTo: url) { defer { try? file.close() }; _ = try? file.seekToEnd(); try? file.write(contentsOf: Data("\(iso(Date().timeIntervalSince1970)) \(message.prefix(4096))\n".utf8)) }
 }
+
+/// Persists the required startup capacity record and alert state without collecting host evidence.
+/// Optional evidence is stored only after every required caller-side write is durable.
+func persistStartupReading(_ current: Reading, plan: AlertPlan, db: Database) throws -> Int64 {
+    try required(!db.transactionActive, "Startup reading persistence cannot nest in a transaction")
+    try db.exec("BEGIN IMMEDIATE")
+    do {
+        try db.write("INSERT INTO readings(timestamp,container,free,used,volumes) VALUES(?,?,?,?,?)", [current.timestamp, current.container, current.free, current.used, current.volumes])
+        let readingID = sqlite3_last_insert_rowid(db.db)
+        try plan.persist(db, current)
+        try db.retain(current.timestamp, includeObservations: false)
+        try db.exec("COMMIT")
+        return readingID
+    } catch {
+        if db.transactionActive { try? db.exec("ROLLBACK") }
+        throw error
+    }
+}
+
 func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications: Bool = false, qa: LifecycleQAScope? = nil) throws {
     if let qa { try qa.admit(command: "check"); try qa.validateFixtures(); try required(directory.path == qa.data.path, "Lifecycle QA check data mismatch") }
     try privateDirectory(directory)
@@ -439,14 +468,10 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
         let window = try db.rows("SELECT * FROM readings WHERE container=? AND timestamp >= ? AND timestamp < ?", [current.container, current.timestamp - 7200, current.timestamp]).compactMap(reading)
         let evaluation = evaluate(current, previous, window)
         let plan = try AlertPlan(db, current, evaluation, retryNotifications: retryNotifications)
-        var readingId: Int64 = 0
-        try db.exec("BEGIN IMMEDIATE")
-        do {
-            try db.write("INSERT INTO readings(timestamp,container,free,used,volumes) VALUES(?,?,?,?,?)", [current.timestamp, current.container, current.free, current.used, current.volumes])
-            readingId = sqlite3_last_insert_rowid(db.db)
-            try plan.persist(db,current)
-            try db.retain(current.timestamp); try db.exec("COMMIT")
-        } catch { try? db.exec("ROLLBACK"); throw error }
+        let readingId = try persistStartupReading(current, plan: plan, db: db)
+        // Capacity must be durable before optional OS probes can block. QA fixtures never
+        // probe unrelated host volumes or VM state.
+        let storageObservation = qa == nil && NativeQARuntime.active == nil && LifecycleQAScope.active == nil ? SnapshotObserver.capture(current) : nil
         var notification = qa == nil ? "deduplicated" : "suppressed:lifecycle-qa"
         if plan.needsNotification && qa == nil {
             let delta = evaluation.delta.map { size($0) } ?? "no previous reading"
@@ -488,7 +513,10 @@ func check(_ directory: URL, forceDiagnostics: Bool = false, retryNotifications:
             let snapshot = diagnosticSnapshot(current)
             try db.write("INSERT INTO diagnostics(timestamp,snapshot) VALUES(?,?)", [current.timestamp, snapshot])
         }
-        try db.retain(current.timestamp)
+        try db.retain(current.timestamp, includeObservations: false)
+        if let storageObservation {
+            storeOptionalStorageObservation(storageObservation, readingID: readingId, reading: current, db: db, logDirectory: directory)
+        }
         if qa != nil { try db.state("lifecycle_qa_last_check_role", LifecycleQAScope.compiledFixtureRole) }
         let summary = "\(evaluation.severity.uppercased()) free=\(size(current.free)) used=\(size(current.used)) change=\(evaluation.delta.map(size) ?? "baseline") reasons=\(plan.signature.isEmpty ? "none" : plan.signature) notification=\(notification)"
         log(directory, summary); print(summary)
@@ -714,6 +742,12 @@ func logBackgroundFailure(_ directory: URL, command: String, error: Error) {
     case "supervise": try await runSupervisor(directory: directory)
     case "check": try check(directory, retryNotifications: args.contains("--retry-notifications"))
     case "diagnose": try check(directory, forceDiagnostics: true)
+    case "snapshot-report":
+        try required(NativeQARuntime.active == nil && LifecycleQAScope.active == nil, "Live snapshot reports are disabled in fixture runtimes")
+        let path = args.firstIndex(of: "--volume").flatMap { args.indices.contains($0 + 1) ? args[$0 + 1] : nil } ?? "/"
+        try required(path.hasPrefix("/"), "--volume requires an absolute mounted volume path")
+        let value = try measure(path: path, requireInternal: path == "/")
+        print(try SnapshotObserver.capture(value, includeVM: path == "/").encoded())
     case "status", "history", "alerts", "diagnostics", "attribution": try show(directory,command,limit)
     case "install": for note in try install() { print(note) }; print("Low-space notifications: allowed only if macOS permits them for MacBook Storage Monitor. Permission given to an earlier version carries over; Settings shows the current state (command line: authorize).")
     case "uninstall": for note in try uninstall() { print(note) }
@@ -800,7 +834,7 @@ func logBackgroundFailure(_ directory: URL, command: String, error: Error) {
         let evidence = collectIntervalEvidence(db: db, readingId: id, readingTime: now, previous: prior.map { (id: $0.readingId, time: $0.timestamp) }, marker: currentEventMarker(), roots: defaultMonitoredRoots() + configuredRoots(directory))
         try db.write("INSERT OR REPLACE INTO interval_evidence(reading_id,timestamp,evidence) VALUES(?,?,?)", [id, now, json(evidence)])
         print(json(evidence))
-    default: print("MacBook Storage Monitor\nCommands: install | uninstall | supervise | check | diagnose | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | coverage-status [--units [state]] | authorize | notification-status | test-notification | self-test\nInventory: inventory-status | inventory-children [node-id] | inventory-largest files|directories|all | inventory-search prefix | inventory-request [--path /absolute/path] | inventory-cancel | inventory-resume | inventory-initialize | inventory-update | inventory-work\nInventory query options: --limit 1..256 --offset N --under node-id\nInventory worker options: --budget seconds --batch 1..256; --root /absolute/path requires isolated data\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
+    default: print("MacBook Storage Monitor\nCommands: install | uninstall | supervise | check | diagnose | snapshot-report [--volume /mount/path] | status | history [count] | alerts [count] | diagnostics [count] | attribution [count] | initialize-baseline | baseline-status | coverage-status [--units [state]] | authorize | notification-status | test-notification | self-test\nInventory: inventory-status | inventory-children [node-id] | inventory-largest files|directories|all | inventory-search prefix | inventory-request [--path /absolute/path] | inventory-cancel | inventory-resume | inventory-initialize | inventory-update | inventory-work\nInventory query options: --limit 1..256 --offset N --under node-id\nInventory worker options: --budget seconds --batch 1..256; --root /absolute/path requires isolated data\nOptional: --data-dir /absolute/private/path\nThresholds use decimal GB: 3 GB/check, 5 GB/2h, low <25 GB, critical <15 GB. Monitoring never deletes user files or changes system settings.")
     }
 }
 #if !INVENTORY_TESTS

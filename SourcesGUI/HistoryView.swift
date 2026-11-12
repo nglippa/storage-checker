@@ -110,7 +110,7 @@ struct HistoryView: View {
                     }.width(min:105,ideal:125,max:155)
                     TableColumn("Change",value:\.changeOrder) { (event: StorageEvent) in ChangeCell(event:event) }.width(min:90,ideal:105,max:130)
                     TableColumn("Event") { event in EventCell(event:event) }.width(min:190,ideal:340,max:.infinity)
-                    TableColumn("Available",value:\.freeOrder) { event in Text(event.currentFree.map { capacity($0) } ?? "—").monospacedDigit().frame(maxWidth:.infinity,alignment:.trailing) }.width(min:95,ideal:115,max:145)
+                    TableColumn("Physical free",value:\.freeOrder) { event in Text(event.currentFree.map { capacity($0) } ?? "—").monospacedDigit().frame(maxWidth:.infinity,alignment:.trailing) }.width(min:95,ideal:115,max:145)
                 }
                 .textSelection(.disabled)
                 .tableStyle(.inset(alternatesRowBackgrounds:false))

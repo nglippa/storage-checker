@@ -42,6 +42,9 @@ private struct EventInspector: View {
                     VStack(alignment: .leading, spacing: 0) {
                         InspectorSection(title: "Measured changes", id: "event.causes") { causes }
                         InspectorSection(title: "Storage breakdown", id: "event.breakdown") { breakdown }
+                        if event.measurement != nil {
+                            InspectorSection(title: "Snapshots and system activity", id: "event.snapshotIntelligence") { snapshotIntelligence }
+                        }
                         InspectorSection(title: "Supporting evidence", id: "event.evidence") { evidence }
                         InspectorSection(title: "Technical details", id: "event.technical", divider: false) { technical }
                     }
@@ -94,6 +97,14 @@ private struct EventInspector: View {
                     Image(systemName: s.certainty == .measured ? "checkmark.circle" : (s.certainty == .unknown ? "questionmark.circle" : "circle.lefthalf.filled"))
                         .foregroundStyle(s.certainty == .measured ? Color.green : Color.secondary)
                 }.font(.callout).foregroundStyle(.secondary)
+            }
+            let related = StorageIntelligence.signals(event).filter { $0.confidence == .plausible || $0.confidence == .strongCorrelation || ($0.id == "snapshots" && !event.snapshotComparison.changes.isEmpty) }
+            if !related.isEmpty {
+                PlainBlock(title: "Related system activity", id: "event.systemActivity") {
+                    ForEach(related) { signal in
+                        Text("\(signal.confidence.rawValue): \(signal.title)").font(.callout).help(signal.detail)
+                    }
+                }
             }
             if !s.actions.isEmpty {
                 PlainBlock(title: "What can I do?", id: "event.actions") {
@@ -153,8 +164,8 @@ private struct EventInspector: View {
         let b = analysis.breakdown
         VStack(alignment: .leading, spacing: 10) {
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
-                ValueRow(label: "Previous available", value: b.previousFree.map { capacity($0) } ?? "—")
-                ValueRow(label: "Current available", value: b.currentFree.map { capacity($0) } ?? "—")
+                ValueRow(label: "Previous physical free", value: b.previousFree.map { capacity($0) } ?? "—")
+                ValueRow(label: "Current physical free", value: b.currentFree.map { capacity($0) } ?? "—")
                 ValueRow(label: "Free space change", value: b.net.map(signedChange) ?? "Unknown", emphasized: true)
                 if let start = b.start { ValueRow(label: "Interval", value: "\(start.formatted(date: .omitted, time: .shortened)) → \(b.end.formatted(date: .omitted, time: .shortened)) · \(CauseAnalyzer.span(start, b.end))") }
             }
@@ -201,6 +212,27 @@ private struct EventInspector: View {
 
     // MARK: C — Supporting evidence
 
+    private var snapshotIntelligence: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if event.observation == nil {
+                Text("Snapshot and system evidence was not recorded or could not be read for this capacity event. Historical file and volume measurements remain available; no snapshot absence is inferred.")
+                    .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(StorageIntelligence.signals(event)) { signal in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(signal.title).font(.subheadline.weight(.medium))
+                    Text(signal.confidence.rawValue).font(.caption).foregroundStyle(.secondary)
+                    Text(signal.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }.accessibilityElement(children: .combine)
+            }
+            DisclosureGroup("Snapshot inventory and measurement sources") {
+                Text(StorageIntelligence.inventoryText(event) ?? "Not recorded")
+                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+            }.accessibilityIdentifier("event.snapshotInventory")
+        }
+    }
+
     @ViewBuilder private var evidence: some View {
         VStack(alignment: .leading, spacing: 12) {
             if analysis.evidence.isEmpty {
@@ -242,7 +274,7 @@ private struct EventInspector: View {
             }
             HStack(spacing: 8) {
                 Button("Copy Details") { copy(EventPanelText.details(event)) }
-                Button("Copy Raw Output") { copy(EventPanelText.raw(event)) }.disabled(event.diagnostics.isEmpty && event.interval == nil)
+                Button("Copy Raw Output") { copy(EventPanelText.raw(event)) }.disabled(event.diagnostics.isEmpty && event.interval == nil && event.observation == nil)
             }.controlSize(.small).padding(.top, 6)
         }
     }

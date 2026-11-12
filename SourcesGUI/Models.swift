@@ -58,12 +58,14 @@ struct AlertRecord: Identifiable, Sendable {
 enum EvidenceSource: String, CaseIterable, Sendable {
     case apfs, swap, vm, temporaryFiles = "temporary_files", applicationData = "application_data", caches, developer, other
     case folders, fileActivity = "file_activity", processes
+    case snapshots, capacityMetrics = "capacity_metrics"
     var title: String {
         switch self {
         case .apfs: return "APFS"; case .swap: return "Swap"; case .vm: return "Virtual memory"
         case .temporaryFiles: return "Temporary files"; case .applicationData: return "Application data"
         case .caches: return "Caches"; case .developer: return "Developer tools"; case .other: return "Other"
         case .folders: return "Folder growth"; case .fileActivity: return "File activity"; case .processes: return "Process correlation"
+        case .snapshots: return "APFS snapshots"; case .capacityMetrics: return "Capacity measurements"
         }
     }
     // Legacy (schema 1) records only carry a command name and path.
@@ -434,9 +436,25 @@ struct StorageEvent: Identifiable, Sendable {
     let source: String
     let searchText: String
     var interval: IntervalEvidence? = nil
+    var observation: StorageObservation? = nil
+    var previousObservation: StorageObservation? = nil
     var isRecordedScan: Bool { measurement != nil }
     var hasDiagnostics: Bool { !diagnostics.isEmpty }
-    var hasSwapChange: Bool { comparisons.contains { $0.current.source == .swap && ($0.delta ?? 0) != 0 } }
+    var hasSwapChange: Bool { comparisons.contains { $0.current.source == .swap && ($0.delta ?? 0) != 0 } || (observationContinuous && observation?.swapAllocatedBytes != nil && previousObservation?.swapAllocatedBytes != nil && observation?.swapAllocatedBytes != previousObservation?.swapAllocatedBytes) }
+    var snapshotComparison: SnapshotComparison {
+        SnapshotComparison.compare(previous: previousObservation?.inventories, current: observation?.inventories ?? [], continuous: observationContinuous)
+    }
+    /// Sampling windows are near, never atomic with capacity. Do not bridge missed checks or sessions.
+    var observationContinuous: Bool {
+        guard let current = observation, let previous = previousObservation, let start = previousTime,
+              timestamp > start, timestamp.timeIntervalSince(start) <= 75 * 60,
+              previousMeasurement?.capacity == measurement?.capacity,
+              current.finishedAt >= current.observedAt, current.finishedAt - current.observedAt <= 120,
+              previous.finishedAt >= previous.observedAt, previous.finishedAt - previous.observedAt <= 120 else { return false }
+        if let boot = current.bootSession, let oldBoot = previous.bootSession, boot != oldBoot { return false }
+        if let uptime = current.uptime, let oldUptime = previous.uptime, uptime <= oldUptime { return false }
+        return current.container == previous.container
+    }
     var changeOrder: Int64 { delta ?? Int64.max }
     var freeOrder: Int64 { currentFree ?? Int64.max }
     var severityOrder: Int { severity.rawValue }
@@ -471,7 +489,7 @@ enum StorageChartSelection {
 }
 
 enum EventTypeFilter: String, CaseIterable, Codable, Sendable {
-    case all = "All Events", loss = "Storage Loss", recovery = "Storage Recovery", warning = "Warnings", critical = "Critical Events", scans = "Recorded Scans", swap = "Swap Changes", diagnostic = "Diagnostic Events"
+    case all = "All Events", loss = "Storage Loss", recovery = "Storage Recovery", warning = "Warnings", critical = "Critical Events", scans = "Recorded Scans", swap = "Swap Changes", diagnostic = "Diagnostic Events", snapshots = "Snapshot Changes"
 }
 enum EventTimeFilter: String, CaseIterable, Codable, Sendable {
     case hour = "Last Hour", day = "Last 24 Hours", week = "Last 7 Days", month = "Last 30 Days", custom = "Custom Date Range"
@@ -523,9 +541,13 @@ struct EventFilters: Codable, Equatable, Sendable {
         case .scans: if !event.isRecordedScan { return false }
         case .swap: if !event.hasSwapChange { return false }
         case .diagnostic: if !event.hasDiagnostics { return false }
+        case .snapshots: if event.snapshotComparison.changes.isEmpty { return false }
         }
         let term = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        return term.isEmpty || event.searchText.range(of: term, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        guard !term.isEmpty else { return true }
+        let snapshotText = event.observation?.inventories.flatMap { inventory in [inventory.volumeName, inventory.volumeUUID] + inventory.snapshots.flatMap { [$0.name, $0.uuid] } }.joined(separator: "\n") ?? ""
+        let snapshotChanges = event.snapshotComparison.changes.flatMap { [$0.snapshot.name, $0.snapshot.uuid] }.joined(separator: "\n")
+        return (event.searchText + "\n" + snapshotText + "\n" + snapshotChanges).range(of: term, options: [.caseInsensitive, .diacriticInsensitive]) != nil
     }
     func apply(_ events: [StorageEvent], now: Date = Date()) -> [StorageEvent] {
         events.filter { matches($0, now: now) }.sorted { a,b in
@@ -658,7 +680,7 @@ enum EventProjector {
             return EvidenceComparison(current: metric, currentTime: metric.observedAt ?? current.timestamp, previous: prior, previousTime: prior.map { $0.observedAt ?? previous!.timestamp })
         }
     }
-    static func project(measurements: [Measurement], alerts: [AlertRecord], diagnostics: [DiagnosticRecord], intervals: [Int64: IntervalEvidence] = [:], loadedAt: Date = Date(), segmentStarts: Set<Int64> = []) -> HistorySnapshot {
+    static func project(measurements: [Measurement], alerts: [AlertRecord], diagnostics: [DiagnosticRecord], intervals: [Int64: IntervalEvidence] = [:], loadedAt: Date = Date(), segmentStarts: Set<Int64> = [], observations: [Int64: StorageObservation] = [:]) -> HistorySnapshot {
         let readings = measurements.sorted { $0.timestamp == $1.timestamp ? $0.id < $1.id : $0.timestamp < $1.timestamp }
         let snapshots = diagnostics.sorted { $0.timestamp == $1.timestamp ? $0.id < $1.id : $0.timestamp < $1.timestamp }
         var attachedAlerts = Set<Int64>(), attachedDiagnostics = Set<Int64>(), previous = [String: Measurement](), events = [StorageEvent]()
@@ -673,6 +695,13 @@ enum EventProjector {
             let evidence = relatedDiagnostics.flatMap { comparisons($0, all: snapshots) }
             var event = make(id: "reading:\(reading.id)", time: reading.timestamp, category: category, delta: delta, prior: prior, free: reading.free, severity: severity, measurement: reading, alerts: relatedAlerts, diagnostics: relatedDiagnostics, comparisons: evidence, source: "readings #\(reading.id); scan origin unknown (not recorded)")
             event.interval = intervals[reading.id]
+            func observation(for value: Measurement) -> StorageObservation? {
+                guard let record = observations[value.id], record.container == value.container,
+                      abs(record.observedAt - value.timestamp.timeIntervalSince1970) < 0.001 else { return nil }
+                return record
+            }
+            event.observation = observation(for: reading)
+            event.previousObservation = prior.flatMap { observation(for: $0) }
             events.append(event)
             previous[reading.container] = reading
         }

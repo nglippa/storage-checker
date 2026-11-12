@@ -54,6 +54,21 @@ if [ "${STORAGE_MONITOR_BUNDLE_HELPER:-0}" = 1 ]; then
   /usr/bin/ditto "$HELPER" "$APP/Contents/Helpers/MacBook Storage Monitor.app"
   /usr/bin/codesign --verify --deep --strict "$APP/Contents/Helpers/MacBook Storage Monitor.app"
 fi
+STORAGE_MONITOR_SDK_PATH="$SDK_PATH" "$ROOT/scripts/build-snapshot-service.sh" "$ROOT/build/snapshot-service"
+/bin/mkdir -p "$APP/Contents/Library/HelperTools" "$APP/Contents/Library/LaunchDaemons"
+/usr/bin/ditto "$ROOT/build/snapshot-service/Storage Monitor Snapshot Service.app" "$APP/Contents/Library/HelperTools/Storage Monitor Snapshot Service.app"
+/bin/cat > "$APP/Contents/Library/LaunchDaemons/local.macbook.storage-monitor.snapshots.plist" <<'SNAPSHOT_PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>local.macbook.storage-monitor.snapshots</string>
+<key>BundleProgram</key><string>Contents/Library/HelperTools/Storage Monitor Snapshot Service.app/Contents/MacOS/StorageMonitorSnapshotService</string>
+<key>MachServices</key><dict><key>local.macbook.storage-monitor.snapshots</key><true/></dict>
+<key>RunAtLoad</key><true/><key>KeepAlive</key><dict><key>Crashed</key><true/></dict>
+<key>ThrottleInterval</key><integer>60</integer>
+<key>ProcessType</key><string>Background</string>
+</dict></plist>
+SNAPSHOT_PLIST
 /usr/bin/codesign --force --sign - --identifier "$BUNDLE_ID" "$APP"
 /usr/bin/codesign --verify --deep --strict "$APP"
 /usr/bin/printf '%s\n' "Built $APP"

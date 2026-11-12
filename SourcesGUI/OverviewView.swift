@@ -48,6 +48,10 @@ struct OverviewView: View {
                 if let free = presentation.free, let total = presentation.total {
                     compactUsage(free: free, total: total, severity: EventSeverity.capacity(free))
                 }
+                if let available = presentation.availabilityText {
+                    Text(available).font(.callout).foregroundStyle(.secondary).help(presentation.detail)
+                        .accessibilityIdentifier("overview.macosAvailable")
+                }
                 if target?.uuid == nil, let health = monitoringHealth?(context.date) {
                     Text(health.title).font(.callout.weight(.medium)).help(health.detail + " " + health.jobDetails.joined(separator: ". ")).accessibilityIdentifier("overview.monitoringHealth")
                 }
@@ -134,13 +138,13 @@ struct OverviewView: View {
     private func recordedText(_ recorded: Measurement) -> some View {
         HStack(spacing:5) {
             Image(systemName:Date().timeIntervalSince(recorded.timestamp)>4500 ? "clock.badge.exclamationmark" : "clock")
-            Text("Last recorded \(recorded.timestamp.formatted(date:.abbreviated,time:.shortened)): \(capacity(recorded.free)) available")
+            Text("Last recorded \(recorded.timestamp.formatted(date:.abbreviated,time:.shortened)): \(capacity(recorded.free)) free")
                 .help("Background monitor reading \(recorded.timestamp.formatted(date:.complete,time:.complete)). History, events and the chart use recorded readings only.")
         }.lineLimit(1)
     }
     @ViewBuilder private func comparisonText(_ comparison: ObservationComparison?, live: LiveCapacityReading?, inline: Bool) -> some View {
         if let comparison {
-            Text("\(inline ? "· " : "")\(comparison.difference == 0 ? "No change since then" : "\(changeMagnitude(comparison.difference)) \(comparison.difference < 0 ? "less" : "more") available now")")
+            Text("\(inline ? "· " : "")\(comparison.difference == 0 ? "No change since then" : "\(changeMagnitude(comparison.difference)) \(comparison.difference < 0 ? "less" : "more") free now")")
                 .lineLimit(inline ? 1 : 2).fixedSize(horizontal: inline, vertical: !inline)
                 .help("Live \(exactBytes(comparison.live.free)) at \(comparison.live.timestamp.formatted(date:.omitted,time:.standard)) minus recorded \(exactBytes(comparison.recorded.free)). An observation comparison: not stored, not a recorded event, not an alert.")
         } else if live != nil {
@@ -233,7 +237,7 @@ struct CapacityChart: View {
     var body: some View {
         VStack(alignment:.leading,spacing:8) {
             HStack {
-                Text("Recorded available capacity").font(.subheadline.weight(.semibold)).fixedSize()
+                Text("Recorded physical free capacity").font(.subheadline.weight(.semibold)).fixedSize()
                 Text("\(points.count) points").font(.subheadline).foregroundStyle(.secondary).lineLimit(1).layoutPriority(-1)
                 Spacer()
                 Picker("Chart time range",selection:$range) { ForEach(EventTimeFilter.allCases.filter { $0 != .custom },id:\.self) { Text($0.rawValue).tag($0) } }.labelsHidden().frame(width:145).accessibilityIdentifier("chart.range")
@@ -250,10 +254,10 @@ struct CapacityChart: View {
                     ForEach(points) { point in
                         LineMark(x:.value("Time",point.date),y:.value("Free GB",point.freeGB),series:.value("Recorded segment",point.segment)).foregroundStyle(Color.accentColor).lineStyle(StrokeStyle(lineWidth:1.5))
                         PointMark(x:.value("Time",point.date),y:.value("Free GB",point.freeGB)).foregroundStyle(Color.accentColor).symbolSize(14)
-                            .accessibilityLabel("\(point.date.formatted()): \(capacity(point.measurement.free)) available")
+                            .accessibilityLabel("\(point.date.formatted()): \(capacity(point.measurement.free)) free")
                     }
                     ForEach(meaningfulEvents) { item in
-                        PointMark(x:.value("Event time",item.point.date),y:.value("Available",item.point.freeGB))
+                        PointMark(x:.value("Event time",item.point.date),y:.value("Physical free",item.point.freeGB))
                             .foregroundStyle((item.event.delta ?? 0) < 0 ? Color.orange : Color.green)
                             .symbolSize(42)
                             .accessibilityLabel("\(item.event.category), \(item.event.delta.map(signedChange) ?? "")")
@@ -263,10 +267,10 @@ struct CapacityChart: View {
                     // are drawn in the overlay below, which cannot change the chart's layout.
                     if let hovered, points.contains(where: { $0.id == hovered.id }) {
                         RuleMark(x:.value("Selected reading",hovered.date)).foregroundStyle(.secondary.opacity(0.5))
-                        PointMark(x:.value("Selected reading",hovered.date),y:.value("Available",hovered.freeGB)).foregroundStyle(Color.accentColor).symbolSize(55)
+                        PointMark(x:.value("Selected reading",hovered.date),y:.value("Physical free",hovered.freeGB)).foregroundStyle(Color.accentColor).symbolSize(55)
                     }
                     if let selectedPoint {
-                        PointMark(x:.value("Selected event",selectedPoint.date),y:.value("Available",selectedPoint.freeGB))
+                        PointMark(x:.value("Selected event",selectedPoint.date),y:.value("Physical free",selectedPoint.freeGB))
                             .foregroundStyle(Color.accentColor).symbolSize(90)
                     }
                 }
@@ -349,7 +353,7 @@ enum CapacityChartHover {
     }
     /// The hover callout: time, available space, and the change from the previous joined reading when there is one.
     static func describe(date: Date,free: Int64,previousFree: Int64?) -> String {
-        var parts = [date.formatted(date:.abbreviated,time:.standard),"\(capacity(free)) available"]
+        var parts = [date.formatted(date:.abbreviated,time:.standard),"\(capacity(free)) free"]
         if let previousFree { parts.append("\(signedChange(free-previousFree)) since previous reading") }
         return parts.joined(separator:" · ")
     }

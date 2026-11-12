@@ -712,7 +712,27 @@ import SQLite3
         try test(InventoryNodePresentation.coverage(excluded) == "Outside measured scope" && InventoryNodePresentation.size(nil, node: excluded, formatter: String.init) == "Not measured", "excluded entries explain that they are outside measured scope")
 
         var filters = EventFilters()
-        for type in EventTypeFilter.allCases { filters.type = type; try test(!filters.apply(snapshot.events,now:anchor).isEmpty,"type filter \(type.rawValue)") }
+        for type in EventTypeFilter.allCases {
+            filters.type = type
+            let matches = filters.apply(snapshot.events, now: anchor)
+            try test(type == .snapshots ? matches.isEmpty : !matches.isEmpty,
+                     "type filter \(type.rawValue) respects legacy history without snapshot evidence")
+        }
+        let snapshotVolume = "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA"
+        func filterObservation(_ time: Date, snapshots: [APFSSnapshotRecord]) -> StorageObservation {
+            StorageObservation(container: critical.measurement!.container, observedAt: time.timeIntervalSince1970,
+                finishedAt: time.timeIntervalSince1970 + 1,
+                inventories: [SnapshotInventory(volumeUUID: snapshotVolume, volumeName: "Fixture", observedAt: time.timeIntervalSince1970,
+                    status: .complete, detail: "fixture", snapshots: snapshots)],
+                capacities: [], swapAllocatedBytes: nil, swapUsedBytes: nil, vmCounters: nil, detail: "fixture")
+        }
+        var snapshotFilteredEvent = critical
+        snapshotFilteredEvent.previousObservation = filterObservation(critical.previousTime!, snapshots: [])
+        snapshotFilteredEvent.observation = filterObservation(critical.timestamp,
+            snapshots: [APFSSnapshotRecord(uuid: "11111111-1111-1111-1111-111111111111", name: "filter-fixture", xid: 1)])
+        filters.type = .snapshots
+        try test(filters.apply([snapshotFilteredEvent], now: anchor).map(\.id) == [critical.id],
+                 "snapshot type filter includes events with a comparable snapshot identity change")
         filters = EventFilters()
         for range in EventTimeFilter.allCases where range != .custom { filters.time = range; try test(!filters.apply(snapshot.events,now:anchor).isEmpty,"time filter \(range.rawValue)") }
         filters = EventFilters(); filters.time = .custom; filters.start = critical.timestamp; filters.end = critical.timestamp
@@ -860,8 +880,8 @@ import SQLite3
         // The plain summary never says more than the measurements.
         let vmEvent = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 47 * decimalGB, [volume("d", "Data", 100 * decimalGB), volume("v", "VM", 5 * decimalGB), volume("u", "Update", decimalGB)]))
         let vmPlain = EventPlainSummary.make(vmEvent, CauseAnalyzer.analyze(vmEvent))
-        try test(vmPlain.whatHappened.hasPrefix("Your Mac lost 3.00 GB of available storage between"), "plain summary: states the measured loss with its interval")
-        try test(vmPlain.explanation?.contains("virtual memory (swap:") == true, "plain summary: explains virtual memory where the term first appears")
+        try test(vmPlain.whatHappened.hasPrefix("Your Mac lost 3.00 GB of physical free storage between"), "plain summary: states the measured physical loss with its interval")
+        try test(vmPlain.explanation?.contains("It holds swap: memory moved onto disk") == true && vmPlain.explanation?.contains("Separate swap counters") == true, "plain summary: distinguishes VM volume allocation from swap usage")
         try test(vmPlain.certainty == .measured && vmPlain.certaintyText.contains("Which app caused it was not recorded"), "plain summary: an exactly reconciled volume change is measured, and the app stays unknown")
         try test(vmPlain.actions.contains { $0.contains("Quitting apps") }, "plain summary: virtual memory growth offers the memory action")
         let gapPlain = EventPlainSummary.make(storageEvent(mixedBefore, gapAfter), gap)
@@ -876,8 +896,8 @@ import SQLite3
         let offsetEvent = storageEvent(reading(1, -30, free: 50 * decimalGB, base), reading(2, 0, free: 48 * decimalGB, [volume("d", "Data", 99 * decimalGB), volume("v", "VM", 5 * decimalGB), volume("u", "Update", decimalGB)]))
         let offsetAnalysis = CauseAnalyzer.analyze(offsetEvent), offsetPlain = EventPlainSummary.make(offsetEvent, offsetAnalysis)
         try test(offsetAnalysis.breakdown.reconciliation == .exact && offsetPlain.whatHappened.hasPrefix("Your Mac lost 2.00 GB")
-                 && offsetPlain.explanation?.contains("macOS used 3.00 GB more disk space for virtual memory") == true
-                 && offsetPlain.explanation?.hasSuffix("At the same time, files and apps freed 1.00 GB, so the net loss was 2.00 GB.") == true,
+                 && offsetPlain.explanation?.contains("virtual memory volume allocated 3.00 GB more disk space") == true
+                 && offsetPlain.explanation?.hasSuffix("At the same time, the Data volume freed 1.00 GB, so the net loss was 2.00 GB.") == true,
                  "plain summary: a larger growth offset by a reduction names the offset and the measured net loss")
         try test(offsetPlain.certainty == .measured, "plain summary: offsetting volume changes that reconcile remain measured, not more certain about the cause")
         try test(dataPlain.explanation?.contains("At the same time, virtual memory freed 1.00 GB, so the net loss was 2.00 GB.") == true,

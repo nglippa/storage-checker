@@ -13,6 +13,9 @@ struct LiveCapacityReading: Sendable, Equatable {
     let free: Int64
     let total: Int64
     let dataVolumeUUID: String?
+    var availableBytes: Int64? = nil
+    var importantAvailableBytes: Int64? = nil
+    var opportunisticAvailableBytes: Int64? = nil
     var used: Int64 { total - free }
 }
 
@@ -39,10 +42,17 @@ enum LiveCapacityProbe {
         var info = statfs()
         guard statfs(path, &info) == 0 else { throw LiveCapacityError.unavailable(String(cString: strerror(errno))) }
         let block = Int64(info.f_bsize)
-        let free = Int64(info.f_bavail) * block, total = Int64(info.f_blocks) * block
-        guard block > 0, total > 0, free >= 0, free <= total else { throw LiveCapacityError.unavailable("invalid filesystem counters") }
+        guard block > 0, info.f_bfree <= UInt64(Int64.max / block), info.f_blocks <= UInt64(Int64.max / block) else { throw LiveCapacityError.unavailable("invalid filesystem counters") }
+        let free = Int64(info.f_bfree) * block, total = Int64(info.f_blocks) * block
+        guard total > 0, free >= 0, free <= total else { throw LiveCapacityError.unavailable("invalid filesystem counters") }
         let uuid = (try? URL(fileURLWithPath: path).resourceValues(forKeys: [.volumeUUIDStringKey]))?.volumeUUIDString
-        return LiveCapacityReading(timestamp: now, free: free, total: total, dataVolumeUUID: uuid)
+        // Fresh URL per query avoids stamping cached availability with a new timestamp.
+        let available = (try? URL(fileURLWithPath: path).resourceValues(forKeys: [.volumeAvailableCapacityKey]))?.volumeAvailableCapacity.map(Int64.init)
+        let important = (try? URL(fileURLWithPath: path).resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?.volumeAvailableCapacityForImportantUsage
+        let opportunistic = (try? URL(fileURLWithPath: path).resourceValues(forKeys: [.volumeAvailableCapacityForOpportunisticUsageKey]))?.volumeAvailableCapacityForOpportunisticUsage
+        return LiveCapacityReading(timestamp: now, free: free, total: total, dataVolumeUUID: uuid,
+            availableBytes: available.flatMap { $0 >= 0 ? $0 : nil }, importantAvailableBytes: important.flatMap { $0 >= 0 ? $0 : nil },
+            opportunisticAvailableBytes: opportunistic.flatMap { $0 >= 0 ? $0 : nil })
     }
 }
 
@@ -75,6 +85,7 @@ struct CapacityPresentation: Equatable {
     let title: String
     let statusText: String
     let detail: String
+    let availabilityText: String?
     var used: Int64? { guard let free, let total else { return nil }; return total - free }
     var isCurrent: Bool { status == .current }
 
@@ -87,7 +98,8 @@ struct CapacityPresentation: Equatable {
         else if state.lastError != nil { status = .failed }
         else if state.reading != nil { status = state.freshness(at: now) == .live ? .current : .stale }
         else { status = recorded != nil ? .previous : .unavailable }
-        title = status == .current ? "Available now" : (source == .recorded ? "Available · last recorded" : (free != nil ? "Available · previous reading" : "Available capacity"))
+        title = status == .current ? "Free now" : (source == .recorded ? "Free · last recorded" : (free != nil ? "Free · previous reading" : "Free physical capacity"))
+        availabilityText = state.reading?.availableBytes.map { "macOS available: \(capacity($0))" }
         let age = timestamp.map { Self.age(of: $0, at: now) }
         switch status {
         case .current: statusText = "Live · updated \(age!)"
@@ -98,6 +110,8 @@ struct CapacityPresentation: Equatable {
         case .unavailable: statusText = "No capacity reading available"
         }
         detail = [timestamp.map { "Reading from " + $0.formatted(date: .complete, time: .complete) + "." }, state.lastError,
+                  "Free uses statfs f_bfree; allocated uses total minus free. Recorded APFS free uses diskutil CapacityFree. APFS volumes share container space; a volume quota may limit its view.",
+                  state.reading.map { "Foundation available: \($0.availableBytes.map { capacity($0) } ?? "Unknown"); important usage: \($0.importantAvailableBytes.map { capacity($0) } ?? "Unknown"); opportunistic usage: \($0.opportunisticAvailableBytes.map { capacity($0) } ?? "Unknown"). These policy-based estimates may be rounded. Their difference from free is not exact purgeable or reclaimable storage." },
                   "Live capacity refreshes on opening, activation, every minute while visible, and Refresh. It is not recorded and never triggers alerts."].compactMap { $0 }.joined(separator: " ")
     }
     private static func age(of date: Date, at now: Date) -> String {

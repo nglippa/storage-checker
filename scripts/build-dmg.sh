@@ -58,7 +58,7 @@ if ! /usr/bin/iconutil -c icns "$WORK/iconset.iconset" -o "$WORK/AppIcon.icns" 2
   /usr/bin/xcrun swift -module-cache-path "$ROOT/build/module-cache" "$ROOT/scripts/pack-icon.swift" "$WORK/iconset.iconset" "$WORK/AppIcon.icns"
 fi
 
-monitors=""; viewers=""
+monitors=""; viewers=""; snapshot_services=""
 for arch in $ARCHS; do
   echo "==> Compile background monitor ($arch, macOS $MIN_MACOS+)"
   /usr/bin/xcrun swiftc -D STORAGE_MONITOR_DISTRIBUTION -target "$arch-apple-macos$MIN_MACOS" -swift-version 5 -O -module-cache-path "$ROOT/build/module-cache" \
@@ -68,12 +68,24 @@ for arch in $ARCHS; do
   /usr/bin/xcrun swiftc -D STORAGE_MONITOR_DISTRIBUTION -sdk "$SDK" -target "$arch-apple-macos$MIN_MACOS" -swift-version 5 -O -parse-as-library -module-cache-path "$ROOT/build/module-cache" \
     -framework SwiftUI -framework Charts -framework AppKit \
     "$ROOT"/SourcesGUI/*.swift "$ROOT"/SourcesShared/*.swift -o "$WORK/bin/StorageMonitorViewer-$arch"
+  STORAGE_MONITOR_SDK_PATH="$SDK" STORAGE_MONITOR_SNAPSHOT_ARCH="$arch" "$ROOT/scripts/build-snapshot-service.sh" "$WORK/snapshot-service-$arch"
+  snapshot_services="$snapshot_services $WORK/snapshot-service-$arch/StorageMonitorSnapshotService"
   monitors="$monitors $WORK/bin/StorageMonitor-$arch"; viewers="$viewers $WORK/bin/StorageMonitorViewer-$arch"
 done
 # shellcheck disable=SC2086
 /usr/bin/lipo -create $monitors -output "$HELPER/Contents/MacOS/StorageMonitor"
 # shellcheck disable=SC2086
 /usr/bin/lipo -create $viewers -output "$APP/Contents/MacOS/StorageMonitorViewer"
+SNAPSHOT_HELPER="$APP/Contents/Library/HelperTools/Storage Monitor Snapshot Service.app"
+/bin/mkdir -p "$APP/Contents/Library/HelperTools" "$APP/Contents/Library/LaunchDaemons"
+/usr/bin/ditto "$WORK/snapshot-service-$arch/Storage Monitor Snapshot Service.app" "$SNAPSHOT_HELPER"
+# shellcheck disable=SC2086
+/usr/bin/lipo -create $snapshot_services -output "$SNAPSHOT_HELPER/Contents/MacOS/StorageMonitorSnapshotService"
+/bin/cat > "$APP/Contents/Library/LaunchDaemons/local.macbook.storage-monitor.snapshots.plist" <<'SNAPSHOT_PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>Label</key><string>local.macbook.storage-monitor.snapshots</string><key>BundleProgram</key><string>Contents/Library/HelperTools/Storage Monitor Snapshot Service.app/Contents/MacOS/StorageMonitorSnapshotService</string><key>MachServices</key><dict><key>local.macbook.storage-monitor.snapshots</key><true/></dict><key>RunAtLoad</key><true/><key>KeepAlive</key><dict><key>Crashed</key><true/></dict><key>ThrottleInterval</key><integer>60</integer><key>ProcessType</key><string>Background</string></dict></plist>
+SNAPSHOT_PLIST
 /bin/cp "$WORK/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 /bin/cp "$WORK/AppIcon.icns" "$HELPER/Contents/Resources/AppIcon.icns"
 /bin/cp "$ROOT/THIRD-PARTY-NOTICES.md" "$APP/Contents/Resources/THIRD-PARTY-NOTICES.md"
@@ -117,6 +129,15 @@ sign() { # path identifier
   if [ "$IDENTITY" = - ]; then /usr/bin/codesign --force --sign - --identifier "$2" "$1"
   else /usr/bin/codesign --force --sign "$IDENTITY" --identifier "$2" --options runtime --timestamp "$1"; fi
 }
+if [ -n "${STORAGE_MONITOR_SNAPSHOT_PROFILE:-}${STORAGE_MONITOR_SNAPSHOT_ENTITLEMENTS:-}" ]; then
+  if [ "$IDENTITY" = - ] || [ ! -f "${STORAGE_MONITOR_SNAPSHOT_PROFILE:-}" ] || [ ! -f "${STORAGE_MONITOR_SNAPSHOT_ENTITLEMENTS:-}" ]; then
+    echo "Snapshot capability requires a real signing identity, an Apple-approved provisioning profile and matching entitlement file." >&2; exit 1
+  fi
+  /bin/cp "$STORAGE_MONITOR_SNAPSHOT_PROFILE" "$SNAPSHOT_HELPER/Contents/embedded.provisionprofile"
+  /usr/bin/codesign --force --sign "$IDENTITY" --identifier local.macbook.storage-monitor.snapshot-service --options runtime --timestamp --entitlements "$STORAGE_MONITOR_SNAPSHOT_ENTITLEMENTS" "$SNAPSHOT_HELPER"
+else
+  sign "$SNAPSHOT_HELPER" local.macbook.storage-monitor.snapshot-service
+fi
 sign "$HELPER" local.macbook.storage-monitor          # nested code first
 sign "$APP" local.macbook.storage-monitor.viewer
 /usr/bin/codesign --verify --deep --strict "$APP"

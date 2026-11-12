@@ -55,6 +55,7 @@ actor HistoryReader {
         try execute("PRAGMA query_only=ON; BEGIN DEFERRED;")
         let rawReadings: [[String:String]], rawAlerts: [[String:String]], rawDiagnostics: [[String:String]], rawIntervals: [[String:String]], rawLifecycle: String?, rawCoverage: String?
         let segmentStarts: Set<Int64>
+        let rawObservations: [[String: String]]
         do {
             rawReadings = try query("SELECT * FROM readings ORDER BY timestamp DESC,id DESC LIMIT 10000")
             rawAlerts = try query("SELECT * FROM alerts ORDER BY timestamp DESC,id DESC LIMIT 5000")
@@ -62,6 +63,8 @@ actor HistoryReader {
             // Older databases do not have this table; it is optional.
             let hasIntervals = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='interval_evidence'").isEmpty
             rawIntervals = hasIntervals ? try query("SELECT reading_id,evidence FROM interval_evidence ORDER BY reading_id DESC LIMIT 10000") : []
+            let hasObservations = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='storage_observations'").isEmpty
+            rawObservations = hasObservations ? try query("SELECT reading_id,observation FROM storage_observations ORDER BY reading_id DESC LIMIT 10000") : []
             let hasState = try !query("SELECT name FROM sqlite_master WHERE type='table' AND name='state'").isEmpty
             rawLifecycle = hasState ? try query("SELECT value FROM state WHERE key='attribution_lifecycle'").first?["value"] : nil
             rawCoverage = hasState ? try query("SELECT value FROM state WHERE key='coverage_lifecycle'").first?["value"] : nil
@@ -83,7 +86,11 @@ actor HistoryReader {
         let diagnostics = try rawDiagnostics.map { row in try EvidenceParser.diagnostic(id: integer(row,"id"), timestamp: timestamp(row), json: row["snapshot"] ?? "{}") }
         var intervals = [Int64: IntervalEvidence]()
         for row in rawIntervals { if let id = Int64(row["reading_id"] ?? ""), let value = IntervalEvidence.parse(readingId: id, json: row["evidence"] ?? "") { intervals[id] = value } }
-        var snapshot = EventProjector.project(measurements: readings, alerts: alerts, diagnostics: diagnostics, intervals: intervals, segmentStarts: segmentStarts)
+        var observations = [Int64: StorageObservation]()
+        for row in rawObservations {
+            if let id = row["reading_id"].flatMap(Int64.init), let value = StorageObservation.decode(row["observation"] ?? "") { observations[id] = value }
+        }
+        var snapshot = EventProjector.project(measurements: readings, alerts: alerts, diagnostics: diagnostics, intervals: intervals, segmentStarts: segmentStarts, observations: observations)
         snapshot.folderMonitoring = rawLifecycle.flatMap(FolderMonitoringStatus.parse)
         snapshot.filesystemCoverage = rawCoverage.flatMap(FilesystemCoverageStatus.parse)
         return snapshot

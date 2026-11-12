@@ -64,6 +64,8 @@ enum ExternalCapacityMonitoring {
     /// Capacity history has no startup attribution or diagnostics. All callers validate the live mount before committing.
     @discardableResult static func store(_ current: Reading, paths: ExternalVolumePaths, label: String,
                                          identityFingerprint: String? = nil,
+                                         observation: StorageObservation? = nil,
+                                         observe: (() -> StorageObservation)? = nil,
                                          validate: () throws -> Void,
                                          notification: (String, String) -> String = notify) throws -> Evaluation? {
         try validate()
@@ -83,11 +85,12 @@ enum ExternalCapacityMonitoring {
         let window = newSession ? [] : try db.rows("SELECT * FROM readings WHERE container=? AND timestamp>=? AND timestamp<?", [current.container, max(current.timestamp - 7200, sessionTime), current.timestamp]).compactMap(reading)
         let evaluation = evaluate(current, newSession ? nil : previous, window)
         let plan = try AlertPlan(db, current, evaluation)
+        var readingID: Int64 = 0
         try db.exec("BEGIN IMMEDIATE")
         do {
             try db.write("INSERT INTO readings(timestamp,container,free,used,volumes) VALUES(?,?,?,?,?)", [current.timestamp, current.container, current.free, current.used, current.volumes])
-            let id = sqlite3_last_insert_rowid(db.db)
-            if newSession { try db.write("INSERT INTO external_capacity_sessions(reading_id) VALUES(?)", [id]) }
+            readingID = sqlite3_last_insert_rowid(db.db)
+            if newSession { try db.write("INSERT INTO external_capacity_sessions(reading_id) VALUES(?)", [readingID]) }
             try plan.persist(db, current)
             if let identityFingerprint { try db.state("external_capacity_backing", identityFingerprint) }
             try validate()
@@ -103,8 +106,11 @@ enum ExternalCapacityMonitoring {
         if !plan.newReasons.isEmpty || plan.needsNotification {
             try db.write("INSERT INTO alerts(timestamp,severity,reasons,free,delta,notification) VALUES(?,?,?,?,?,?)", [current.timestamp, evaluation.severity, plan.signature, current.free, evaluation.delta as Any, result])
         }
-        try db.retain(current.timestamp)
+        try db.retain(current.timestamp, includeObservations: false)
         try db.exec("DELETE FROM external_capacity_sessions WHERE reading_id NOT IN (SELECT id FROM readings)")
+        if let observation = observation ?? observe?() {
+            storeOptionalStorageObservation(observation, readingID: readingID, reading: current, db: db, logDirectory: paths.capacityDirectory)
+        }
         return evaluation
     }
 
@@ -115,8 +121,12 @@ enum ExternalCapacityMonitoring {
             do {
                 let lease = try ExternalVolumeMountLease(descriptor: target.descriptors[0], registry: ExternalVolumeRegistry(baseDirectory: baseDirectory), indexing: false)
                 let value = try measure(target, lease: lease, containers: topology)
+                let enrolled = Set(target.descriptors.compactMap { try? $0.identity().uuid })
+                try lease.validate()
                 _ = try store(value, paths: target.paths, label: target.label,
-                    identityFingerprint: "backing:" + lease.registration.backingUUIDs.joined(separator: ","), validate: lease.validate)
+                    identityFingerprint: "backing:" + lease.registration.backingUUIDs.joined(separator: ",") + ";device:\(lease.descriptor.device)",
+                    observe: target.paths.capacityScope.hasPrefix("apfs:") ? { SnapshotObserver.capture(value, enrolled: enrolled, includeVM: false) } : nil,
+                    validate: lease.validate)
             } catch { log(baseDirectory, "external capacity \(target.paths.identity.uuid): \(error)") }
         }
     }

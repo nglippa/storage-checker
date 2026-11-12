@@ -129,7 +129,7 @@ import SwiftUI
         // The callout says when, how much is available, and the change from the previous joined reading.
         let described = CapacityChartHover.describe(date:readings[30].timestamp,free:readings[30].free,previousFree:readings[29].free)
         let firstDescribed = CapacityChartHover.describe(date:readings[0].timestamp,free:readings[0].free,previousFree:nil)
-        check(described.contains("\(capacity(readings[30].free)) available") && described.contains(signedChange(readings[30].free-readings[29].free)) && !firstDescribed.contains("since"),
+        check(described.contains("\(capacity(readings[30].free)) free") && described.contains(signedChange(readings[30].free-readings[29].free)) && !firstDescribed.contains("since"),
               "the hover callout gives time, available space and the change since the previous reading (\(described))")
         livingTreeScrollRoutingChecks(check)
         structuredExplorerStateChecks(check)

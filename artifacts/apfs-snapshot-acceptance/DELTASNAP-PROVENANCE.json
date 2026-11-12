@@ -1,0 +1,21 @@
+{
+  "eula": {
+    "url": "https://scaleninja.com/EULA.txt",
+    "sha256": "67fa4b6412eadee3d0c5216b510c4559e5cf939397259541f16da0442dcde62e",
+    "updated": "2026-10-10",
+    "archive": "<disposable-acceptance-directory>/deltasnap-eula.txt",
+    "retrieved_at_utc": "2026-11-12T02:05:06.530546+00:00"
+  },
+  "repository": {
+    "url": "https://github.com/scaleninja/deltasnap",
+    "commit": "c5742f1e61fcedc39742a4ca1ce1c5f959954bfb",
+    "tree_sha256": "db52c7362bb45da91c5da159e9bda233c98be55d7084dfeb56bd8273a1abf3c8",
+    "tree_archive": "deltasnap-tree.json",
+    "tree_truncated": false,
+    "snapshot_manager_source_present": false,
+    "license_file_present": false,
+    "retrieved_at_utc": "2026-11-12T02:05:06.837542+00:00"
+  },
+  "decision": "No verified reusable manager source or embedding license. No DeltaSnap dependency, helper or code added. Independent native metadata observation only.",
+  "recorded_at_utc": "2026-11-12T03:39:52.186121+00:00"
+}

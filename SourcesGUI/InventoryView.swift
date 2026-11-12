@@ -14,6 +14,7 @@ struct MonitorRootView: View {
     var body: some View {
         Group {
             if section == "history" { HistoryView(store: store) }
+            else if section == "snapshots" { SnapshotManagementView(history: store) }
             else { DiskInventoryView(configuration: store.configuration, history: store, model: inventory) }
         }
         // Set for both sections, so the QA marker stays in the title after Monitoring is left.
@@ -34,7 +35,8 @@ struct MonitorRootView: View {
                 Picker("Section", selection: $store.section) {
                     Text("Storage").tag("inventory")
                     Text("History & Monitoring").tag("history")
-                }.pickerStyle(.segmented).fixedSize().help("Storage shows what is using your disk. Monitoring shows how free space changed over time and why.")
+                    Text("Snapshots").tag("snapshots")
+                }.pickerStyle(.segmented).fixedSize().help("Storage shows what is using your disk. Monitoring shows how free space changed over time and why. Snapshots manages explicitly owned recovery points.")
                 .accessibilityIdentifier("app.section")
             }
         }
@@ -889,7 +891,10 @@ struct InventoryCapacitySummary: View {
                         }.frame(maxWidth: 280)
                         Spacer(minLength: 0)
                     }
-                } else { Text("Available capacity · no reading").font(.callout) }
+                } else { Text("Free physical capacity · no reading").font(.callout) }
+                if let available = presentation.availabilityText {
+                    Text(available).font(.caption).foregroundStyle(.secondary).help(presentation.detail)
+                }
                 HStack(spacing: 6) {
                     if presentation.status == .refreshing { ProgressView().controlSize(.small) }
                     Text(presentation.statusText).font(.caption).foregroundStyle(presentation.status == .failed || presentation.status == .stale ? Color.primary : Color.secondary).fixedSize(horizontal: false, vertical: true)

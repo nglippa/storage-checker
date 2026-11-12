@@ -6,6 +6,20 @@ Storage Monitor ships as a disk image:
 
 Users do not need Homebrew, Python, Node.js, Swift, Xcode or the command-line developer tools. The app is native Swift/SwiftUI, uses no other runtime, and is universal (Apple silicon and Intel), for macOS 14 Sonoma or later.
 
+## 3.0.0 snapshot-helper scope
+
+3.0.0 bundles a separate `Storage Monitor Snapshot Service.app` and a LaunchDaemon
+registration description. Packaging does not register or launch this daemon.
+The normal ad-hoc DMG has no accepted snapshot entitlement, so privileged snapshot
+creation/deletion/mounting and automatic lifecycle policies remain disabled.
+The existing forensic monitoring continues to work independently.
+
+A future provisioned build can supply `STORAGE_MONITOR_SNAPSHOT_PROFILE` and
+`STORAGE_MONITOR_SNAPSHOT_ENTITLEMENTS` with a matching Developer ID identity.
+These are operator-supplied Apple credentials, not a grant created by this project.
+Native entitlement, XPC/authorization and mutation acceptance remain outstanding;
+see [the 3.0.0 release record](STORAGE-MONITOR-3.0.0-RELEASE.md).
+
 ## Build prerequisites (build machine only)
 
 - macOS with the Command Line Tools: `swiftc`, `lipo`, `codesign`, `hdiutil`, `sips`, `iconutil`, `plutil`.
@@ -21,7 +35,7 @@ scripts/build-dmg.sh
 
 This produces:
 
-- `build/dist/Storage-Monitor-2.2.0.dmg` plus a `.sha256` checksum;
+- `build/dist/Storage-Monitor-3.0.0.dmg` plus a `.sha256` checksum;
 - the assembled app in `build/dist/work/`.
 
 It is ad-hoc signed. The script finishes by running `scripts/verify-dmg.sh`, which mounts the image read-only with `-nobrowse -noautoopen`, so no Finder window opens and nothing is launched. It then checks structure, metadata, signatures, architectures and libraries, runs the bundled monitor's self-test from the image, and detaches.
@@ -30,8 +44,8 @@ Options, all set through environment variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `STORAGE_MONITOR_VERSION` | `scripts/version.env` (2.2.0) | `CFBundleShortVersionString` of the app and helper; also the DMG file name |
-| `STORAGE_MONITOR_BUILD` | `scripts/version.env` (10) | `CFBundleVersion`; only ever increases |
+| `STORAGE_MONITOR_VERSION` | `scripts/version.env` (3.0.0) | `CFBundleShortVersionString` of the app and helper; also the DMG file name |
+| `STORAGE_MONITOR_BUILD` | `scripts/version.env` (22) | `CFBundleVersion`; only ever increases |
 | `STORAGE_MONITOR_APP_ONLY` | unset | `1` stops after building and verifying `build/dist/work/Storage Monitor.app`; no disk image |
 | `STORAGE_MONITOR_SIGN_IDENTITY` | `-` (ad-hoc) | codesign identity |
 | `STORAGE_MONITOR_ARCHS` | `arm64 x86_64` | architectures |
@@ -75,6 +89,10 @@ Storage Monitor.app                           local.macbook.storage-monitor.view
   Contents/Helpers/MacBook Storage Monitor.app  local.macbook.storage-monitor (LSUIElement)
     Contents/MacOS/StorageMonitor             background monitor, inventory worker, CLI (universal)
     Contents/Resources/AppIcon.icns
+  Contents/Library/HelperTools/Storage Monitor Snapshot Service.app
+    Contents/Info.plist
+    Contents/MacOS/StorageMonitorSnapshotService  privileged lifecycle adapter (universal; gated)
+  Contents/Library/LaunchDaemons/local.macbook.storage-monitor.snapshots.plist
 ```
 
 - Both executables link only `/usr/lib` and `/System/Library` (the Swift runtime ships with macOS).
@@ -200,6 +218,10 @@ Failure and interruption:
 | Verify a DMG | `scripts/verify-dmg.sh build/dist/Storage-Monitor-<version>.dmg <version> <build>` |
 
 ## Verification status
+
+Current release: [Storage Monitor 3.0.0 (22)](STORAGE-MONITOR-3.0.0-RELEASE.md).
+The records below are historical packaging results.
+
 
 For the 2.2.0 (build 10) release, see [the release record](STORAGE-MONITOR-2.2.0-RELEASE.md) for automated checks, packaging verification and remaining native acceptance gaps.
 

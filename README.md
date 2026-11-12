@@ -2,7 +2,25 @@
 
 # MacBook Storage Monitor
 
-A local, native Apple Silicon macOS utility that checks the internal APFS container and chosen external drives at login and every half hour (`:00` and `:30`). No Terminal window needs to stay open. launchd coalesces calendar checks missed during sleep into a check after waking. Monitoring starts after the user logs in; a logged-out user does not have an active LaunchAgent.
+A local, native universal macOS utility that checks the internal APFS container and chosen external drives at login and every half hour (`:00` and `:30`). No Terminal window needs to stay open. launchd coalesces calendar checks missed during sleep into a check after waking. Monitoring starts after the user logs in; a logged-out user does not have an active LaunchAgent.
+
+## Version 3.0.0
+
+[Download Storage Monitor 3.0.0](https://github.com/nglippa/storage-checker/releases/tag/v3.0.0) · [Release record](STORAGE-MONITOR-3.0.0-RELEASE.md)
+
+This release adds read-only APFS snapshot inventories and historical comparisons,
+Snapshot Changes filtering/search, clearer physical-free versus macOS-availability
+reporting, and stronger isolation of optional evidence from capacity recording.
+The new **Snapshots** section contains lifecycle-management controls and a
+persistent ownership/retention engine. **Privileged creation, deletion, snapshot
+mounting and automatic policies are unavailable in this ad-hoc build.** An
+Apple-accepted entitlement and separately validated signed helper are still
+required. This release does not modify Time Machine settings or existing recovery
+points, and does not calculate exact per-snapshot reclaimable sizes.
+
+See [snapshot intelligence](APFS-SNAPSHOT-INTELLIGENCE.md),
+[management implementation and limits](APFS-SNAPSHOT-MANAGEMENT.md), and the
+[readiness record](artifacts/apfs-snapshot-management/READINESS-REVIEW.md).
 
 ## Desktop app
 
@@ -15,7 +33,7 @@ Event history is a native sortable table. Select a row to inspect it; Escape dis
 The inspector reads top to bottom in four sections:
 
 1. **Likely causes**: up to three measured contributors, ranked by size. A cause is an APFS volume whose allocation moved in the same direction as the free-space change (for example "Virtual memory growth +1.07 GB"). Each cause carries an evidence class (Confirmed, Likely, Possible, or Unknown) and, separately, "Responsible application: Unknown". The viewer never names an application without application-level evidence. When nothing supports a cause it says "Likely cause unavailable" and gives the reason. It never pads the list to three.
-2. **Storage breakdown**: previous and current available capacity, the free-space change, the interval, and allocation change by volume with a thin proportional bar. A reconciliation line appears only when it is valid: "Measured volume changes account for the recorded loss" or "Some capacity change remains unaccounted for". Volume changes in the opposite direction are listed as offsetting.
+2. **Storage breakdown**: previous and current physical free capacity, the free-space change, the interval, and allocation change by volume with a thin proportional bar. A reconciliation line appears only when it is valid: "Measured volume changes account for the recorded loss" or "Some capacity change remains unaccounted for". Volume changes in the opposite direction are listed as offsetting.
 3. **Supporting evidence**: swap (allocated and used), temporary files, and application data, but only measurements that changed. Each row shows its own measurement interval. Evidence measured over a different interval than the event is labelled that way and is never treated as the event's cause. A collection line summarises incomplete measurements in plain language ("Some protected directories could not be inspected (78 locations)").
 4. **Technical details**: collapsed native disclosure groups for APFS, Virtual memory, Temporary files, Application data, Collector status, Raw command output and Provenance. Reading IDs, UUIDs, exact bytes, exit codes and epoch timestamps live here. **Copy Details** copies the whole analysis with provenance; **Copy Raw Output** copies the stored diagnostic output unabridged. Text in the technical sections is selectable.
 
@@ -27,9 +45,9 @@ APFS volume differences are matched by UUID between the displayed readings, so e
 
 The secondary chart uses actual stored capacity points, snaps hover details to a real reading, and draws the 25 GB / 15 GB reference lines. It breaks lines at container changes and gaps over 75 minutes. Its time range is independent of history filters.
 
-The GUI opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`, takes short consistent read transactions, closes them before projecting events, and refreshes about every 30 seconds while the app is active with a visible window. Apart from the read-only live capacity reading described above, it performs no directory scans and launches no monitoring commands except when you explicitly choose Enable, Update, Repair or Disable background monitoring, or Allow Low-Space Notifications, in Settings. Those actions run the bundled background monitor's own `install`, `uninstall` or `authorize` command after a confirmation that explains what changes. It does not change the existing writer's journal mode, schema, data, or retention. Viewer preferences, external-drive choices, operational requests and catalog reader leases are stored locally. Only the background monitor writes capacity history and inventory SQL.
+The historical viewer opens SQLite with `SQLITE_OPEN_READONLY` and `query_only`, takes short consistent read transactions, closes them before projecting events, and refreshes about every 30 seconds while the app is active with a visible window. Apart from the read-only live capacity reading described above, it performs no directory scans and launches no monitoring commands except when you explicitly choose Enable, Update, Repair or Disable background monitoring, or Allow Low-Space Notifications, in Settings. Those actions run the bundled background monitor's own `install`, `uninstall` or `authorize` command after a confirmation that explains what changes. It does not change the existing writer's journal mode, schema, data, or retention. Viewer preferences, external-drive choices, operational requests and catalog reader leases are stored locally. Only the background monitor writes capacity history and inventory SQL.
 
-**Live capacity.** The overview leads with *Available now*, a live reading of the APFS container's free and total space. It comes from one in-process `statfs()` on the Data volume, the same numbers as the monitor's `CapacityFree` and `CapacityCeiling`. The viewer reads it when it opens, when it becomes active, every 60 seconds while its window is visible and the app is active, and on ⌘R; overlapping requests are dropped. The status line shows when it last updated, and a reading older than 3 minutes, or one whose refresh failed, is marked *Stale*. Live readings are never stored, never evaluated for alerts, never notify, and never start the collector; the viewer does not link the notifications framework. The last background reading appears on its own line. Any difference from it is shown only when the live Data volume UUID belongs to the recorded container, and it is labelled an observation comparison, not a recorded event. Events, the inspector and the chart ("Recorded available capacity") use recorded readings only.
+**Live capacity.** The overview leads with physical free space from an in-process `statfs()` on the Data volume. Recorded APFS capacity uses diskutil `CapacityFree` and `CapacityCeiling`; sequential readings and quota views can differ. Foundation ordinary, important-use and opportunistic availability are kept separate. Their difference from physical free space is not exact purgeable or reclaimable storage. The viewer reads it when it opens, when it becomes active, every 60 seconds while its window is visible and the app is active, and on ⌘R; overlapping requests are dropped. The status line shows when it last updated, and a reading older than 3 minutes, or one whose refresh failed, is marked *Stale*. Live readings are never stored, never evaluated for alerts, never notify, and never start the collector; the viewer does not link the notifications framework. The last background reading appears on its own line. Any difference from it is shown only when the live Data volume UUID belongs to the recorded container, and it is labelled an observation comparison, not a recorded event. Events, the inspector and the chart ("Recorded physical free capacity") use recorded readings only.
 
 **Appearance.** View → Appearance, or Storage Monitor → Settings (⌘,), offers System, Light and Dark. The choice is saved in the viewer's own preferences and applies only to Storage Monitor. System follows macOS, including later changes. The macOS appearance setting is never changed. The QA launch option `--appearance light|dark` overrides the choice for that launch without saving it.
 

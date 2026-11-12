@@ -5,3 +5,10 @@
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Host-specific acceptance data stays local; publish aggregate release verification instead.
+/artifacts/apfs-snapshot-acceptance/HEADLESS-ACCEPTANCE.json
+/artifacts/apfs-snapshot-acceptance/GUI-ACCEPTANCE.json
+/artifacts/apfs-snapshot-acceptance/FINAL-CHECKS.json
+/artifacts/apfs-snapshot-acceptance/INDEPENDENT-REPORT-REVIEW.json
+/artifacts/apfs-snapshot-management/VALIDATION.json

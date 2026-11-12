@@ -35,7 +35,7 @@ enum EventPanelText {
         out.append(causes.joined(separator: "\n"))
 
         let b = analysis.breakdown
-        var breakdown = ["STORAGE BREAKDOWN", "Previous available: \(bytes(b.previousFree))", "Current available: \(bytes(b.currentFree))", "Net change: \(bytes(b.net, signed: true))"]
+        var breakdown = ["STORAGE BREAKDOWN", "Previous physical free: \(bytes(b.previousFree))", "Current physical free: \(bytes(b.currentFree))", "Net change: \(bytes(b.net, signed: true))"]
         if let start = b.start { breakdown.append("Interval: \(CauseAnalyzer.interval(start, b.end)) (\(CauseAnalyzer.span(start, b.end)))") }
         if b.hasVolumes {
             breakdown.append("Allocation change by volume:")
@@ -44,6 +44,9 @@ enum EventPanelText {
         if let text = b.reconciliationText { breakdown.append(text) }
         breakdown += analysis.attribution
         out.append(breakdown.joined(separator: "\n"))
+        if event.observation != nil {
+            out.append((["SNAPSHOTS AND SYSTEM ACTIVITY"] + StorageIntelligence.signals(event).map { "\($0.confidence.rawValue): \($0.title)\n\($0.detail)" }).joined(separator: "\n"))
+        }
 
         var evidence = ["SUPPORTING EVIDENCE"]
         if analysis.evidence.isEmpty { evidence.append(event.diagnostics.isEmpty && event.interval == nil ? "No diagnostic snapshot or folder measurements were recorded for this event." : "No relevant measurements changed.") }
@@ -60,6 +63,7 @@ enum EventPanelText {
     static func technical(_ event: StorageEvent) -> String {
         var lines = ["TECHNICAL DETAILS", "Event: \(event.id) · \(event.source)", "Recorded: \(stamp(event.timestamp))"]
         if let start = event.previousTime { lines.append("Compared with: \(stamp(start))") }
+        if let inventory = StorageIntelligence.inventoryText(event) { lines.append(inventory) }
         if let reading = event.measurement {
             lines.append("Container: \(reading.container) · reading #\(reading.id)" + (event.previousMeasurement.map { " vs #\($0.id)" } ?? ""))
             for volume in reading.volumes {
@@ -107,6 +111,7 @@ enum EventPanelText {
             }
         }
         if let i = event.interval { out.append("=== Folder evidence for reading #\(i.readingId)\n\(i.raw)") }
+        if let observation = event.observation { out.append("=== Snapshot/system observation\n" + ((try? observation.encoded()) ?? "Unreadable observation")) }
         if out.isEmpty { out.append("No raw diagnostic output was recorded for this event.") }
         return out.joined(separator: "\n\n")
     }

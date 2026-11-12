@@ -199,7 +199,9 @@ struct MonitoringSetupStatus: Equatable {
         • A one-time folder baseline used to explain changes.
         • Disk inventory indexing at low priority. The first pass over a large disk can take hours.
 
-        Monitoring covers the internal startup volume only, for your logged-in account. Checks run approximately every 30 minutes, stop while logged out, and may be delayed by sleep. Low-space thresholds are fixed at 25 GB and 15 GB. Growth alerts use a drop of 3 GB since the previous reading or 5 GB within two hours. All thresholds use decimal GB.
+        Monitoring covers the internal startup volume and external volumes you explicitly enroll, for your logged-in account. Checks run approximately every 30 minutes, stop while logged out, and may be delayed by sleep. Read-only APFS snapshot inventories and system allocation observations accompany checks; snapshots are never created, mounted or deleted. Low-space thresholds are fixed at 25 GB and 15 GB. Growth alerts use a drop of 3 GB since the previous reading or 5 GB within two hours. All thresholds use decimal GB.
+
+        Full Disk Access is optional. It widens the helper's access to file names, sizes and change metadata in protected locations such as Mail, Messages and Safari data. File contents are not needed for storage indexing. Without it, capacity monitoring and accessible folders keep working; unreadable or deferred areas remain visible as incomplete coverage. Full Disk Access does not override every macOS restriction or grant snapshot-management privileges.
 
         History is stored in ~/Library/Application Support/MacBook Storage Monitor. You can turn this off at any time; your history is kept.
         """
@@ -207,7 +209,7 @@ struct MonitoringSetupStatus: Equatable {
     static let permissions = """
         Without extra permission, Storage Monitor measures free space, APFS volumes and every folder macOS lets it read. Protected places, such as other users' folders and some app data in ~/Library (Mail, Messages, Safari), are reported as inaccessible and never guessed.
 
-        Full Disk Access is optional. Granting it to the background monitor lets it measure those protected folders; monitoring keeps working without it. macOS never grants it silently: open System Settings → Privacy & Security → Full Disk Access, click +, and add ~/Applications/MacBook Storage Monitor.app (the background monitor, not this window).
+        Full Disk Access is optional. It allows more file names, sizes and filesystem-change metadata to be inspected; storage indexing does not read file contents. Coverage can still be partial because of other permissions, time limits, exclusions or disconnected drives. It is not snapshot-management authorization, and it does not bypass every system restriction. macOS never grants it silently: open System Settings → Privacy & Security → Full Disk Access, click +, and add ~/Applications/MacBook Storage Monitor.app (the background monitor, not this window).
         """
 }
 

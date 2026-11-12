@@ -17,6 +17,94 @@ enum TechnicalSection: String, CaseIterable, Identifiable {
     static let expandedByDefault: Set<TechnicalSection> = []
 }
 
+enum StorageConfidence: String, Sendable {
+    case measured = "Measured fact", strongCorrelation = "Strong correlation", plausible = "Plausible explanation", unknown = "Unknown cause"
+}
+struct StorageSignal: Identifiable, Sendable {
+    let id: String
+    let confidence: StorageConfidence
+    let title: String
+    let detail: String
+}
+
+/// These signals explain observations. They never allocate a second set of bytes to the
+/// physical container: snapshots, swap, folders and APFS allocation can describe the same blocks.
+enum StorageIntelligence {
+    static func signals(_ event: StorageEvent) -> [StorageSignal] {
+        guard let observation = event.observation else { return [] }
+        var signals = [StorageSignal]()
+        func add(_ id: String, _ confidence: StorageConfidence, _ title: String, _ detail: String) {
+            signals.append(StorageSignal(id: id, confidence: confidence, title: title, detail: detail))
+        }
+        if let reading = event.measurement {
+            add("physical", .measured, "Physical capacity", "\(capacity(reading.free)) free; \(capacity(reading.used)) allocated in this shared container. Source: diskutil CapacityFree and CapacityCeiling minus CapacityFree. Volume and file totals are separate views of these blocks.")
+        }
+        let comparison = event.snapshotComparison
+        let appeared = comparison.changes.filter { $0.kind == .appeared }
+        let disappeared = comparison.changes.filter { $0.kind == .disappeared }
+        if !comparison.changes.isEmpty {
+            let names = comparison.changes.prefix(6).map { "\($0.volumeName): \($0.snapshot.name) \($0.kind.rawValue)" }
+            add("snapshots", .measured, "Snapshots: \(appeared.count) appeared, \(disappeared.count) disappeared", names.joined(separator: "; ") + (comparison.changes.count > 6 ? "; more in the inventory comparison." : ".") + " This compares recorded identities, not exact creation/deletion times or file contents.")
+        } else {
+            add("snapshots", comparison.comparedVolumes > 0 ? .measured : .unknown, "Snapshot comparison", comparison.comparedVolumes > 0 ? "No identity changes in \(comparison.comparedVolumes) comparable volume inventories. Snapshots created and removed between checks can be missed." : "No continuous pair of complete inventories. Current successful inventories form a baseline; absence is not inferred from a failed read.")
+        }
+        if !disappeared.isEmpty, (event.delta ?? 0) > 0 {
+            add("thinning", .plausible, "Snapshot disappearance near capacity recovery", "Possible snapshot deletion or thinning was observed near \(changeMagnitude(event.delta!)) of container recovery. Timing is not atomic, APFS frees blocks asynchronously, and other volumes or file changes may contribute. No recovered byte amount is assigned to snapshots.")
+        }
+        if appeared.contains(where: { $0.snapshot.name.hasPrefix("com.apple.os.update") }) || disappeared.contains(where: { $0.snapshot.name.hasPrefix("com.apple.os.update") }) {
+            add("update-snapshot", .plausible, "macOS update snapshot activity", "An identity with Apple's OS-update naming prefix changed. This is a name-based clue, not confirmation that an update caused the capacity change.")
+        }
+        if event.observationContinuous, let previous = event.previousObservation,
+           let now = observation.swapAllocatedBytes, let before = previous.swapAllocatedBytes {
+            let delta = now - before
+            add("swap", .measured, "Swap allocation \(signedChange(delta))", "sysctl vm.swapusage: \(capacity(before)) → \(capacity(now)) allocated; current usage \(observation.swapUsedBytes.map { capacity($0) } ?? "unknown"). Allocation and usage are different measurements.")
+            let vmDelta = CauseAnalyzer.breakdown(event).volumes.filter { $0.role == "VM" }.reduce(Int64(0)) { $0 + $1.delta }
+            if delta != 0, vmDelta != 0, (delta > 0) == (vmDelta > 0),
+               abs(Double(vmDelta) - Double(delta)) <= max(1_048_576, abs(Double(vmDelta)) * 0.05) {
+                add("vm-correlation", .strongCorrelation, "VM allocation and swap moved together", "The VM-role volume changed by \(signedChange(vmDelta)) near the swap-allocation change. They may describe the same storage and are not added together. The responsible application and memory-pressure cause were not recorded.")
+            }
+        } else if let allocated = observation.swapAllocatedBytes {
+            add("swap", .measured, "Swap allocation baseline", "\(capacity(allocated)) allocated via sysctl; no continuous previous system observation to compare.")
+        }
+        if let interval = CauseAnalyzer.interval(event) {
+            let created = interval.groups.reduce(0) { $0 + $1.created }, removed = interval.groups.reduce(0) { $0 + $1.removed }
+            let modified = interval.groups.reduce(0) { $0 + $1.modified }
+            add("files", interval.activityStatus == "complete" ? .measured : .unknown, "File activity", "\(interval.activityEvents) coalesced events recorded. Stored groups include \(created) additions, \(removed) removals and \(modified) modifications. Groups can be capped; events are not byte amounts. Coverage: \(interval.activityStatus); \(interval.inaccessibleCount) inaccessible areas.")
+        }
+        if event.observationContinuous, let previous = event.previousObservation {
+            for current in observation.capacities {
+                guard let old = previous.capacities.first(where: { $0.volumeUUID.caseInsensitiveCompare(current.volumeUUID) == .orderedSame }),
+                      let now = current.importantAvailableBytes, let before = old.importantAvailableBytes, now != before else { continue }
+                add("available:\(current.volumeUUID)", .measured, "macOS important-use availability \(signedChange(now - before))", "\(current.path): a policy-based estimate changed. Available-minus-free is not an exact purgeable or reclaimable measurement; estimates can change without file activity.")
+            }
+        }
+        if (event.delta ?? 0) != 0 {
+            add("unresolved", .unknown, "Exact capacity cause remains unresolved", "Capacity and APFS allocation are measured. File activity, snapshots, clone extents, metadata, purgeable data and VM signals can overlap. No additive attribution or exact reclaimable amount is claimed.")
+        }
+        return signals
+    }
+
+    static func inventoryText(_ event: StorageEvent) -> String? {
+        guard let observation = event.observation else { return nil }
+        var lines = ["Capacity reading: \(EventPanelText.stamp(event.timestamp))", "Observation completed: \(EventPanelText.stamp(Date(timeIntervalSince1970: observation.finishedAt)))", observation.detail]
+        lines += event.snapshotComparison.limitations
+        for inventory in observation.inventories {
+            let count = inventory.status == .complete ? "\(inventory.snapshots.count) snapshots" : "Snapshot count unknown"
+            lines.append("\n\(inventory.volumeName) · \(inventory.volumeUUID)\n\(inventory.status.rawValue) at \(EventPanelText.stamp(Date(timeIntervalSince1970: inventory.observedAt))) · \(count)\n\(inventory.detail)")
+            for snapshot in inventory.snapshots {
+                let created = snapshot.createdAt.map { EventPanelText.stamp(Date(timeIntervalSince1970: $0)) } ?? "Unknown"
+                lines.append("\(snapshot.name)\nUUID \(snapshot.uuid) · XID \(snapshot.xid.map(String.init) ?? "Unknown")\nCreated: \(created) · private size: \(snapshot.privateBytes.map(exactBytes) ?? "Unknown") · purgeable flag: \(snapshot.purgeable.map(String.init) ?? "Unknown")")
+            }
+        }
+        if observation.inventories.isEmpty { lines.append("No APFS snapshot inventories recorded for this scope.") }
+        for current in observation.capacities {
+            lines.append("\n\(current.path) · \(current.volumeUUID) at \(EventPanelText.stamp(Date(timeIntervalSince1970: current.observedAt)))\nFoundation available: \(current.availableBytes.map(exactBytes) ?? "Unknown")\nAvailable for important usage: \(current.importantAvailableBytes.map(exactBytes) ?? "Unknown")\nAvailable for opportunistic usage: \(current.opportunisticAvailableBytes.map(exactBytes) ?? "Unknown")\n\(current.detail)")
+        }
+        if let counters = observation.vmCounters { lines.append("\nVM counters (Mach; memory pages/counters, not APFS disk bytes):\n" + counters.keys.sorted().map { "\($0): \(counters[$0]!)" }.joined(separator: "\n")) }
+        return lines.joined(separator: "\n")
+    }
+}
+
 enum EvidenceClass: Int, Comparable, Sendable {
     case confirmed, likely, possible, unknown
     static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
@@ -254,8 +342,8 @@ enum CauseAnalyzer {
     static func headline(_ breakdown: StorageBreakdown) -> String {
         guard let net = breakdown.net else { return "No earlier reading to compare with." }
         let span = breakdown.start.map { " between \(interval($0, breakdown.end))" } ?? ""
-        if net == 0 { return "Available capacity did not change\(span)." }
-        return "Available capacity \(net < 0 ? "decreased" : "increased") by \(changeMagnitude(net))\(span)."
+        if net == 0 { return "Physical free capacity did not change\(span)." }
+        return "Physical free capacity \(net < 0 ? "decreased" : "increased") by \(changeMagnitude(net))\(span)."
     }
 
     // MARK: Ranking
@@ -266,7 +354,7 @@ enum CauseAnalyzer {
         }
         guard event.measurement != nil || !event.diagnostics.isEmpty || !event.alerts.isEmpty else { return ([], "Insufficient diagnostic evidence.") }
         guard let net = breakdown.net else { return ([], event.measurement == nil ? "This record has no capacity readings to compare." : "This is the first reading for this container, so there is no earlier measurement to compare.") }
-        guard net != 0 else { return ([], "Available capacity did not change, so there is nothing to attribute.") }
+        guard net != 0 else { return ([], "Physical free capacity did not change, so there is nothing to attribute.") }
         let loss = net < 0
         let matched = event.comparisons.filter { matchesEvent($0, event) }
         var causes = [LikelyCause]()
@@ -482,7 +570,7 @@ struct EventPlainSummary: Equatable, Sendable {
         if let net = b.net, net != 0 {
             let amount = changeMagnitude(net)
             let when = b.start.map { " between \($0.formatted(date: .omitted, time: .shortened)) and \(b.end.formatted(date: .omitted, time: .shortened))" } ?? ""
-            whatHappened = net < 0 ? "Your Mac lost \(amount) of available storage\(when)." : "Your Mac gained \(amount) of available storage\(when)."
+            whatHappened = net < 0 ? "Your Mac lost \(amount) of physical free storage\(when)." : "Your Mac gained \(amount) of physical free storage\(when)."
         } else { whatHappened = analysis.headline }
 
         guard let top = analysis.causes.first else {
@@ -542,7 +630,7 @@ struct EventPlainSummary: Equatable, Sendable {
     static func offsetName(_ volume: VolumeChange) -> String {
         switch volume.role {
         case "VM": return "virtual memory"
-        case "Data": return "files and apps"
+        case "Data": return "the Data volume"
         default: return "macOS system areas"
         }
     }
@@ -551,8 +639,8 @@ struct EventPlainSummary: Equatable, Sendable {
         switch cause.title {
         case "Virtual memory growth": return "virtual memory grew"
         case "Virtual memory reduction": return "virtual memory shrank"
-        case "Data volume growth": return "files and apps grew"
-        case "Data volume reduction": return "files and apps shrank"
+        case "Data volume growth": return "Data volume allocation grew"
+        case "Data volume reduction": return "Data volume allocation shrank"
         case "Other system allocation": return "macOS system areas grew"
         case "Other system allocation released": return "macOS system areas shrank"
         default: return cause.title.lowercased()
@@ -563,14 +651,14 @@ struct EventPlainSummary: Equatable, Sendable {
         let amount = changeMagnitude(cause.delta)
         switch cause.title {
         case "Virtual memory growth":
-            return "macOS used \(amount) more disk space for virtual memory (swap: memory moved onto the disk when apps need more than the Mac's RAM)."
+            return "The virtual memory volume allocated \(amount) more disk space. It holds swap: memory moved onto disk. Separate swap counters are needed to establish how closely swap allocation changed."
         case "Virtual memory reduction":
-            return "macOS released \(amount) of disk space it had been using for virtual memory (swap)."
+            return "The virtual memory volume released \(amount) of allocated space. Swap usage and allocation are separate supporting measurements."
         case "Data volume growth":
             let folder = CauseAnalyzer.drivingFolders(event).first
-            return "Files and apps on your Mac took up \(amount) more space." + (folder.map { " The largest measured growth was in \(($0.path as NSString).abbreviatingWithTildeInPath) (\(signedChange($0.allocatedDelta)))." } ?? " Which folders grew was not recorded.")
+            return "The Data volume allocated \(amount) more space. Files, snapshots and filesystem metadata can contribute." + (folder.map { " The largest measured folder growth was in \(($0.path as NSString).abbreviatingWithTildeInPath) (\(signedChange($0.allocatedDelta)))." } ?? " Which folders grew was not recorded.")
         case "Data volume reduction":
-            return "Files and apps on your Mac took up \(amount) less space."
+            return "The Data volume released \(amount) of allocated space. File removal, snapshot thinning and metadata changes are possible mechanisms; the allocation measurement alone does not distinguish them."
         case "Other system allocation":
             return "macOS system areas (such as software updates) used \(amount) more space."
         case "Other system allocation released":

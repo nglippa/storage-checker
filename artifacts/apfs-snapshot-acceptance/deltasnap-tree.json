@@ -1,0 +1,75 @@
+{
+  "sha": "c5742f1e61fcedc39742a4ca1ce1c5f959954bfb",
+  "url": "https://api.github.com/repos/scaleninja/deltasnap/git/trees/c5742f1e61fcedc39742a4ca1ce1c5f959954bfb",
+  "tree": [
+    {
+      "path": ".claude-plugin",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "41d3a306b0e3df001cad361c5fa83e3f70ddadf8",
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/trees/41d3a306b0e3df001cad361c5fa83e3f70ddadf8"
+    },
+    {
+      "path": ".claude-plugin/marketplace.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f19e9d0faa611c43b84f316b150b07d42d64b010",
+      "size": 777,
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/blobs/f19e9d0faa611c43b84f316b150b07d42d64b010"
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f9a3c80cd3128305a33ad83a8d058774bfc1f6ef",
+      "size": 531,
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/blobs/f9a3c80cd3128305a33ad83a8d058774bfc1f6ef"
+    },
+    {
+      "path": ".codex-plugin",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c046821c3cb487da139a81445e8e69a8ebb5d6a1",
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/trees/c046821c3cb487da139a81445e8e69a8ebb5d6a1"
+    },
+    {
+      "path": ".codex-plugin/plugin.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "be44bfd3993ae9d7f001bb1bfd6ee810d67cca4d",
+      "size": 231,
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/blobs/be44bfd3993ae9d7f001bb1bfd6ee810d67cca4d"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33f0e199594d6a85fe7c56b8bccc0bb6552a3698",
+      "size": 2862,
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/blobs/33f0e199594d6a85fe7c56b8bccc0bb6552a3698"
+    },
+    {
+      "path": "skills",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "eb74f4ed6b863df7030a2d36e7c7b9c252efffa2",
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/trees/eb74f4ed6b863df7030a2d36e7c7b9c252efffa2"
+    },
+    {
+      "path": "skills/deltasnap",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f9e76e987cb1154d57475afb17be88f5a11edd0f",
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/trees/f9e76e987cb1154d57475afb17be88f5a11edd0f"
+    },
+    {
+      "path": "skills/deltasnap/SKILL.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e077819492c9e275e270f97715934323ef60a767",
+      "size": 6902,
+      "url": "https://api.github.com/repos/scaleninja/deltasnap/git/blobs/e077819492c9e275e270f97715934323ef60a767"
+    }
+  ],
+  "truncated": false
+}

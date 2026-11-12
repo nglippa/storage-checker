@@ -93,7 +93,7 @@ struct ViewerConfiguration {
     @Published private(set) var externalRuntime: LaunchdState?
     private var runtimeTask: Task<Void, Never>?
     private var lastRuntimeCheck: Date?
-    @Published var section = ViewerConfiguration.current.isQA && CommandLine.arguments.contains("--open-monitoring") ? "history" : "inventory"
+    @Published var section = ViewerConfiguration.current.isQA && CommandLine.arguments.contains("--open-snapshots") ? "snapshots" : (ViewerConfiguration.current.isQA && CommandLine.arguments.contains("--open-monitoring") ? "history" : "inventory")
     private var selectionSerial: UInt64 = 0
     private var targetsTask: Task<Void, Never>?
     private var targetLoadSerial: UInt64 = 0
