@@ -4,7 +4,17 @@
 
 A local, native universal macOS utility that checks the internal APFS container and chosen external drives at login and every half hour (`:00` and `:30`). No Terminal window needs to stay open. launchd coalesces calendar checks missed during sleep into a check after waking. Monitoring starts after the user logs in; a logged-out user does not have an active LaunchAgent.
 
-## Version 3.0.1
+## Version 3.1.0
+
+[Download Storage Monitor 3.1.0](https://github.com/nglippa/storage-checker/releases/tag/v3.1.0) · [Release record](STORAGE-MONITOR-3.1.0-RELEASE.md)
+
+This release adds **Start Index** without background monitoring: indexing, Atlas
+and saved catalogs work with monitoring off, and external drives can be indexed
+on demand. It also adds **Request Time Machine Snapshot…** with a private request
+history. See the release record for what was verified and what remains
+**NOT VERIFIED**.
+
+### Version 3.0.1
 
 [Download Storage Monitor 3.0.1](https://github.com/nglippa/storage-checker/releases/tag/v3.0.1) · [Release record](STORAGE-MONITOR-3.0.1-RELEASE.md)
 
@@ -115,17 +125,36 @@ The installed executable works without this checkout:
 "$HOME/Applications/MacBook Storage Monitor.app/Contents/MacOS/StorageMonitor" status
 ```
 
+## Indexing and Atlas without background monitoring
+
+Available from Storage Monitor 3.1.0.
+
+Open Storage Monitor and choose **Start Index**. Files and folders become
+available in the browser and Atlas as their listings are committed. Keep the app
+running while indexing; Pause stops the job, and quitting stops the app-owned
+worker. Saved catalogs remain browsable. Nothing is installed in Login Items and
+background monitoring does not need to be enabled.
+
+Full Disk Access is optional for protected folders. Grant it to Storage Monitor
+in System Settings → Privacy & Security → Full Disk Access, reopen the app, and
+choose Start Index again. Inaccessible areas remain labeled rather than guessed.
+Background Monitoring is a separate choice for recurring capacity checks and
+scheduled updates. Development viewer builds bundle the indexing engine by
+default; build it first with `scripts/build.sh`.
+
+See [on-demand indexing and validation](ON-DEMAND-INDEXING.md).
+
 ## External drives
 
-The window's **Drive** selector scopes both Storage and Monitoring. Open **Manage external drives** to enable monitoring and indexing for chosen connected drives. Discovery alone never enrolls a drive. Supported filesystems are APFS, HFS+ and exFAT on verified local, physical external storage, including external PCIe SSDs. Network mounts, disk images, system helpers, Time Machine destinations and unverifiable identities are excluded.
+The window's **Drive** selector scopes both Storage and Monitoring. Open **Manage external drives** and choose **Start Index** for a connected drive, then View to browse its catalog. Discovery alone never enrolls a drive. Supported filesystems are APFS, HFS+ and exFAT on verified local, physical external storage, including external PCIe SSDs. Network mounts, disk images, system helpers, Time Machine destinations and unverifiable identities are excluded.
 
-Chosen drives resume when they reconnect. Identity follows the volume UUID, rather than the drive name or mount path. Duplicate mounted UUIDs stop work; a changed known physical backing or APFS capacity scope requires explicit re-enrollment. **Pause indexing** keeps capacity monitoring active. **Disable** stops both and retains recorded history and the last published catalog.
+With background monitoring enabled, chosen drives resume when they reconnect. Without it, reconnect the drive and choose Start Index. Identity follows the volume UUID, rather than the drive name or mount path. Duplicate mounted UUIDs stop work; a changed known physical backing or APFS capacity scope requires explicit re-enrollment. **Pause indexing** preserves any separately enabled capacity monitoring. **Disable** stops work for the drive and retains recorded history and the last published catalog.
 
 Each external volume has its own index. APFS siblings share one container capacity history and alert evaluation, labelled with all enrolled sibling names. A gap longer than 75 minutes starts a fresh change baseline; current low-space thresholds still apply. exFAT folders refresh on schedule or request, without claiming continuous file-event history. External views do not attach startup swap, cache or application attribution, or offer cleanup plans.
 
 Working databases, capacity history and immutable published catalogs stay on internal storage under `external-volumes/` inside the monitor's data directory. The app writes no metadata to an indexed external drive. Offline catalogs remain browsable with their measured time; live Finder actions require the selected mount to be revalidated. One dispatcher serializes startup and external indexing and resumes fairly between targets.
 
-External support requires a matching background monitor and its updated mount/registry wake configuration. Settings detects this capability independently of the release version. Building a development app does not update the installed monitor.
+Manual external indexing uses the app's bundled engine and does not require background monitoring. Automatic reconnect handling and scheduled external checks require the matching background monitor and updated mount/registry wake configuration. Building a development app does not update the installed monitor.
 
 The corresponding helper commands are `external-discover`, `external-list`, `external-enable UUID`, `external-disable UUID`, `external-pause UUID`, `external-resume UUID`, `external-refresh UUID`, and `external-check`. Discovery reads bounded disk metadata; enabling is a separate action. As with other commands, `--data-dir` selects an isolated internal support directory. See [external-volume verification](docs/EXTERNAL-VOLUMES-VERIFICATION.md) for tested behavior and remaining native/physical checks.
 
@@ -196,7 +225,7 @@ Every check also records which monitored folders changed between this reading an
 
 **Full Disk Access.** Without it, macOS shows a permission prompt or an "app data" notification when a background process opens Desktop, Documents, Downloads, Pictures, Music, Movies, iCloud, app containers, or other apps' data in `~/Library`. Storage Monitor therefore never opens those folders, or any Application Support folder it was not already reading. If a folder still fails to answer, a watchdog marks it blocked and moves on. It reports them as inaccessible and keeps monitoring everything else.
 
-To include them, open **System Settings → Privacy & Security → Full Disk Access**, click **+**, and add `~/Applications/MacBook Storage Monitor.app` (the background monitor, not the viewer). The monitor never asks for this itself. Root-only and SIP-protected system folders stay inaccessible either way. The overview's *Filesystem coverage* line and its tooltip show the current state, pending work, inaccessible regions and the last successful reconciliation.
+For indexing from the viewer, open **System Settings → Privacy & Security → Full Disk Access**, click **+**, and add Storage Monitor. Scheduled work separately uses `~/Applications/MacBook Storage Monitor.app`. Permissions are granted by the user; the app never changes them silently. Root-only and SIP-protected system folders can remain inaccessible either way. The overview's *Filesystem coverage* line and its tooltip show the recorded state, pending work, inaccessible regions and the last successful reconciliation.
 
 In the inspector, measured folder growth and any process correlation appear under the Data volume cause. The breakdown states the unattributed remainder as an estimate; folder sizes are never added to APFS totals. Supporting evidence lists the folders, changed-file counts and correlated processes. Technical details gains Folder growth, File activity and Processes sections, collapsed by default.
 

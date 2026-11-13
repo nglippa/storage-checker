@@ -79,6 +79,22 @@ private struct WaveFixture {
         let args = ["inventory-work", "--budget", "120"]
         do {
             let fixture = WaveFixture(); defer { fixture.remove() }
+            try fixture.enroll([waveA, waveB])
+            let tape = WaveTape()
+            let dependencies = fixture.dependencies(tape, descriptors: [waveA, waveB].map(fixture.drive))
+            _ = try await indexSelectedExternalVolume(uuid: waveA, directory: fixture.base, budget: 10, dependencies: dependencies)
+            try check(tape.runs == [waveA] && tape.validated == [waveA], "manual indexing runs only the selected external drive, never startup or another enrolled drive")
+            _ = try fixture.registry.setIndexingPaused(uuid: waveA, paused: true)
+            let paused = try await indexSelectedExternalVolume(uuid: waveA, directory: fixture.base, budget: 10, dependencies: dependencies)
+            try check(paused.reason == "cancelled" && !paused.runnableWorkRemains && tape.runs == [waveA], "paused selected drive is not restarted by a manual slice")
+            do {
+                _ = try await indexSelectedExternalVolume(uuid: "99999999-9999-4999-8999-999999999999", directory: fixture.base, budget: 10, dependencies: dependencies)
+                fatalError("unknown manual target accepted")
+            } catch {}
+            try check(tape.runs == [waveA], "unregistered manual targets cannot fall back to startup indexing")
+        }
+        do {
+            let fixture = WaveFixture(); defer { fixture.remove() }
             let disabled = "33333333-3333-4333-8333-333333333333", paused = "44444444-4444-4444-8444-444444444444"
             let offline = "55555555-5555-4555-8555-555555555555", ambiguous = "66666666-6666-4666-8666-666666666666", failed = "77777777-7777-4777-8777-777777777777"
             try fixture.enroll([waveA, waveB, disabled, paused, offline, ambiguous, failed])

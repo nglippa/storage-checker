@@ -77,8 +77,8 @@ func viewerIdentityTests(root: URL, _ test: (Bool, String) throws -> Void) throw
     // Release version metadata: one source, and the build number never goes back.
     let version = try source("scripts/version.env")
     func value(_ key: String) -> String? { version.components(separatedBy: "\n").first { $0.hasPrefix(key + "=") }.map { String($0.dropFirst(key.count + 1)) } }
-    try test(value("STORAGE_MONITOR_RELEASE_VERSION") == "3.0.1" && (Int(value("STORAGE_MONITOR_RELEASE_BUILD") ?? "") ?? 0) > 22,
-             "the release is 3.0.1 with a build number above every earlier build (3.0.0 was 22)")
+    try test(value("STORAGE_MONITOR_RELEASE_VERSION") == "3.1.0" && (Int(value("STORAGE_MONITOR_RELEASE_BUILD") ?? "") ?? 0) > 23,
+             "the release is 3.1.0 with a build number above every earlier build (3.0.1 was 23)")
     for path in ["scripts/build.sh", "scripts/build-gui.sh", "scripts/build-dmg.sh"] {
         let text = try source(path)
         try test(text.contains(". \"$ROOT/scripts/version.env\"") && text.contains("${STORAGE_MONITOR_VERSION:-$STORAGE_MONITOR_RELEASE_VERSION}")

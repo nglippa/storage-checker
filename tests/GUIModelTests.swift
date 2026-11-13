@@ -548,8 +548,8 @@ import SQLite3
         let noIndex = StorageAccountingPresentation(used: 230_900_000_000, free: 14_760_000_000, volumes: airVolumes, inventory: nil)
         try test(noIndex.unattributed == nil && noIndex.summary == "230.9 GB used of 245.66 GB" && noIndex.notes.isEmpty,
                  "without an inventory only the macOS figures are shown")
-        try test(StorageAccountingPresentation.fullDiskAccessGuidance.contains("~/Applications") && StorageAccountingPresentation.fullDiskAccessGuidance.contains("not by this app"),
-                 "Full Disk Access guidance names the background monitor in ~/Applications, not the viewer")
+        try test(StorageAccountingPresentation.fullDiskAccessGuidance.contains("this app") && StorageAccountingPresentation.fullDiskAccessGuidance.contains("Start Index") && StorageAccountingPresentation.fullDiskAccessGuidance.contains("without background monitoring"),
+                 "Full Disk Access guidance supports independent viewer indexing and optional background monitoring")
         // VoiceOver: the bar's label is the panel title; its value states activity truthfully.
         try test(active.accessibilityValue.contains("no completion estimate") && paused.accessibilityValue == "Paused; saved results remain available" && paused.title != active.title, "VoiceOver labels distinguish active and paused first-pass states without an estimate")
 

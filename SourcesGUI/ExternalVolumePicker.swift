@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ExternalVolumePicker: View {
     @ObservedObject var store: ViewerStore
+    @ObservedObject private var indexer: OnDemandIndexController
+    init(store: ViewerStore) { self.store = store; self.indexer = store.indexer }
     @State private var managing = false
     var body: some View {
         HStack(spacing: 6) {
@@ -11,7 +13,7 @@ struct ExternalVolumePicker: View {
                     Text(displayName(saved) + (saved.enabled ? "" : " (disabled)")).tag(saved.volumeUUID)
                 }
             }.pickerStyle(.menu).frame(maxWidth: 230).accessibilityIdentifier("storage.drive")
-            Button { managing.toggle(); store.refreshTargets(); store.refreshExternalRuntimeStatus(force: true) } label: { Image(systemName: "externaldrive") }
+            Button { managing.toggle(); if managing { store.externalControl("discover") }; store.refreshTargets(); store.refreshExternalRuntimeStatus(force: true) } label: { Image(systemName: "externaldrive") }
                 .help("Manage external drives").accessibilityLabel("Manage external drives").accessibilityIdentifier("storage.manageDrives")
                 .popover(isPresented: $managing) { management }
         }
@@ -19,7 +21,7 @@ struct ExternalVolumePicker: View {
     private var management: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("External drives").font(.headline)
-            Text("Chosen drives resume automatically when they reconnect.")
+            Text("Index a connected drive without enabling background monitoring.")
                 .font(.callout).foregroundStyle(.secondary)
             setupSteps
             if let error = store.externalError { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
@@ -34,10 +36,11 @@ struct ExternalVolumePicker: View {
                                 Group {
                                 if saved.enabled {
                                     Button(saved.indexingPaused ? "Resume indexing" : "Pause indexing") { store.externalControl(saved.indexingPaused ? "resume" : "pause", uuid: saved.volumeUUID) }
+                                        .disabled(saved.indexingPaused && indexer.isRunning)
                                     Button("Disable") { store.externalControl("disable", uuid: saved.volumeUUID) }
                                 } else { Button("Enable") { store.externalControl("enable", uuid: saved.volumeUUID) } }
                                 if backingChanged(saved) { Button("Re-enroll changed drive") { store.externalControl("reenroll", uuid: saved.volumeUUID) } }
-                                }.disabled(!store.externalSupportReady)
+                                }.disabled(!store.canIndexExternalDrives)
                             }.controlSize(.small)
                         }
                         Divider()
@@ -47,10 +50,10 @@ struct ExternalVolumePicker: View {
                             HStack {
                                 Text(drive.name).font(.body.weight(.medium))
                                 Spacer()
-                                Button("Enable monitoring & indexing") { if let uuid = try? drive.identity().uuid { store.externalControl("enable", uuid: uuid) } }
-                                    .controlSize(.small).disabled(!store.externalSupportReady || reason(drive) != nil)
+                                Button("Start Index") { if let uuid = try? drive.identity().uuid { store.externalControl("enable", uuid: uuid) } }
+                                    .controlSize(.small).disabled(!store.canIndexExternalDrives || indexer.isRunning || reason(drive) != nil)
                             }
-                            Text(reason(drive) ?? (drive.filesystem.uppercased() + " · connected, not monitored"))
+                            Text(reason(drive) ?? (drive.filesystem.uppercased() + " · connected, not indexed"))
                                 .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                         }
                     }
@@ -60,29 +63,19 @@ struct ExternalVolumePicker: View {
                 }
             }.frame(maxHeight: 360)
             HStack {
-                Button("Refresh connected drives") { store.externalControl("discover") }.disabled(!store.externalSupportReady)
+                Button("Refresh connected drives") { store.externalControl("discover") }.disabled(!store.canIndexExternalDrives)
                 Spacer(); Button("Done") { managing = false }
             }
-            Text("Pause stops indexing only. Disable stops both indexing and capacity monitoring; saved data is kept.").font(.caption).foregroundStyle(.secondary)
+            Text("Pause stops indexing. Saved catalogs remain available. When Background Monitoring is on, chosen drives also receive recurring capacity checks and index updates.").font(.caption).foregroundStyle(.secondary)
         }.padding(18).frame(width: 480)
     }
     /// The linking procedure as explicit, checkable steps, so a first-time user knows exactly what to do next.
     private var setupSteps: some View {
-        let ready = store.externalSupportReady
-        let connected = !(store.externalObservations?.descriptors ?? []).isEmpty
-        let linked = store.externalSettings.volumes.values.contains { $0.enabled }
         return VStack(alignment: .leading, spacing: 8) {
-            step(1, done: ready, "Turn on background monitoring",
-                 ready ? "Background monitoring is running." : store.externalSupportMessage + " In Settings, click “Enable Background Monitoring…” (or “Update…” / “Repair…”) and approve the prompt. If macOS later asks, allow Storage Monitor in System Settings → General → Login Items.") {
-                if !ready { SettingsLink { Text("Open Settings") }.controlSize(.small) }
-            }
-            step(2, done: connected, "Connect the drive",
-                 connected ? "A drive is connected." : "Plug in an APFS, HFS+ or exFAT drive and wait for it to appear in Finder, then click “Refresh connected drives” below.") { EmptyView() }
-            step(3, done: linked, "Link it",
-                 linked ? "At least one drive is linked." : "Click “Enable monitoring & indexing” next to the drive in the list below. If macOS asks for access to removable volumes, click Allow.") { EmptyView() }
-            step(4, done: linked && store.target.uuid != nil, "View it",
-                 "Choose the drive from the Drive menu in the toolbar (or click “View” below). The first index can take a while on a large drive.") { EmptyView() }
+            Text("Connect an APFS, HFS+ or exFAT drive and choose Start Index. Choose View to browse its results in Atlas or the file browser.")
+            Text("If macOS asks for access to removable volumes, choose Allow. Protected folders may also require Full Disk Access.")
         }
+        .font(.caption).foregroundStyle(.secondary)
         .padding(.vertical, 4)
         .accessibilityElement(children: .contain).accessibilityIdentifier("storage.driveSetupSteps")
     }
@@ -121,9 +114,9 @@ struct ExternalVolumePicker: View {
         return matches.count == 1 ? matches[0].name : saved.name
     }
     private func status(_ saved: ExternalVolumeRegistration) -> String {
-        if !saved.enabled { return "Monitoring disabled · saved data retained" }
+        if !saved.enabled { return "Drive disabled · saved data retained" }
         if backingChanged(saved) { return "Backing identity changed · explicit re-enrollment required" }
         if store.externalObservations?.descriptors.contains(where: { (try? $0.identity().uuid) == saved.volumeUUID }) != true { return "Disconnected · saved catalog available" }
-        return saved.indexingPaused ? "Indexing paused · capacity monitoring active" : "Monitoring & indexing enabled"
+        return saved.indexingPaused ? "Indexing paused · saved catalog available" : "Ready to index · background monitoring optional"
     }
 }

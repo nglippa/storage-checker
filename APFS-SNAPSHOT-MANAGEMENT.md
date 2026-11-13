@@ -19,17 +19,44 @@ The manual describes root and additional entitlement requirements; public kernel
 source distinguishes entitlement checks from root/device-write authorization.
 Neither is the same as paid membership, Developer ID signing or notarization.
 The follow-up [local capability investigation](APFS-LOCAL-CAPABILITY-INVESTIGATION.md)
-records actual direct-call and AMFI results, source limitations and the pending
-root-only probe. The installed
+records actual direct-call and AMFI results, source limitations and the root-only
+probe's `EPERM` result. The installed
 `diskutil apfs` supports listing and deleting snapshots, but exposes no general
-creation verb. `tmutil localsnapshot` is not used: Time Machine does not provide
-the requested per-volume ownership domain or arbitrary management policy.
+creation verb. `tmutil localsnapshot` is the supported creation route for Time
+Machine local snapshots. It requests snapshots of every APFS volume included in
+Time Machine, independently of the selected volume or privileged helper. macOS
+chooses names and Time Machine controls retention and deletion. Storage Monitor
+records the reported date token without adopting or managing these snapshots.
+The native helper route remains blocked pending an accepted snapshot entitlement.
 
 The native adapter calls `fs_snapshot_create`, `fs_snapshot_delete` and
 `fs_snapshot_mount` through a small C shim, and `unmount` for cleanup. Diskutil is
 used only for bounded read-only APFS discovery, inventories and role/container
 cross-checks. No private ioctl, unrestricted root shell, sudo, Time Machine
 configuration, snapshot revert or vendor engine is used.
+
+## Time Machine requests
+
+Snapshot Management exposes a separate **Request Time Machine Snapshot…** action
+with an explicit scope confirmation and a two-minute command limit. Requests run
+off the main actor. A private per-user journal under
+`~/Library/Application Support/MacBook Storage Monitor/time-machine-snapshots`
+records intent before execution and keeps up to 200 requests, newest first in
+the viewer, with started/finished times, outcome, returned token, exit code and
+bounded command output on demand. **Reported created** describes tmutil's report,
+not verified ownership or an independent backup.
+
+An uncertain/interrupted earlier result must be reviewed and explicitly
+acknowledged before a new request; there is no automatic retry. QA sessions
+disable this action and do not open or mutate the live request journal. Time
+Machine inventory entries stay observation-only and cannot enter Storage
+Monitor's deletion previews or retention ownership domain. No scheduling,
+deletion, thinning or Time Machine settings changes are provided by this route.
+
+This integration is unreleased; automated verification and outstanding native
+checks are recorded in [the upcoming release notes](STORAGE-MONITOR-TMUTIL-RELEASE-NOTES.md).
+
+## Native helper packaging
 
 The helper checks `com.apple.developer.vfs.snapshot`. Its actual availability to
 this product is unresolved; root or a self-assigned entitlement is insufficient.
@@ -47,7 +74,7 @@ with a real signing identity; it does not manufacture Apple authorization. The
 profile, kernel acceptance and daemon context still need acceptance testing.
 The implementation handoff preceded release authorization. Subsequent 3.0.0 packaging and publication are recorded in `STORAGE-MONITOR-3.0.0-RELEASE.md`.
 
-## Supported scope
+## Native helper supported scope
 
 | Volume/state | Lifecycle policy |
 | --- | --- |

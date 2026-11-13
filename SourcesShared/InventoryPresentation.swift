@@ -227,7 +227,7 @@ public struct InventoryStatusPresentation: Sendable {
     /// False only when current service evidence proves monitoring is off. Nil retains catalog-only semantics.
     public let updatesAreWaiting: Bool
 
-    public init(status: InventoryStatus, monitoringEnabled: Bool? = nil) {
+    public init(status: InventoryStatus, monitoringEnabled: Bool? = nil, independentIndexing: Bool = false) {
         updatesAreWaiting = monitoringEnabled == false && status.generation != nil &&
             (status.hasReconciliationWork || status.hasInitialDiscoveryWork || status.initialCompletion == .inProgress ||
              status.queuedDirectoryJobs > 0 || status.pendingDirectories > 0 || status.staleDirectories > 0)
@@ -253,11 +253,11 @@ public struct InventoryStatusPresentation: Sendable {
             condition = recorded.condition; affectedDirectories = recorded.affectedDirectories
             if recorded.condition == .paused || recorded.condition == .unavailable {
                 phase = recorded.phase; headline = recorded.headline
-                detail = recorded.detail + " Background indexing is also off. Enable or repair monitoring in Settings before indexing can resume."
+                detail = recorded.detail + (independentIndexing ? " Indexing is stopped. Choose Start Index to continue; background monitoring is optional." : " Background indexing is also off. Enable or repair monitoring in Settings before indexing can resume.")
             } else {
                 phase = .idle
                 headline = status.initialCompletion == .inProgress ? "Indexing is waiting" : "Folder updates are waiting"
-                detail = "Background indexing is off. Enable or repair monitoring in Settings to continue. Previous measurements and queued work are kept."
+                detail = independentIndexing ? "Indexing is stopped. Choose Start Index to continue. Previous measurements and queued work are kept; background monitoring is optional." : "Background indexing is off. Enable or repair monitoring in Settings to continue. Previous measurements and queued work are kept."
             }
         } else if status.lowSpacePaused {
             phase = .unavailable; condition = .paused; affectedDirectories = 0
@@ -454,7 +454,7 @@ public struct StorageAccountingPresentation: Sendable, Equatable {
         self.rows = rows; self.notes = notes; self.unattributed = unattributed; self.needsFullDiskAccess = needsAccess
     }
 
-    public static let fullDiskAccessGuidance = "Full Disk Access is needed only by the background monitor, \"MacBook Storage Monitor\" in your home folder's Applications folder (~/Applications), not by this app. Open System Settings → Privacy & Security → Full Disk Access, click +, and add it. Indexing continues without it. This test build is not signed with a Developer ID, so after an update macOS may stop honouring an existing entry: if protected folders remain, remove the entry and add it again."
+    public static let fullDiskAccessGuidance = "Indexing and Atlas work without background monitoring. For protected folders, open System Settings → Privacy & Security → Full Disk Access and add Storage Monitor (this app), then reopen it and choose Start Index. Indexing still works without Full Disk Access, with inaccessible folders marked. Scheduled background indexing separately uses ~/Applications/MacBook Storage Monitor.app. After an ad-hoc app update, an existing permission entry may need to be removed and added again."
 }
 
 /// What the results area shows when there is no folder to list yet. It depends only on the status, which
@@ -481,17 +481,17 @@ public struct InventoryLifecyclePresentation: Equatable, Sendable {
     public let detail: String
     public let action: Action?
     public var showsProgress: Bool { state == .checking || state == .indexing }
-    public init(hasRoot: Bool, status: InventoryStatus?, requested: Bool, loading: Bool, error: String?, monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil) {
+    public init(hasRoot: Bool, status: InventoryStatus?, requested: Bool, loading: Bool, error: String?, monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil, independentIndexing: Bool = false) {
         showsBrowser = hasRoot
         if let error = error ?? (!hasRoot ? indexingFailure : nil) {
             state = hasRoot ? .temporarilyUnavailable : .failed
             title = hasRoot ? "Inventory could not be updated" : "Inventory unavailable"
-            detail = error + (hasRoot ? " Previous catalog results remain visible. Reload to try again." : " Reload to try again, or check Background Monitoring in Settings.")
+            detail = error + (hasRoot ? " Previous catalog results remain visible. Reload to try again." : independentIndexing ? " Choose Start Index to try again, or check folder access." : " Reload to try again, or check Background Monitoring in Settings.")
             action = .retry
         } else if monitoringEnabled == false && ((!hasRoot && (requested || status?.initialCompletion == .inProgress)) || status.map { InventoryStatusPresentation(status: $0, monitoringEnabled: false).updatesAreWaiting } == true) {
             state = .waiting; title = "Indexing is waiting"
-            detail = "Background indexing is off. Enable or repair monitoring in Settings to continue indexing. Previous measurements and queued work are kept."
-            action = .openSettings
+            detail = independentIndexing ? "Indexing is stopped. Choose Start Index to continue. Previous measurements and queued work are kept; background monitoring is optional." : "Background indexing is off. Enable or repair monitoring in Settings to continue indexing. Previous measurements and queued work are kept."
+            action = independentIndexing ? .startIndexing : .openSettings
         } else if hasRoot {
             if status?.initialCompletion == .inProgress { state = .indexing; title = "Building your storage inventory" }
             else if status?.completeness == .stale || status?.eventHistoryUnavailable == true { state = .stale; title = "Previous inventory measurements" }
@@ -500,14 +500,18 @@ public struct InventoryLifecyclePresentation: Equatable, Sendable {
             action = nil
         } else if requested || status?.initialCompletion == .inProgress {
             state = .indexing; title = "Building your storage inventory"
-            detail = "Waiting for the background indexer's first results. Large inventories can take hours; you can browse results as they are discovered. Full Disk Access is optional."
-            action = .openSettings
+            detail = "Waiting for the indexer's first results. Large inventories can take hours; you can browse results as they are discovered. Full Disk Access is optional."
+            action = independentIndexing ? nil : .openSettings
         } else if status?.generation != nil {
             state = .temporarilyUnavailable; title = "Inventory folder unavailable"
             detail = "The catalog exists, but its folder results could not be loaded. Reload the inventory, or check Background Monitoring and folder access in Settings."
             action = .retry
         } else if status == nil && loading {
             state = .checking; title = "Checking inventory status…"; detail = "Reading the local catalog."; action = nil
+        } else if independentIndexing {
+            state = .notCreated; title = "Start your storage index"
+            detail = "Choose Start Index to discover files and folders, then explore them in Atlas or the browser as results arrive. Full Disk Access is optional for protected folders. Background monitoring is not required."
+            action = .startIndexing
         } else if monitoringConfigured == false {
             state = .monitoringOff; title = "Background monitoring is not configured"
             detail = "Enable Background Monitoring in Settings to record capacity and build your disk inventory. Storage Monitor asks before setting up the MacBook Storage Monitor helper for your account. The first inventory can take hours. Full Disk Access is optional."

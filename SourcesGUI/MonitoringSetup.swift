@@ -63,6 +63,12 @@ struct MonitoringSetupStatus: Equatable {
     /// The LaunchAgent that hosts the workers.
     var supervisorLabel: String = MonitoringSetupStatus.labels[0]
 
+    /// Scheduling configuration is not evidence that a worker is serving a request.
+    var inventoryWorkerRunning: Bool {
+        guard let launchd, launchd.reliable, jobLabels.count > 2 else { return false }
+        return launchd.loaded.contains(jobLabels[2]) && launchd.jobs[jobLabels[2]]?.pid != nil
+    }
+
     /// A retained catalog queue is not proof of running work. Unknown service output stays unknown.
     var inventoryUpdatesEnabled: Bool? {
         guard let launchd, launchd.reliable, jobLabels.count > 2 else { return nil }
@@ -209,7 +215,7 @@ struct MonitoringSetupStatus: Equatable {
     static let permissions = """
         Without extra permission, Storage Monitor measures free space, APFS volumes and every folder macOS lets it read. Protected places, such as other users' folders and some app data in ~/Library (Mail, Messages, Safari), are reported as inaccessible and never guessed.
 
-        Full Disk Access is optional. It allows more file names, sizes and filesystem-change metadata to be inspected; storage indexing does not read file contents. Coverage can still be partial because of other permissions, time limits, exclusions or disconnected drives. It is not snapshot-management authorization, and it does not bypass every system restriction. macOS never grants it silently: open System Settings → Privacy & Security → Full Disk Access, click +, and add ~/Applications/MacBook Storage Monitor.app (the background monitor, not this window).
+        Full Disk Access is optional. It allows more file names, sizes and filesystem-change metadata to be inspected; storage indexing does not read file contents. Coverage can still be partial because of other permissions, time limits, exclusions or disconnected drives. It is not snapshot-management authorization, and it does not bypass every system restriction. macOS never grants it silently: open System Settings → Privacy & Security → Full Disk Access and add Storage Monitor for indexing from this window. Scheduled background indexing separately uses ~/Applications/MacBook Storage Monitor.app. Indexing and Atlas do not require background monitoring to be enabled.
         """
 }
 

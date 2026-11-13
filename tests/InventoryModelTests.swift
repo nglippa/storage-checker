@@ -102,7 +102,12 @@ private final class TrashControllerGate: @unchecked Sendable {
             try fm.createDirectory(at: folder, withIntermediateDirectories: true)
             try Data(count: 4_096 * (index + 1)).write(to: folder.appendingPathComponent("f"))
         }
-        let indexed = try run(monitor, ["inventory-work", "--root", tree.path, "--data-dir", state.path, "--budget", "30"])
+        let indexed = try run(monitor, ["inventory-index", "--root", tree.path, "--data-dir", state.path, "--budget", "30"])
+        let initialSummary = try JSONSerialization.jsonObject(with: Data(indexed.output.utf8)) as? [String: Any]
+        test(initialSummary?["continues"] as? Bool == false, "real standalone indexing drains instead of scheduling a perpetual loop")
+        let idle = try run(monitor, ["inventory-index", "--root", tree.path, "--data-dir", state.path, "--budget", "30"])
+        let idleSummary = try JSONSerialization.jsonObject(with: Data(idle.output.utf8)) as? [String: Any]
+        test(idle.status == 0 && idleSummary?["continues"] as? Bool == false, "an already-complete catalog stays idle after its explicit check")
         let database = state.appendingPathComponent("history.sqlite3").path
         test(indexed.status == 0 && fm.fileExists(atPath: database), "the isolated fixture is indexed by the monitor worker (exit \(indexed.status))")
         test(database.hasPrefix(scratch.path), "the model only opens the scratch database")
@@ -121,6 +126,13 @@ private final class TrashControllerGate: @unchecked Sendable {
              "default Explorer on a missing database reaches usable monitoring setup instead of indefinite loading")
         test(!fm.fileExists(atPath: missingDatabase) && firstLaunch.lifecycle(monitoringConfigured: false).action == .openSettings,
              "first-launch presentation offers Settings and creates no database or scan")
+        test(firstLaunch.lifecycle(monitoringConfigured: false, monitoringEnabled: false, independentIndexing: true).action == .startIndexing,
+             "the independent indexing flow offers Start Index without monitoring")
+        var receivedAction: String?
+        firstLaunch.onWorkRequest = { receivedAction = $0 }
+        firstLaunch.request("resume", announce: false)
+        let delivered = await waitUntil { receivedAction == "resume" }
+        test(delivered && !fm.fileExists(atPath: missingDatabase), "explicit Start Index publishes a resume wake without writing catalog SQL in the viewer")
         firstLaunch.initializationRequested = true
         test(firstLaunch.lifecycle(monitoringConfigured: true).state == .indexing, "a deliberate first-index request is shown as waiting for results")
         // Recover this same model by copying only the isolated catalog to its previously missing path.

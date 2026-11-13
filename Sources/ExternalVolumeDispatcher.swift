@@ -105,6 +105,31 @@ private func dispatchExternalInventory(directory: URL, args: [String], dependenc
     return runnable || FileManager.default.fileExists(atPath: signal.path)
 }
 
+/// A manual index never opts in another drive or runs a capacity check/startup dispatch wave.
+func indexSelectedExternalVolume(uuid: String, directory: URL, budget: TimeInterval,
+                                 dependencies: ExternalDispatchDependencies = .live) async throws -> InventoryRunResult {
+    let id = try ExternalVolumeIdentity(uuid).uuid
+    let started = Date()
+    try ExternalVolumeStorage.ensureDirectory(directory)
+    guard let lock = FileLock(directory.appendingPathComponent("inventory-dispatch.lock").path, wait: 0) else {
+        return InventoryRunResult(outcome: "busy", generation: nil, entries: 0, directories: 0, pending: 0, reason: "An indexer is already running.")
+    }
+    defer { withExtendedLifetime(lock) {} }
+    let registry = ExternalVolumeRegistry(baseDirectory: directory)
+    guard let saved = try registry.read().volumes[id], saved.enabled else { throw ExternalVolumeError.invalidIdentity }
+    guard !saved.indexingPaused else {
+        return InventoryRunResult(outcome: "partial", generation: nil, entries: 0, directories: 0, pending: 0, reason: "cancelled")
+    }
+    let observations = try dependencies.discover()
+    try ExternalVolumeObservationStore(baseDirectory: directory).write(observations)
+    guard let descriptor = try ExternalVolumeCatalog.resolve(uuid: id, descriptors: observations.descriptors) else { throw ExternalVolumeError.unsupported("The selected drive is disconnected. Reconnect it and choose Start Index.") }
+    try registry.validate(descriptor)
+    try dependencies.validateExternal(descriptor, registry)
+    let remaining = min(300, max(0.01, budget - Date().timeIntervalSince(started)))
+    guard let result = try await dependencies.runExternal(directory, descriptor, remaining) else { throw Failure("The selected drive returned no indexing result.") }
+    return result
+}
+
 func runExternalInventorySlice(baseDirectory: URL, descriptor: ExternalVolumeDescriptor, budget: TimeInterval) async throws -> InventoryRunResult {
     let registry = ExternalVolumeRegistry(baseDirectory: baseDirectory)
     let lease = try ExternalVolumeMountLease(descriptor: descriptor, registry: registry)

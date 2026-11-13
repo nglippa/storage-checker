@@ -23,9 +23,9 @@ struct StorageTargetContext: Sendable {
     var status: String {
         guard let registration else { return "Internal storage" }
         if let issue { return issue }
-        if !registration.enabled { return "Monitoring disabled · saved history and catalog retained" }
+        if !registration.enabled { return "Drive disabled · saved history and catalog retained" }
         if descriptor == nil { return "Disconnected · showing the last published catalog" }
-        return registration.indexingPaused ? "Indexing paused · capacity monitoring active" : "Connected · monitoring enabled"
+        return registration.indexingPaused ? "Indexing paused · saved catalog available" : "Connected · ready to index"
     }
 
     static func startup(database: String) -> Self {
@@ -56,7 +56,7 @@ struct StorageTargetContext: Sendable {
             if let current = descriptor {
                 try registry.validate(current)
                 guard let discovered = current.mountIdentity, try probe(current.mountPath) == discovered else {
-                    throw ExternalVolumeError.unsupported("Waiting for the background monitor to verify this mount.")
+                    throw ExternalVolumeError.unsupported("Refresh connected drives to verify this mount.")
                 }
             }
         } catch { descriptor = nil; issue = error.localizedDescription }

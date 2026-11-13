@@ -11,6 +11,8 @@ struct SnapshotManagementView: View {
     @State private var confirmOperation = false
     @State private var confirmEnable = false
     @State private var confirmDisable = false
+    @State private var confirmTimeMachine = false
+    @State private var selectedTab = "inventory"
     @FocusState private var searchFocused: Bool
     init(history: ViewerStore) { self.history = history; _model = StateObject(wrappedValue: SnapshotManagementModel(isQA: history.configuration.isQA)) }
     var body: some View {
@@ -19,9 +21,17 @@ struct SnapshotManagementView: View {
                 Text("Snapshot Management").font(.title2).bold()
                 Spacer()
                 Button("History & Monitoring") { history.section = "history" }
-                Button("Reload", systemImage: "arrow.clockwise") { model.reload() }.disabled(model.busy).keyboardShortcut("r")
+                Button("Reload", systemImage: "arrow.clockwise") { model.reload(); model.loadTimeMachineHistory() }.disabled(model.busy || model.tmBusy).keyboardShortcut("r")
             }
-            Text("Create and retain Storage Monitor recovery points. Historical evidence remains available in History & Monitoring.").foregroundStyle(.secondary)
+            HStack {
+                Text("Request Time Machine snapshots or review per-volume recovery points.").foregroundStyle(.secondary)
+                Spacer()
+                Button("Request Time Machine Snapshot…") { confirmTimeMachine = true }
+                    .disabled(model.tmBusy || model.isQA)
+                    .accessibilityIdentifier("snapshots.timeMachine.request")
+            }
+            if model.tmBusy { ProgressView("Reading history or requesting a Time Machine snapshot…").controlSize(.small) }
+            if let error = model.tmError { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red).textSelection(.enabled).accessibilityIdentifier("snapshots.timeMachine.error") }
             HStack(alignment: .top) {
                 Image(systemName: model.available ? "lock.shield" : "exclamationmark.shield")
                 Text(model.serviceStatus).textSelection(.enabled).accessibilityIdentifier("snapshots.serviceStatus")
@@ -47,19 +57,27 @@ struct SnapshotManagementView: View {
             if let error = model.error { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red).textSelection(.enabled).accessibilityIdentifier("snapshots.error") }
             if !model.message.isEmpty { Text(model.message).font(.callout).textSelection(.enabled).accessibilityIdentifier("snapshots.result") }
             if model.busy { ProgressView("Reading or managing snapshots…").controlSize(.small) }
-            TabView {
-                inventory.tabItem { Text("Inventory & Details") }
-                comparison.tabItem { Text("Comparison") }
-                activity.tabItem { Text("Activity History") }
+            Picker("Snapshot section", selection: $selectedTab) {
+                Text("Inventory & Details").tag("inventory")
+                Text("Comparison").tag("comparison")
+                Text("Activity History").tag("activity")
+                Text("Time Machine Requests").tag("timeMachine")
+            }.pickerStyle(.segmented).accessibilityIdentifier("snapshots.section")
+            switch selectedTab {
+            case "comparison": comparison
+            case "activity": activity
+            case "timeMachine": timeMachineHistory
+            default: inventory
             }
         }
         .padding(20)
-        .task { model.reload() }
+        .task { model.reload(); model.loadTimeMachineHistory() }
         .onChange(of: model.volumeID) { _, _ in model.selected = []; model.search = "" }
         .onChange(of: model.search) { _, _ in model.selected.formIntersection(Set(model.visibleInventory.map(\.id))) }
         .background(Button("Search Snapshots") { searchFocused = true }.keyboardShortcut("f", modifiers: .command).hidden())
         .sheet(isPresented: $showCreate) { SnapshotCreationSheet(model: model) }
         .sheet(isPresented: $showPolicy) { SnapshotPolicySheet(model: model) }
+        .sheet(isPresented: $model.tmNeedsAcknowledgement) { SnapshotTimeMachineAcknowledgementSheet(model: model) }
         .sheet(item: $preview) { plan in
             VStack(alignment: .leading, spacing: 16) {
                 Text("Review snapshot deletion").font(.title2).bold()
@@ -83,6 +101,10 @@ struct SnapshotManagementView: View {
             Button("Continue") { if let pending { model.perform(pending) }; pending = nil }
             Button("Cancel", role: .cancel) { pending = nil }
         }
+        .confirmationDialog("Request a Time Machine local snapshot?", isPresented: $confirmTimeMachine, titleVisibility: .visible) {
+            Button("Request Time Machine Snapshot") { selectedTab = "timeMachine"; model.requestTimeMachineSnapshot() }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text(timeMachineSnapshotScope) }
         .confirmationDialog("Enable the privileged snapshot helper?", isPresented: $confirmEnable, titleVisibility: .visible) {
             Button("Enable Helper") { model.enableService() }
             Button("Cancel", role: .cancel) {}
@@ -169,7 +191,67 @@ struct SnapshotManagementView: View {
             }.accessibilityElement(children: .combine)
         }.accessibilityLabel("Snapshot management activity history")
     }
+    private var timeMachineHistory: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Requests across all APFS volumes included in Time Machine").font(.headline)
+            Text("macOS chooses snapshot names. These records contain only tmutil's reported date token; Time Machine controls retention and deletion.").font(.callout).foregroundStyle(.secondary)
+            if model.isQA {
+                Text("Read-only QA session. Time Machine requests are disabled and live request history is not opened.").font(.callout)
+            }
+            if model.tmActivities.isEmpty && !model.tmBusy {
+                Text(model.tmError == nil ? "No Time Machine snapshot requests recorded here." : "Time Machine request history is unavailable. Reload after resolving the error.").foregroundStyle(.secondary).accessibilityIdentifier("snapshots.timeMachine.empty")
+                Spacer()
+            } else {
+                List(model.tmActivities) { item in SnapshotTimeMachineActivityRow(item: item) }
+                    .accessibilityLabel("Time Machine snapshot request history")
+                    .accessibilityIdentifier("snapshots.timeMachine.history")
+            }
+        }.padding(.top, 12)
+    }
     private func ask(_ request: SnapshotServiceRequest, title: String) { pending = request; confirmation = title; confirmOperation = true }
+}
+
+private let timeMachineSnapshotScope = "macOS creates a Time Machine local snapshot of every APFS volume included in Time Machine, not just the selected volume. macOS chooses the names; Storage Monitor records only the date token tmutil reports. Time Machine controls retention and deletion; Storage Monitor will not delete or manage these snapshots. The request may take up to two minutes."
+
+private struct SnapshotTimeMachineActivityRow: View {
+    let item: TimeMachineSnapshotActivity
+    @State private var showOutput = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(item.outcome == .reportedCreated ? "reported created" : item.outcome.rawValue).bold()
+            Text("Started: \(item.startedAt.formatted(date: .abbreviated, time: .standard))").font(.callout)
+            Text("Finished: \(item.finishedAt?.formatted(date: .abbreviated, time: .standard) ?? "Not recorded")").font(.callout)
+            Text("Reported date token: \(item.returnedTimestampToken ?? "None") · Exit code: \(item.exitCode.map(String.init) ?? "Not recorded")").font(.caption).foregroundStyle(.secondary)
+            Button(showOutput ? "Hide Command Output" : "Show Command Output") { showOutput.toggle() }
+                .accessibilityIdentifier("snapshots.timeMachine.output")
+            if showOutput {
+                Text(item.output.isEmpty ? "No output recorded." : item.output)
+                    .font(.system(.caption, design: .monospaced)).frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }.textSelection(.enabled).padding(.vertical, 4)
+    }
+}
+
+private struct SnapshotTimeMachineAcknowledgementSheet: View {
+    @ObservedObject var model: SnapshotManagementModel
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Review uncertain Time Machine requests").font(.title2).bold()
+            Text("These requests may have created snapshots. Their outcome is unknown and they have not been retried. Acknowledge them before making a new request.")
+            List(model.tmUncertainActivities) { item in SnapshotTimeMachineActivityRow(item: item) }
+                .frame(minHeight: 160, maxHeight: 280)
+            Text(timeMachineSnapshotScope).font(.callout).foregroundStyle(.secondary)
+            HStack {
+                Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Acknowledge and Request Another Snapshot") {
+                    dismiss()
+                    model.requestTimeMachineSnapshot(acknowledgeUncertain: true)
+                }.disabled(model.tmBusy || model.isQA || model.tmUncertainActivities.isEmpty)
+            }
+        }.padding(24).frame(width: 680)
+    }
 }
 
 private struct SnapshotCreationSheet: View {

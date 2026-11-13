@@ -36,7 +36,7 @@ scripts/build-dmg.sh
 
 This produces:
 
-- `build/dist/Storage-Monitor-3.0.1.dmg` plus a `.sha256` checksum;
+- `build/dist/Storage-Monitor-3.1.0.dmg` plus a `.sha256` checksum;
 - the assembled app in `build/dist/work/`.
 
 It is ad-hoc signed. The script finishes by running `scripts/verify-dmg.sh`, which mounts the image read-only with `-nobrowse -noautoopen`, so no Finder window opens and nothing is launched. It then checks structure, metadata, signatures, architectures and libraries, runs the bundled monitor's self-test from the image, and detaches.
@@ -45,8 +45,8 @@ Options, all set through environment variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `STORAGE_MONITOR_VERSION` | `scripts/version.env` (3.0.1) | `CFBundleShortVersionString` of the app and helper; also the DMG file name |
-| `STORAGE_MONITOR_BUILD` | `scripts/version.env` (23) | `CFBundleVersion`; only ever increases |
+| `STORAGE_MONITOR_VERSION` | `scripts/version.env` (3.1.0) | `CFBundleShortVersionString` of the app and helper; also the DMG file name |
+| `STORAGE_MONITOR_BUILD` | `scripts/version.env` (24) | `CFBundleVersion`; only ever increases |
 | `STORAGE_MONITOR_APP_ONLY` | unset | `1` stops after building and verifying `build/dist/work/Storage Monitor.app`; no disk image |
 | `STORAGE_MONITOR_SIGN_IDENTITY` | `-` (ad-hoc) | codesign identity |
 | `STORAGE_MONITOR_ARCHS` | `arm64 x86_64` | architectures |
@@ -220,7 +220,7 @@ Failure and interruption:
 
 ## Verification status
 
-Current release: [Storage Monitor 3.0.1 (23)](STORAGE-MONITOR-3.0.1-RELEASE.md).
+Current release: [Storage Monitor 3.1.0 (24)](STORAGE-MONITOR-3.1.0-RELEASE.md).
 The records below are historical packaging results.
 
 

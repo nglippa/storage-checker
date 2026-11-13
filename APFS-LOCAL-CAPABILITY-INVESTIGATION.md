@@ -80,7 +80,15 @@ resources; and executable names in `/usr/bin`, `/usr/sbin`, `/usr/libexec`.
 
 - `diskutil apfs` documents listing and deletion, with no general creation verb.
 - `tmutil localsnapshot` creates Time Machine-managed snapshots and does not
-  provide the requested arbitrary-volume, arbitrary-name ownership domain.
+  provide the requested arbitrary-volume, arbitrary-name ownership domain. It
+  was subsequently adopted as the supported Time Machine creation route after
+  the root-only native probe returned `EPERM`: this route does not require the
+  product's restricted native snapshot entitlement. Its trade-off is explicit:
+  every APFS volume included in Time Machine is in scope, macOS chooses names,
+  and Time Machine controls retention/deletion. Storage Monitor records the
+  reported date token without adopting ownership. The model/UI integration and
+  its verification limits are recorded in
+  [the upcoming release notes](STORAGE-MONITOR-TMUTIL-RELEASE-NOTES.md).
 - `apfs.util` documents no creation verb. Its `-R` schedules a destructive revert;
   its `-s` changes UUIDs. Neither was invoked.
 - `apfs_systemsnapshot -s name -v mountpoint` is documented for Signed System
@@ -102,7 +110,7 @@ not universal APFS filesystem requirements. Startup Data is currently excluded
 by the product's role-bearing-volume policy; no Data-volume mutation test proves
 that the OS itself forbids it.
 
-Remaining acceptance: a supported capability/authorization route accepted by the
+Remaining native-helper acceptance: a supported capability/authorization route accepted by the
 target OS; successful disposable-volume create/readback/protect/compare/
 unmount/preview/delete/readback; real authorization and installed-helper security
 testing. No internal/external user-drive mutation is authorized by these probes.

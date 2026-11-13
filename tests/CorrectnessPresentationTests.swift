@@ -43,6 +43,8 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
     }
     try test(lifecycle(status: noInventory).state == .monitoringOff && lifecycle(status: noInventory).action == .openSettings && !lifecycle(status: noInventory).showsBrowser && !lifecycle(status: noInventory).showsProgress, "clean first launch resolves before renderer selection and offers Settings without a perpetual spinner")
     try test(lifecycle(status: noInventory, loading: true).state == .monitoringOff, "periodic reload does not turn first-run setup back into loading")
+    let independent = InventoryLifecyclePresentation(hasRoot: false, status: noInventory, requested: false, loading: false, error: nil, monitoringConfigured: false, monitoringEnabled: false, independentIndexing: true)
+    try test(independent.state == .notCreated && independent.action == .startIndexing && !independent.showsProgress && independent.detail.contains("Background monitoring is not required"), "standalone first launch offers Start Index with monitoring off and no automatic scan")
     try test(lifecycle(loading: true).state == .checking && lifecycle(loading: true).showsProgress, "an actual initial catalog read is checking")
     try test(lifecycle(status: noInventory, configured: true).state == .notCreated && lifecycle(status: noInventory, configured: true).action == .startIndexing, "configured helper with no generation offers deliberate first indexing")
     try test(lifecycle(status: noInventory, configured: nil).state == .notCreated && lifecycle(status: noInventory, configured: nil).action == .openSettings, "unknown configuration directs to Settings without inventing setup or starting a scan")
@@ -66,6 +68,10 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
     // Disabling monitoring retains the catalog queue without advertising active work.
     let queued = indexed(.complete, .stale, pending: 2)
     let waiting = InventoryStatusPresentation(status: queued, monitoringEnabled: false)
+    let manualWaiting = InventoryStatusPresentation(status: queued, monitoringEnabled: false, independentIndexing: true)
+    try test(manualWaiting.updatesAreWaiting && manualWaiting.detail.contains("Start Index") && !manualWaiting.detail.contains("Settings"), "standalone pending work can resume directly without monitoring setup")
+    let independentRetained = InventoryLifecyclePresentation(hasRoot: true, status: queued, requested: false, loading: false, error: nil, monitoringConfigured: false, monitoringEnabled: false, independentIndexing: true)
+    try test(independentRetained.showsBrowser && independentRetained.action == .startIndexing, "Atlas and the browser retain indexed data while monitoring is off")
     let enabled = InventoryStatusPresentation(status: queued, monitoringEnabled: true)
     try test(waiting.updatesAreWaiting && waiting.phase == .idle && waiting.headline == "Folder updates are waiting" && waiting.detail.contains("Settings"), "disabled queued work is waiting with recovery, never an active update")
     try test(waiting.condition == enabled.condition && waiting.activeListings == enabled.activeListings && waiting.foundFolders == enabled.foundFolders && waiting.affectedDirectories == enabled.affectedDirectories, "disabling monitoring preserves queued counts and inventory coverage")
@@ -105,12 +111,15 @@ func correctnessPresentationTests(_ test: (Bool, String) throws -> Void) throws 
         return result
     }
     try test(setup(.off).inventoryUpdatesEnabled == false && setup(.on).inventoryUpdatesEnabled == true && setup(.needsUpdate).inventoryUpdatesEnabled == true, "reliable setup distinguishes monitoring off from enabled inventory scheduling")
+    try test(!setup(.on).inventoryWorkerRunning && !setup(.needsUpdate, workerExit: 78).inventoryWorkerRunning, "configured or failed monitoring is not mistaken for a running indexer")
     try test(setup(.incomplete).inventoryUpdatesEnabled == nil && setup(.off, launchdKnown: false).inventoryUpdatesEnabled == nil, "partial setup and missing launchd evidence do not invent a known-off state")
     var observedRunning = setup(.off)
     observedRunning.launchd?.jobs[worker] = .init(pid: 123, lastExitStatus: 78)
     try test(observedRunning.inventoryUpdatesEnabled == true, "a current registered indexer PID overrides an off setup snapshot while work drains")
+    try test(observedRunning.inventoryWorkerRunning, "a reliable loaded worker PID may serve an explicit indexing request")
     observedRunning.launchd?.reliable = false
     try test(observedRunning.inventoryUpdatesEnabled == nil, "unreliable output cannot reuse a PID to establish active indexing")
+    try test(!observedRunning.inventoryWorkerRunning, "unreliable status cannot suppress the independent Start Index job")
     var disabledIndexer = setup(); disabledIndexer.launchd?.disabled.insert(worker)
     try test(disabledIndexer.inventoryUpdatesEnabled == false, "a reliable disabled override makes queued indexing wait even when setup needs repair")
     disabledIndexer.launchd?.jobs[worker] = .init(pid: 123, lastExitStatus: 0)

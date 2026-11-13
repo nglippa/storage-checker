@@ -24,15 +24,34 @@ private final class SnapshotReplyGate: @unchecked Sendable {
     @Published var comparisonSearch = ""
     @Published var serviceStatus = "Snapshot helper has not been enabled."
     @Published var available = false
+    @Published var tmActivities: [TimeMachineSnapshotActivity] = []
+    @Published var tmBusy = false
+    @Published var tmError: String?
+    @Published var tmNeedsAcknowledgement = false
     let isQA: Bool
     private var connection: NSXPCConnection?
     private var loading: Task<Void, Never>?
-    init(isQA: Bool) { self.isQA = isQA }
+    private let timeMachineHistory: TimeMachineSnapshotHistory
+    init(
+        isQA: Bool,
+        timeMachineDirectory: URL = MonitoringSetupStatus.dataDirectory(home: FileManager.default.homeDirectoryForCurrentUser)
+            .appendingPathComponent("time-machine-snapshots", isDirectory: true),
+        timeMachineRunner: any TimeMachineSnapshotCreating = SystemTimeMachineSnapshotCommand()
+    ) {
+        self.isQA = isQA
+        self.timeMachineHistory = TimeMachineSnapshotHistory(directory: timeMachineDirectory, runner: timeMachineRunner)
+    }
+    var tmUncertainActivities: [TimeMachineSnapshotActivity] {
+        tmActivities.filter { $0.outcome == .uncertain || $0.outcome == .interrupted }
+    }
     var volume: ManagedVolume? { response.volumes.first { $0.id == volumeID } }
     var records: [ManagedSnapshot] { response.records.filter { $0.volumeUUID == volumeID && $0.state != .deleted } }
     var inventory: [LifecycleSnapshot] { response.inventories[volumeID] ?? [] }
     var visibleInventory: [LifecycleSnapshot] { inventory.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) || $0.id.localizedCaseInsensitiveContains(search) || (record($0)?.label.localizedCaseInsensitiveContains(search) ?? false) } }
-    func record(_ snapshot: LifecycleSnapshot) -> ManagedSnapshot? { records.first { $0.snapshotUUID == snapshot.id && $0.name == snapshot.name && $0.xid == snapshot.xid && $0.state == .managed } }
+    func record(_ snapshot: LifecycleSnapshot) -> ManagedSnapshot? {
+        guard !snapshot.name.lowercased().hasPrefix("com.apple.timemachine.") else { return nil }
+        return records.first { $0.snapshotUUID == snapshot.id && $0.name == snapshot.name && $0.xid == snapshot.xid && $0.state == .managed }
+    }
     var selectedRecords: [ManagedSnapshot] { inventory.filter { selected.contains($0.id) }.compactMap { record($0) }.sorted { $0.createdAt < $1.createdAt } }
     var policy: SnapshotPolicy { response.policies.first { $0.volume.id == volumeID }?.policy ?? SnapshotPolicy() }
     var canMutate: Bool { available && !isQA && !busy && volume?.compatibilityIssue == nil }
@@ -46,6 +65,74 @@ private final class SnapshotReplyGate: @unchecked Sendable {
         let entitlements = helperInfo?[kSecCodeInfoEntitlementsDict as String] as? [String: Any]
         guard entitlements?["com.apple.developer.vfs.snapshot"] as? Bool == true else { return "The helper lacks Apple's snapshot entitlement. Creation, deletion, scheduling and mounting remain unavailable; administrator access alone is insufficient." }
         return nil
+    }
+    @discardableResult
+    func loadTimeMachineHistory() -> Task<Void, Never>? {
+        guard !tmBusy else { return nil }
+        guard !isQA else {
+            tmActivities = []
+            tmError = nil
+            tmNeedsAcknowledgement = false
+            return nil
+        }
+        tmBusy = true
+        tmError = nil
+        let history = timeMachineHistory
+        return Task { [weak self] in
+            do {
+                let activities = try await Task.detached(priority: .utility) {
+                    try history.load()
+                }.value
+                guard let self else { return }
+                self.tmActivities = activities.sorted { $0.startedAt > $1.startedAt }
+            } catch {
+                self?.tmError = Self.timeMachineErrorDescription(error)
+            }
+            self?.tmBusy = false
+        }
+    }
+    @discardableResult
+    func requestTimeMachineSnapshot(acknowledgeUncertain: Bool = false) -> Task<Void, Never>? {
+        guard !tmBusy else { return nil }
+        guard !isQA else {
+            tmError = "Time Machine snapshot requests are disabled in read-only QA sessions."
+            return nil
+        }
+        tmBusy = true
+        tmError = nil
+        tmNeedsAcknowledgement = false
+        let history = timeMachineHistory
+        return Task { [weak self] in
+            do {
+                let activities = try await Task.detached(priority: .userInitiated) {
+                    _ = try history.create(acknowledgeUncertain: acknowledgeUncertain)
+                    return try history.load()
+                }.value
+                guard let self else { return }
+                self.tmActivities = activities.sorted { $0.startedAt > $1.startedAt }
+            } catch let error as TimeMachineSnapshotHistoryError where error == .acknowledgementRequired {
+                let activities = try? await Task.detached(priority: .utility) {
+                    try history.load()
+                }.value
+                guard let self else { return }
+                if let activities {
+                    self.tmActivities = activities.sorted { $0.startedAt > $1.startedAt }
+                }
+                self.tmNeedsAcknowledgement = true
+                self.tmError = error.errorDescription
+            } catch {
+                let activities = try? await Task.detached(priority: .utility) { try history.load() }.value
+                if let activities { self?.tmActivities = activities.sorted { $0.startedAt > $1.startedAt } }
+                self?.tmError = Self.timeMachineErrorDescription(error)
+            }
+            self?.tmBusy = false
+        }
+    }
+    private static func timeMachineErrorDescription(_ error: Error) -> String {
+        if let historyError = error as? TimeMachineSnapshotHistoryError {
+            return historyError.errorDescription ?? String(describing: historyError)
+        }
+        return error.localizedDescription
     }
     func reload() {
         guard !busy else { return }

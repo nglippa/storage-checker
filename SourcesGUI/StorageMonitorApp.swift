@@ -103,6 +103,23 @@ struct ViewerConfiguration {
                             isQA: baseConfiguration.isQA, readinessOutput: baseConfiguration.readinessOutput, selectedTarget: target)
     }
     let readiness: ViewerReadiness
+    let indexer = OnDemandIndexController()
+    private var discoveryTask: Task<Void, Never>?
+    private var pendingDriveActions: [(String, String?)] = []
+    /// The engine ships with the viewer. Using it does not install or enable monitoring.
+    var indexExecutable: URL? {
+        guard !baseConfiguration.isQA else { return nil }
+        let bundled = MonitoringSetupStatus.bundledHelper(in: Bundle.main.bundleURL).appendingPathComponent("Contents/MacOS/StorageMonitor")
+        if FileManager.default.isExecutableFile(atPath: bundled.path) { return bundled }
+        return nil
+    }
+    var canIndexExternalDrives: Bool { !baseConfiguration.isQA && indexExecutable != nil }
+    func startIndex(database: String, volumeUUID: String? = nil) {
+        guard !baseConfiguration.isQA else { return }
+        // Only a current, reliable worker PID can serve this request instead of the app-owned job.
+        if monitoring?.inventoryWorkerRunning == true { return }
+        indexer.start(executable: indexExecutable, database: database, baseDirectory: volumeUUID == nil ? nil : externalBaseDirectory, volumeUUID: volumeUUID, isQA: baseConfiguration.isQA)
+    }
     private var reader: HistoryReader
     private let historyLoader: (@Sendable (String) async throws -> HistorySnapshot)?
     private let preferences: UserDefaults
@@ -256,7 +273,9 @@ struct ViewerConfiguration {
             }
         }
     }
-    func stop() { loop?.cancel(); loop = nil; targetsTask?.cancel(); targetsTask = nil; runtimeTask?.cancel(); runtimeTask = nil; refreshTask?.cancel(); refreshTask = nil; if NativeQARuntime.active != nil { NativeQAWorker.shared.stopAndWait() } }
+    // This is a window/view refresh lifecycle, also used when changing targets. The explicit
+    // index session retains its own target and ends on pause, completion or application quit.
+    func stop() { loop?.cancel(); loop = nil; targetsTask?.cancel(); targetsTask = nil; runtimeTask?.cancel(); runtimeTask = nil; refreshTask?.cancel(); refreshTask = nil; discoveryTask?.cancel(); discoveryTask = nil; if NativeQARuntime.active != nil { NativeQAWorker.shared.stopAndWait() } }
 
     func selectTarget(_ uuid: String?) {
         guard !baseConfiguration.isQA, uuid != target.uuid else { return }
@@ -339,10 +358,34 @@ struct ViewerConfiguration {
     }
 
     func externalControl(_ action: String, uuid: String? = nil) {
-        guard externalSupportReady, !baseConfiguration.isQA else { externalError = "Update and enable the background monitor in Settings to use external drives."; return }
+        guard canIndexExternalDrives, let executable = indexExecutable else { externalError = "The bundled indexing engine is unavailable. Rebuild or reinstall Storage Monitor."; return }
+        if ["pause", "disable"].contains(action), indexer.volumeUUID == uuid { indexer.stop() }
+        guard discoveryTask == nil else {
+            if action != "discover" {
+                pendingDriveActions.append((action, uuid))
+                externalError = "Refreshing connected drives. Your request is queued."
+            }
+            return
+        }
         let base = externalBaseDirectory
-        Task {
+        discoveryTask = Task {
+            defer {
+                discoveryTask = nil
+                if !pendingDriveActions.isEmpty {
+                    let next = pendingDriveActions.removeFirst()
+                    externalControl(next.0, uuid: next.1)
+                }
+            }
             do {
+                if ["discover", "enable", "reenroll"].contains(action) {
+                    let specification = OnDemandIndexCommandSpecification(executable: executable,
+                        arguments: ["external-discover", "--data-dir", base.path],
+                        environment: ["PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "LC_ALL": "C"], timeout: 30, outputLimit: 512 * 1024)
+                    let result = await SystemOnDemandIndexCommandRunner().run(specification)
+                    guard result.exitStatus == 0, !result.cancelled, !result.timedOut, result.launchError == nil else {
+                        throw NSError(domain: "StorageMonitor.Index", code: 1, userInfo: [NSLocalizedDescriptionKey: "Connected drives could not be read. \(result.launchError ?? result.output)"])
+                    }
+                }
                 try await Task.detached(priority: .utility) {
                     let control = ExternalVolumeControl(baseDirectory: base)
                     switch action {
@@ -350,9 +393,17 @@ struct ViewerConfiguration {
                     case "reenroll": guard let uuid else { return }; _ = try control.enroll(uuid: uuid, replaceBacking: true)
                     case "disable": guard let uuid else { return }; try control.disable(uuid: uuid)
                     case "pause", "resume": guard let uuid else { return }; _ = try control.request(uuid: uuid, action: action)
-                    default: try control.signal()
+                    default: break
                     }
                 }.value
+                if let uuid, ["pause", "disable"].contains(action), indexer.volumeUUID == uuid { indexer.stop() }
+                if let uuid, ["enable", "reenroll", "resume"].contains(action) {
+                    let saved = try ExternalVolumeRegistry(baseDirectory: base).read().volumes[uuid]
+                    if let saved {
+                        let paths = try ExternalVolumePaths(baseDirectory: base, uuid: uuid, capacityScope: saved.capacityScope)
+                        startIndex(database: paths.inventoryDatabase, volumeUUID: uuid)
+                    }
+                }
                 externalError = nil
                 targetsTask?.cancel(); targetsTask = nil; targetLoadSerial &+= 1
                 refreshTargets()

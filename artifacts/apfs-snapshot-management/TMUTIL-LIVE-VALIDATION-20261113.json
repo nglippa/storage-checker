@@ -1,0 +1,40 @@
+{
+  "scope": "One explicitly operator-approved request through the development viewer; no automatic retry or deletion",
+  "verified_at_utc": "2026-11-13T07:40:19.895971+00:00",
+  "request_count_before": 0,
+  "request_count_after": 1,
+  "request_id": "3B34F159-EDC2-4197-BAEE-249C169D71F1",
+  "outcome": "reportedCreated",
+  "exit_code": 0,
+  "returned_date_token": "2026-11-13-013805",
+  "started_utc": "2026-11-13T07:38:05.426895+00:00",
+  "finished_utc": "2026-11-13T07:38:05.715491+00:00",
+  "command_output": "NOTE: local snapshots are considered purgeable and may be removed at any time by deleted(8).\nCreated local snapshot with date: 2026-11-13-013805\n",
+  "listlocalsnapshots_root_before": "Snapshots for disk /:\n",
+  "listlocalsnapshots_root_after": "Snapshots for disk /:\ncom.apple.TimeMachine.2026-11-13-013805.local\n",
+  "reported_token_present_before": false,
+  "reported_token_present_after": true,
+  "native_history_verified": [
+    "reported created label",
+    "started and finished times",
+    "reported date token",
+    "exit code",
+    "automatically selected Time Machine Requests section",
+    "cold app reload preserves the real entry",
+    "Show Command Output button reveals the exact recorded output",
+    "button changes to Hide Command Output after expansion"
+  ],
+  "limitations": [
+    "The root snapshot list confirms the reported token; no independent enumeration of every included APFS volume was performed.",
+    "Acknowledgement-sheet native interaction remains unverified; fake-runner model tests cover its state flow.",
+    "Snapshot naming, retention and deletion remain controlled by Time Machine."
+  ],
+  "final_build_verified": {
+    "sdk": "MacOSX26.5",
+    "gui_build": "passed",
+    "deep_strict_signature": "passed",
+    "UserNotifications_linkage_guard": "passed"
+  },
+  "request_count_after_ui_reload": 1,
+  "test_instance_closed": true
+}

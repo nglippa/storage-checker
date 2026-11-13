@@ -63,6 +63,12 @@ enum SnapshotLifecycleEngineTests {
         let owner502 = engine.document.snapshots.first { $0.owner == 502 && $0.state == .managed }!
         let foreign = LifecycleSnapshot(id: UUID().uuidString, name: "foreign.snapshot", xid: 9_999)
         backend.snapshots.append(foreign)
+        let timeMachine = LifecycleSnapshot(id: UUID().uuidString, name: "com.apple.TimeMachine.2026-11-12-141501.local", xid: 10_000)
+        backend.snapshots.append(timeMachine)
+        do {
+            _ = try engine.handle(.init(action: .previewManual, volumeUUID: volume.id, snapshotIDs: [timeMachine.id]), owner: 501)
+            fatalError("Time Machine inventory was accepted for manual deletion")
+        } catch {}
 
         var policy = SnapshotPolicy()
         policy.enabled = true; policy.interval = .hourly; policy.maximumCount = 2; policy.maximumAgeDays = 3650; policy.retentionEnabled = true
@@ -76,6 +82,7 @@ enum SnapshotLifecycleEngineTests {
         precondition(backend.deletedSnapshotIDs == owner501Before.prefix(2).map(\.snapshotUUID), "automatic retention must delete only the oldest eligible owned records")
         precondition(engine.document.snapshots.contains { $0.id == owner502.id && $0.state == .managed }, "one owner cannot retain/delete another owner's records")
         precondition(backend.snapshots.contains(foreign), "foreign native snapshots must never be deleted by automatic retention")
+        precondition(backend.snapshots.contains(timeMachine) && !backend.deletedSnapshotIDs.contains(timeMachine.id), "Time Machine snapshots must remain observation-only during retention")
         precondition(!backend.deletedSnapshotIDs.contains(owner502.snapshotUUID) && !backend.deletedSnapshotIDs.contains(foreign.id))
     }
 

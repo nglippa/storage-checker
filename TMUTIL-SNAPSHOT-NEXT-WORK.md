@@ -1,5 +1,29 @@
 # Next work: Time Machine local snapshots (tmutil) in Storage Monitor
 
+## Progress — 2026-11-13
+
+The model/UI integration, fake-runner model tests, ownership regression checks
+and documentation below are implemented in the local working tree, uncommitted.
+The requested backend, snapshot model/management and viewer suites passed
+(1,163 viewer checks), and the GUI build passed with SDK 26.5. Native checks
+verified the confirmation/cancel path, helper/volume independence, QA-disabled
+action, empty and populated history, cold history reload, and on-demand output.
+Two native control issues found during verification were fixed with an explicit
+segmented section picker and Show/Hide Command Output button.
+
+**The separately approved one real request has already been used.** It ran at
+2026-11-13 07:38:05 UTC, returned exit 0 and `reportedCreated`, with token
+`2026-11-13-013805`. `tmutil listlocalsnapshots /` confirmed the matching
+`com.apple.TimeMachine.2026-11-13-013805.local`; the journal has one request.
+Do not repeat this live creation without fresh explicit operator approval.
+
+The acknowledgement sheet's native interaction remains unverified; fake-runner
+model tests cover its state flow. Release/version assignment, commits and
+publication have not been authorized. See
+[release/verification notes](STORAGE-MONITOR-TMUTIL-RELEASE-NOTES.md) and
+[live evidence](artifacts/apfs-snapshot-management/TMUTIL-LIVE-VALIDATION-20261113.json).
+The original handoff follows as historical context.
+
 Status at `60ac812` (2026-11-12). Decision already made by the operator: **"tmutil is the way."** Do not reopen the
 route choice; the native `fs_snapshot_create` route stays blocked (root-only probe returned `EPERM`, see
 `APFS-LOCAL-CAPABILITY-INVESTIGATION.md`).

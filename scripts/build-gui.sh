@@ -47,7 +47,7 @@ if [ "$QA" = true ]; then
   /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Storage Monitor QA" "$APP/Contents/Info.plist"
   /usr/libexec/PlistBuddy -c 'Add :StorageMonitorQAInventory bool true' "$APP/Contents/Info.plist"
 fi
-if [ "${STORAGE_MONITOR_BUNDLE_HELPER:-0}" = 1 ]; then
+if [ "${STORAGE_MONITOR_BUNDLE_HELPER:-1}" = 1 ]; then
   HELPER="$ROOT/build/MacBook Storage Monitor.app"
   if [ ! -x "$HELPER/Contents/MacOS/StorageMonitor" ]; then /usr/bin/printf '%s\n' 'Build the matching monitor first with scripts/build.sh.' >&2; exit 1; fi
   /bin/mkdir -p "$APP/Contents/Helpers"

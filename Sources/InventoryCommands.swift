@@ -247,14 +247,27 @@ func inventoryRunStatus(_ main: InventoryRunResult) -> String {
 @discardableResult func inventoryCommand(_ command: String, args: [String], directory: URL, coordinated: Bool = false) async throws -> InventoryRunResult? {
     let commandStarted = Date()
     func value(_ key: String) -> String? { guard let i = args.firstIndex(of: key), args.count > i + 1 else { return nil }; return args[i + 1] }
+    // Explicit viewer work is one selected target, never the scheduled all-drive dispatcher.
+    if command == "inventory-index", args.contains("--uuid") {
+        guard let uuid = value("--uuid") else { throw Failure("--uuid requires a persistent volume UUID; no startup fallback is allowed") }
+        try required(value("--root") == nil && NativeQARuntime.active == nil && LifecycleQAScope.active == nil, "External indexing is unavailable in fixture runtimes")
+        let budget = min(300, max(0.01, Double(value("--budget") ?? "300") ?? 300))
+        let result = try await indexSelectedExternalVolume(uuid: uuid, directory: directory, budget: budget)
+        print(json(["outcome": result.outcome, "status": inventoryRunStatus(result), "continues": result.runnableWorkRemains, "reason": result.reason ?? ""]))
+        if result.outcome == "failed" { throw Failure(result.reason ?? "Indexing failed") }
+        return result
+    }
     if command == "inventory-work", !coordinated, value("--root") == nil, NativeQARuntime.active == nil, LifecycleQAScope.active == nil {
         if try await dispatchExternalInventory(directory: directory, args: args) { exit(75) }
         return nil
     }
     var dispatcherLock: FileLock?
-    if ["inventory-initialize", "inventory-update", "inventory-work"].contains(command), !coordinated {
+    if ["inventory-initialize", "inventory-update", "inventory-work", "inventory-index"].contains(command), !coordinated {
         try privateDirectory(directory)
-        guard let lock = FileLock(directory.appendingPathComponent("inventory-dispatch.lock").path, wait: 0) else { return nil }
+        guard let lock = FileLock(directory.appendingPathComponent("inventory-dispatch.lock").path, wait: 0) else {
+            if command == "inventory-index" { throw Failure("An indexer is already running. Its committed results remain available.") }
+            return nil
+        }
         dispatcherLock = lock
     }
     defer { withExtendedLifetime(dispatcherLock) {} }
@@ -277,9 +290,9 @@ func inventoryRunStatus(_ main: InventoryRunResult) -> String {
         let id = try InventoryRequests.enqueue(database: database, action: "refresh", path: value("--path")); print("Queued inventory refresh \(id)")
     case "inventory-cancel": try cancelInventory(directory: directory); print("Inventory pause requested; committed partial results are retained.")
     case "inventory-resume": _ = try InventoryRequests.enqueue(database: database, action: "resume"); print("Inventory resume requested.")
-    case "inventory-initialize", "inventory-update", "inventory-work":
+    case "inventory-initialize", "inventory-update", "inventory-work", "inventory-index":
         let budget = min(3_600, max(0.01, Double(value("--budget") ?? "20") ?? 20))
-        let deadline = coordinated ? commandStarted.addingTimeInterval(budget) : nil
+        let deadline = coordinated || command == "inventory-index" ? commandStarted.addingTimeInterval(budget) : nil
         try privateDirectory(directory)
         guard let commandLock = FileLock(directory.appendingPathComponent("inventory-command.lock").path, wait: 0) else { throw Failure("Another inventory command is active") }
         defer { withExtendedLifetime(commandLock) {} }
@@ -359,7 +372,7 @@ func inventoryRunStatus(_ main: InventoryRunResult) -> String {
             result = InventoryRunResult(outcome: final.outcome, generation: final.generation,
                                         entries: result.entries, directories: result.directories,
                                         pending: final.pending, reason: final.reason)
-        } else if coordinated, ["complete", "partial"].contains(result.outcome), result.reason != "cancelled" {
+        } else if coordinated || command == "inventory-index", ["complete", "partial"].contains(result.outcome), result.reason != "cancelled" {
             main.runnableWorkRemains = true
         }
         let summary: [String: Any] = ["outcome": result.outcome, "generation": result.generation as Any, "entries": result.entries, "directories": result.directories,

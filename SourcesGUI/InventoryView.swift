@@ -122,6 +122,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
     var pendingReveal: InventoryNode?
     let reader: InventoryReader
     let readiness: ViewerReadiness
+    var onWorkRequest: ((String) -> Void)?
     private let focusWriter = InventoryFocusWriter()
     private var focusRevision: UInt64 = 0
     private var reloads = InventoryReloadGate()
@@ -143,8 +144,8 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
         guard let path = livePath(node) else { message = "Reconnect and verify this drive to reveal items in Finder."; return }
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
-    func lifecycle(monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil) -> InventoryLifecyclePresentation {
-        InventoryLifecyclePresentation(hasRoot: root != nil, status: status, requested: initializationRequested, loading: loading, error: error, monitoringConfigured: monitoringConfigured, indexingFailure: indexingFailure, monitoringEnabled: monitoringEnabled)
+    func lifecycle(monitoringConfigured: Bool?, indexingFailure: String? = nil, monitoringEnabled: Bool? = nil, independentIndexing: Bool = false) -> InventoryLifecyclePresentation {
+        InventoryLifecyclePresentation(hasRoot: root != nil, status: status, requested: initializationRequested, loading: loading, error: error, monitoringConfigured: monitoringConfigured, indexingFailure: indexingFailure, monitoringEnabled: monitoringEnabled, independentIndexing: independentIndexing)
     }
     var selectedNode: InventoryNode? { items.first { $0.id == selected } }
     var queryID: String { "\(mode.rawValue)|\(sort.rawValue)|\(search)|\(scopeToFolder)|\(offset)|\(revision)" }
@@ -366,7 +367,7 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
             }
             path = resolved
         }
-        let starting = action == "refresh" && status?.generation == nil
+        let starting = ["refresh", "resume"].contains(action) && status?.generation == nil
         if starting { initializationRequested = true }
         let sequence: UInt64?
         if action == "focus" { focusRevision &+= 1; sequence = focusRevision } else { sequence = nil }
@@ -390,9 +391,10 @@ enum InventoryBrowserMode: String, CaseIterable, Identifiable {
                     case "focus": message = "“\(path.map { inventoryFolderName(path: $0, rootPath: root?.path) } ?? "This folder")” will be indexed before other folders. Existing sizes stay visible."
                     case "pause": message = "Pause requested. Committed results remain available."
                     case "resume": message = "Resume requested."
-                    default: message = path == nil ? "Full refresh requested: the background worker will recheck every folder, which can take a while on a large disk." : "Folder refresh requested."
+                    default: message = path == nil ? "Full refresh requested: the indexer will recheck every folder, which can take a while on a large disk." : "Folder refresh requested."
                     }
                 }
+                if ["refresh", "resume", "pause"].contains(action) { onWorkRequest?(action) }
                 onSuccess?()
                 if action != "focus" { refreshIfIdle() }
             } catch {
@@ -407,32 +409,38 @@ struct DiskInventoryView: View {
     let configuration: ViewerConfiguration
     @ObservedObject var history: ViewerStore
     @ObservedObject var model: InventoryBrowserModel
+    @ObservedObject private var indexer: OnDemandIndexController
+    init(configuration: ViewerConfiguration, history: ViewerStore, model: InventoryBrowserModel) {
+        self.configuration = configuration; self.history = history; self.model = model; self.indexer = history.indexer
+    }
     @AppStorage("inventory.header.details", store: ViewerStore.viewPreferences) private var showingIndexDetails = false
     @ObservedObject private var qaWorker = NativeQAWorker.shared
     private var workerAvailable: Bool {
         if let scope = LifecycleQAScope.active {
             return (try? scope.admit(command: "inventory-request")) != nil && FileManager.default.fileExists(atPath: scope.agentURL(scope.labels[0]).path)
         }
-        if history.target.uuid != nil { return history.target.canRequest && history.externalSupportReady }
+        if !configuration.isQA { return model.canRequest && history.indexExecutable != nil }
         let data = URL(fileURLWithPath: configuration.database).deletingLastPathComponent()
         let path = configuration.isQA ? data.appendingPathComponent("inventory-worker.plist").path : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents/local.macbook.storage-monitor.plist").path
         if NativeQARuntime.active != nil { return qaWorker.failure == nil }
         return FileManager.default.fileExists(atPath: path)
     }
     private var inventoryUpdatesEnabled: Bool? {
-        history.target.uuid == nil ? history.monitoring?.inventoryUpdatesEnabled : history.target.registration?.enabled
+        if indexer.isRunning && indexer.database == model.requestDatabase { return true }
+        if configuration.isQA { return history.monitoring?.inventoryUpdatesEnabled }
+        return history.monitoring?.inventoryWorkerRunning ?? false
     }
     private var showsInitialization: Bool { initialization.isVisible && inventoryUpdatesEnabled != false }
     private var indexingActive: Bool {
         if inventoryUpdatesEnabled == false { return false }
         if history.target.uuid != nil && (!history.target.canRequest || history.target.registration?.indexingPaused == true) { return false }
-        guard let status = model.status else { return true }
+        guard let status = model.status else { return indexer.isRunning && indexer.database == model.requestDatabase }
         // Deferred folders retry on the worker's next scheduled update; they are not active indexing.
         return status.generation == nil || InventoryStatusPresentation(status: status).activeListings > 0 || status.hasReconciliationWork
     }
     private var lifecycle: InventoryLifecyclePresentation {
         if history.target.uuid != nil {
-            return model.lifecycle(monitoringConfigured: history.externalSupportReady, monitoringEnabled: inventoryUpdatesEnabled)
+            return model.lifecycle(monitoringConfigured: true, indexingFailure: indexer.database == model.requestDatabase ? indexer.error : nil, monitoringEnabled: inventoryUpdatesEnabled, independentIndexing: true)
         }
         let configured = history.monitoring.map { $0.state == .on || $0.state == .needsUpdate }
         let tasks = history.monitoring?.launchd
@@ -441,7 +449,7 @@ struct DiskInventoryView: View {
         if tasks?.reliable == true, let job, job.pid == nil, let exit = job.lastExitStatus, exit != 0 && exit != 75 {
             failure = "The background indexer reported an error before folder results became available."
         } else { failure = nil }
-        return model.lifecycle(monitoringConfigured: configured ?? (configuration.isQA ? workerAvailable : nil), indexingFailure: failure, monitoringEnabled: inventoryUpdatesEnabled)
+        return model.lifecycle(monitoringConfigured: configured ?? (configuration.isQA ? workerAvailable : nil), indexingFailure: indexer.database == model.requestDatabase ? indexer.error : failure, monitoringEnabled: inventoryUpdatesEnabled, independentIndexing: true)
     }
     @Environment(\.openSettings) private var openSettings
     @State private var showingDeferred = false
@@ -484,7 +492,22 @@ struct DiskInventoryView: View {
         .overlay(alignment: .top) { if NativeQARuntime.active != nil, let failure = qaWorker.failure { Text("QA fixture worker stopped: " + failure).font(.caption).padding().background(.background) } }
         .background(Color(nsColor: .windowBackgroundColor))
         .task(id: model.queryID) { await model.load() }
-        .onAppear { PerformanceTrace.mark("storage.appear") }
+        .onAppear {
+            PerformanceTrace.mark("storage.appear")
+            let store = history, browser = model
+            browser.onWorkRequest = { [weak store, weak browser] action in
+                guard let history = store, let model = browser, !history.configuration.isQA else { return }
+                if action == "pause" {
+                    if history.indexer.database == model.requestDatabase { history.indexer.stop() }
+                } else { history.startIndex(database: model.requestDatabase, volumeUUID: model.target?.uuid) }
+            }
+        }
+        .onChange(of: indexer.revision) { _, _ in
+            if indexer.database == model.requestDatabase {
+                if !indexer.isRunning { model.initializationRequested = false }
+                model.refreshIfIdle(); history.refreshTargets()
+            }
+        }
         // Reuse the viewer's one visible-window clock; inventory adds no scanner or loop.
         .onReceive(history.$inventoryRefreshTick.dropFirst()) { _ in model.refreshIfIdle() }
         // Migration Readiness follows catalog changes; the controller coalesces passes (at most one per 30 s).
@@ -519,11 +542,20 @@ struct DiskInventoryView: View {
                     }
                     Button("Open Settings…") { openSettings() }
                 }
-            case .startIndexing: Button("Start indexing") { model.request("refresh") }.disabled(!workerAvailable).accessibilityIdentifier("inventory.start")
+            case .startIndexing:
+                Button("Start Index") { model.request("resume") }.disabled(!workerAvailable || indexer.isRunning).accessibilityIdentifier("inventory.start")
             case .retry:
-                HStack { Button("Reload Inventory") { model.reloadNow() }; Button("Open Settings…") { openSettings() } }
+                HStack {
+                    Button("Start Index") { model.request("resume") }.disabled(!workerAvailable || indexer.isRunning)
+                    Button("Reload Inventory") { model.reloadNow() }
+                }
             case nil: EmptyView()
             }
+            if !configuration.isQA {
+                Button("Full Disk Access…") { openFullDiskAccess() }.buttonStyle(.link)
+                if history.indexExecutable == nil { Text("The bundled indexing engine is missing. Rebuild or reinstall Storage Monitor.").font(.caption).foregroundStyle(.secondary) }
+            }
+            if indexer.isRunning && indexer.database != model.requestDatabase { Text("Another drive is being indexed. Switch back to pause it.").font(.caption).foregroundStyle(.secondary) }
         }.frame(maxWidth: 500).padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityElement(children: .contain).accessibilityIdentifier("inventory.lifecycle")
     }
@@ -545,6 +577,11 @@ struct DiskInventoryView: View {
             HStack {
                 titleTrail
                 Spacer()
+                if lifecycle.showsBrowser && !configuration.isQA {
+                    Button(indexer.isRunning || indexingActive ? "Indexing…" : "Start Index") {
+                        model.request(model.status?.initialCompletion == .inProgress || model.indexingPaused ? "resume" : "refresh")
+                    }.disabled(!workerAvailable || indexer.isRunning || indexingActive).accessibilityIdentifier("inventory.start")
+                }
                 Menu("Folder updates") {
                     if let directory = model.directory, indexingActive {
                         Button("Update “\(model.displayName(directory))” first") { model.prioritizeCurrentFolder() }
@@ -557,11 +594,17 @@ struct DiskInventoryView: View {
                 }.disabled(!workerAvailable).accessibilityIdentifier("inventory.refresh")
             }
             initializationProgress
+            if indexer.database == model.requestDatabase, let error = indexer.error, lifecycle.showsBrowser {
+                Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+            }
+            if indexer.database == model.requestDatabase, indexer.error == nil, let message = indexer.message {
+                Text(message).font(.caption).foregroundStyle(.secondary)
+            }
             summaryLine
             if lifecycle.state == .stale { Text(lifecycle.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             MigrationReadinessSummary(controller: model.migration, browser: model)
             if let status = model.status, !(showsInitialization && status.generation == nil) {
-                let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled)
+                let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled, independentIndexing: !configuration.isQA)
                 if !showsInitialization {
                     if showingIndexDetails {
                         Text("\(status.totalNodes.formatted()) items found · \(presentation.foundFolders.formatted()) folders found · \(presentation.activeListings.formatted()) listings queued")
@@ -620,7 +663,7 @@ struct DiskInventoryView: View {
     @ViewBuilder private var summaryLine: some View {
         HStack(spacing: 6) {
             if let status = model.status, !showsInitialization {
-                let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled)
+                let presentation = InventoryStatusPresentation(status: status, monitoringEnabled: inventoryUpdatesEnabled, independentIndexing: !configuration.isQA)
                 Text(status.hasEventGapRecheck && !presentation.updatesAreWaiting ? "Updating older measurements" : presentation.headline).font(.caption).foregroundStyle(.secondary).lineLimit(1).accessibilityIdentifier("inventory.status")
                 if !presentation.updatesAreWaiting, status.refreshIsManual, status.hasReconciliationWork, let fraction = status.refreshFraction {
                     ProgressView(value: fraction).progressViewStyle(.linear).controlSize(.small).frame(width: 90)
@@ -628,7 +671,8 @@ struct DiskInventoryView: View {
                         .accessibilityIdentifier("inventory.refreshProgress")
                 }
                 if presentation.updatesAreWaiting {
-                    Button("Open Settings…") { openSettings() }
+                    Button(configuration.isQA ? "Open Settings…" : "Start Index") { if configuration.isQA { openSettings() } else { model.request("resume") } }
+                        .disabled(!configuration.isQA && (!workerAvailable || indexer.isRunning))
                         .buttonStyle(.link).font(.caption).accessibilityIdentifier("inventory.waitingSettings")
                 }
                 Button(showingIndexDetails ? "Hide details" : "Indexing details") { showingIndexDetails.toggle() }
@@ -646,6 +690,9 @@ struct DiskInventoryView: View {
                     .popover(isPresented: $showingAccounting, arrowEdge: .bottom) { accountingDetails(accounting) }
             }
         }
+    }
+    private func openFullDiskAccess() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") { NSWorkspace.shared.open(url) }
     }
     private func storageAccounting(_ latest: Measurement) -> StorageAccountingPresentation {
         StorageAccountingPresentation(used: latest.used, free: latest.free, volumes: latest.volumes.map { StorageVolumeUsage(name: $0.name, roles: $0.roles, bytes: $0.bytes) },
